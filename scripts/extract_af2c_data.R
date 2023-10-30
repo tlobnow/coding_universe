@@ -1,7 +1,6 @@
 # Load required libraries (if you don't have pacman installed yet, please unhash the installation line and run it)
 #install.packages("pacman")
-library(pacman)
-p_load(data.table)
+library(pacman); p_load(data.table)
 
 source(file = ifelse(exists("https://raw.githubusercontent.com/tlobnow/coding_universe/main/scripts/functions.R"), 
                      yes =  "https://raw.githubusercontent.com/tlobnow/coding_universe/main/scripts/functions.R",
