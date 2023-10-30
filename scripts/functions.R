@@ -323,14 +323,40 @@ add2Summary <- function(NEW_DF, EXISTING_DF) {
 ################################################################################
 ################################################################################
 
+#' Extracts and Processes AlphaFold Results
+#'
+#' This function extracts data from JSON files, processes it, and appends it to summary CSV files.
+#' It's designed to work specifically with AlphaFold results.
+#'
+#' @param LOC A string representing the location of the target data folder.
+#' @param MAIN A string representing the main directory where the summaries are stored. Defaults to "~/Desktop/SUMMARIES/LOC/".
+#' @param SUMMARY_FOLDER A string representing the directory where summary files are saved. Defaults to "~/Desktop/SUMMARIES/".
+#' @param ADD_2_EXISTING_DF A logical value indicating whether to append the extracted data to an existing dataframe. Defaults to FALSE.
+#' @param EXISTING_DF A string representing the path of the existing dataframe to which the data should be appended, if ADD_2_EXISTING_DF is TRUE.
+#'
+#' @return None. This function primarily performs side effects, such as modifying files in place.
+#' 
+#' @examples
+#' \dontrun{
+#' run_extraction(LOC = "my_location")
+#' run_extraction(LOC = "my_location", ADD_2_EXISTING_DF = TRUE, EXISTING_DF = "~/path_to_existing_df.csv")
+#' }
+#'
+
 run_extraction <- function(LOC, MAIN = NULL, SUMMARY_FOLDER = NULL, ADD_2_EXISTING_DF = F, EXISTING_DF = NULL) {
   pacman::p_load(dplyr, tidyr, stringr, fs, jsonlite, purrr, utils, data.table)
   if (is.null(MAIN)) {
-    MAIN <- paste0("/Volumes/TAYLOR-LAB/Finn/CURATED_RESULTS/", LOC, "/")
+    MAIN <- paste0("~/Desktop/SUMMARIES/", LOC, "/")
   }
   
   if (is.null(SUMMARY_FOLDER)) {
-    SUMMARY_FOLDER <- "/Volumes/TAYLOR-LAB/Finn/CURATED_RESULTS/SUMMARIES/"
+    SUMMARY_FOLDER <- "~/Desktop/SUMMARIES/"
+  }
+  
+  # Check for the summary directory and the RECYCLES folder inside
+  if (!file.exists(file.path(SUMMARY_FOLDER, "/RECYCLES"))) {
+    # If it doesn't exist, create it
+    dir.create(file.path(SUMMARY_FOLDER, "/RECYCLES"), recursive = TRUE)
   }
   
   if (isTRUE(ADD_2_EXISTING_DF) & is.null(EXISTING_DF)) {
@@ -440,13 +466,39 @@ run_extraction <- function(LOC, MAIN = NULL, SUMMARY_FOLDER = NULL, ADD_2_EXISTI
 ################################################################################
 ################################################################################
 
+#' Plot AlphaFold Results
+#'
+#' This function takes AlphaFold results from a specified location and plots them.
+#' It categorizes the `iScore` into different confidence levels and allows filtering based on a given pattern.
+#'
+#' @param LOC A character string specifying the location of the data. This will be appended to the SUMMARY_FOLDER path to generate the full path.
+#' @param SUMMARY_FOLDER The folder where summary results are stored. By default, it is set to "~Desktop/SUMMARIES/".
+#' @param xlab A character string for the x-axis label. Default is "iScore".
+#' @param ylab A character string for the y-axis label. Default is "piTM".
+#' @param plot_title A character string for the plot title. If NULL (the default), a default title is generated based on the LOC value.
+#' @param pattern A character string. If provided, the function will filter the dataset to include only rows where the FILE column matches this pattern.
+#' @param best_only A logical value. If TRUE, only the best results (as determined by iScore) will be plotted.
+#'
+#' @return A ggplot object showing AlphaFold results.
+#' 
+#' @examples
+#' plot_alphafold_results(LOC = "ExampleLocation")
+#' plot_alphafold_results(LOC = "ExampleLocation", pattern = "specific_pattern", best_only = TRUE)
+#'
+#' @importFrom ggplot2 ggplot annotate geom_abline geom_point labs expand_limits
+#' @importFrom dplyr mutate group_by ungroup filter select arrange
+#' @importFrom data.table fread
+#' @importFrom stringr str_detect
+#' @importFrom ggalt geom_encircle
+#' @importFrom ggrepel geom_label_repel
+#' 
 
 plot_alphafold_results <- function(LOC, SUMMARY_FOLDER = NULL, xlab = "iScore", ylab = "piTM", 
                                    plot_title = NULL, pattern = NULL, best_only = FALSE) {
   pacman::p_load(ggplot2, dplyr, data.table, ggrepel, ggalt, stringr)
   
   if (is.null(SUMMARY_FOLDER)) {
-    SUMMARY_FOLDER <- "/Volumes/TAYLOR-LAB/Finn/CURATED_RESULTS/SUMMARIES/"
+    SUMMARY_FOLDER <- "~/Desktop/SUMMARIES/"
   }
   
   file_path <- paste0(SUMMARY_FOLDER, LOC, ".csv")
