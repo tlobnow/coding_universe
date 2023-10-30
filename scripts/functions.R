@@ -337,7 +337,7 @@ run_extraction <- function(LOC, MAIN = NULL, SUMMARY_FOLDER = NULL, ADD_2_EXISTI
     print("If you wish to add the extracted data to an existing DF, please provide the path for EXISTING_DF.")
   }
   
-  summaryWithRecycles = paste0(SUMMARY_FOLDER, "RECYCLES/", LOC, "_summaryWithRecycles.csv")
+  summaryWithRecycles = paste0(SUMMARY_FOLDER, "/RECYCLES/", LOC, "_summaryWithRecycles.csv")
   summary             = paste0(SUMMARY_FOLDER, LOC, ".csv")
   if (file.exists(summaryWithRecycles))  {file.remove(summaryWithRecycles)}
   if (file.exists(summary))              {file.remove(summary)}
