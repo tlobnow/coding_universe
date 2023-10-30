@@ -31,8 +31,9 @@ plot_alphafold_results(LOC = LOC, SUMMARY_FOLDER = SUMMARY_FOLDER, best_only = T
 plot_alphafold_results(LOC = LOC, SUMMARY_FOLDER = SUMMARY_FOLDER, pattern = "_x", best_only = TRUE)
 
 
-
-##### ADDITIONAL DOCUMENTATION OF THE FUNCTIONS USED ###########################
+################################################################################
+################ ADDITIONAL DOCUMENTATION OF THE FUNCTIONS USED ################
+################################################################################
 
 #' Extracts and Processes AlphaFold Results
 #'
