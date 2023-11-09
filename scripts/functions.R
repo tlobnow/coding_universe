@@ -274,7 +274,7 @@ ELISA_Fx <- function(Input_Directory, Output_Directory) {
       # Further processing of the Plate object if needed
       
       
-      # Fitting Data To Standarad Curve ----------------------------------------
+      # Fitting Data To Standard Curve ----------------------------------------
       Plate <- Plate %>% 
         filter(CONDITIONS != "CALIBRATION") %>% 
         mutate(Plate = as.numeric(gsub("^Plate_(\\d+)_\\d{8}$", "\\1", basename(input_plate_dir))),
@@ -511,8 +511,9 @@ run_extraction <- function(LOC, MAIN = NULL, SUMMARY_FOLDER = NULL, ADD_2_EXISTI
 #' 
 
 plot_alphafold_results <- function(LOC, SUMMARY_FOLDER = NULL, xlab = "iScore", ylab = "piTM", 
-                                   plot_title = NULL, pattern = NULL, best_only = FALSE) {
-  pacman::p_load(ggplot2, dplyr, data.table, ggrepel, ggalt, stringr)
+                                   plot_title = NULL, pattern = NULL, best_only = FALSE,
+                                   plot_interactive = FALSE) {
+  pacman::p_load(ggplot2, dplyr, data.table, ggrepel, ggalt, stringr, plotly)
   
   if (is.null(SUMMARY_FOLDER)) {
     SUMMARY_FOLDER <- "~/Desktop/SUMMARIES/"
@@ -566,11 +567,11 @@ plot_alphafold_results <- function(LOC, SUMMARY_FOLDER = NULL, xlab = "iScore", 
     distinct(FILE, .keep_all = T) %>%
     ungroup()
   
-  
   print(max_iScore %>%
           dplyr::select(FILE, RECYCLE, iScore, piTM) %>% 
           dplyr::arrange(desc(iScore)))
   
+
   if (is.null(plot_title)) {
     plot_title = paste0("AlphaFold Results for ", LOC)
   }
@@ -613,5 +614,36 @@ plot_alphafold_results <- function(LOC, SUMMARY_FOLDER = NULL, xlab = "iScore", 
     expand_limits(x=c(0,1), y=c(0,1)) +
     labs(x = xlab, y = ylab, title = plot_title)
   
-  return(plot)
+  
+  if (plot_interactive) {
+    plotly_plot <- ggplot(DF, aes(label = FILE)) +
+      geom_abline(col = "gray")
+    # Add encircle only if best_only is FALSE
+    if (!best_only & length(unique(DF$FILE)) <= 10) {
+      plotly_plot <- plotly_plot + geom_encircle(aes(iScore, piTM, fill = FILE), alpha = 0.1)
+    }
+    # Check number of unique FILE names and continue adding layers based on condition
+    if (length(unique(DF$FILE)) > 10) {
+      plotly_plot <- plotly_plot +
+        geom_point(aes(iScore, piTM, col = Confidence), size = 3) +
+        geom_point(data = max_iScore, aes(iScore, piTM, col = Confidence), size = 5) +
+        scale_color_manual(name = "Confidence",
+                           values = c("Low" = "gray80",
+                                      "Medium" = "gray40",
+                                      "High" = "cornflowerblue",
+                                      "Very High" = "lightgreen"))
+    } else {
+      plotly_plot <- plotly_plot +
+        geom_point(aes(iScore, piTM, color = FILE)) +
+        geom_point(data = max_iScore, aes(iScore, piTM, color = FILE), size = 4) +
+        geom_label_repel(data = mean_labeling, aes(mean_iScore, mean_piTM, label = FILE, color = FILE))
+    }
+    # Add remaining layers and return
+    plotly_plot <- plotly_plot + 
+      expand_limits(x=c(0,1), y=c(0,1)) +
+      labs(x = xlab, y = ylab, title = plot_title)
+    return(ggplotly(plotly_plot))
+    
+  } else return(plot)
+  
 }
