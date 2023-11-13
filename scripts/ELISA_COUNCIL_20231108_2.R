@@ -25,10 +25,14 @@ save_to = "~/Documents/Github/master_thesis/thesis_figs"
 POSITIVE_CTRL = "MyD88-GFP"
 NEGATIVE_CTRL = "204_TRIPLE_KO"
 
-# Source the functions needed to run this script
-ifelse(test = file.exists("https://raw.githubusercontent.com/tlobnow/master_thesis/main/scripts/functions.R"), 
-       yes  = source("https://raw.githubusercontent.com/tlobnow/master_thesis/main/scripts/functions.R"), 
-       no   = source("~/Documents/Github/master_thesis/scripts/functions.R"))
+# # Source the functions needed to run this script
+# ifelse(test = file.exists("https://raw.githubusercontent.com/tlobnow/master_thesis/main/scripts/functions.R"), 
+#        yes  = source("https://raw.githubusercontent.com/tlobnow/master_thesis/main/scripts/functions.R"), 
+#        no   = source("~/Documents/Github/master_thesis/scripts/functions.R"))
+
+source(file = ifelse(exists("https://raw.githubusercontent.com/tlobnow/coding_universe/main/scripts/functions.R"), 
+                     yes =  "https://raw.githubusercontent.com/tlobnow/coding_universe/main/scripts/functions.R",
+                     no  =  "~/Documents/Github/coding_universe/scripts/functions.R"))
 
 # What are the names of the csv files in each plate folder?
 CELL_LINES    <- "CELL_LINES.csv"       # COHORT
@@ -239,8 +243,13 @@ plot4COHORT <- function(COHORT, COLOR = "salmon", SEED = 600, plot_pval = T, run
   
 }
 
-plot4COHORT(COHORT = paste0("MyD88-","BDLD_6","-T6BM"), COLOR = "#2d8659", SEED = 600, run_anova = T,
-            POSITIVE_CTRL = POSITIVE_CTRL, NEGATIVE_CTRL = NEGATIVE_CTRL)
+plot4COHORT(COHORT = paste0("MyD88-","BDLD_6","-T6BM"),  COLOR = "#2d8659", SEED = 600, run_anova = T, POSITIVE_CTRL = "MyD88-GFP", NEGATIVE_CTRL = "204_TRIPLE_KO")
+plot4COHORT(COHORT = paste0("MyD88-","BDLD_57","-T6BM"), COLOR = "#2d8659", SEED = 600, run_anova = T, POSITIVE_CTRL = "MyD88-GFP", NEGATIVE_CTRL = "204_TRIPLE_KO")
+
+##################################################################################################################
+##################################################################################################################
+##################################################################################################################
+
 
 plot4DAY <- function(DAY, COLOR = "salmon", SEED = 600, plot_pval = T, run_anova = F,
                      POSITIVE_CTRL, NEGATIVE_CTRL) {
@@ -396,8 +405,7 @@ plot4DAY <- function(DAY, COLOR = "salmon", SEED = 600, plot_pval = T, run_anova
   return(plot)
 }
 
-plot4DAY(DAY = "2023-05-04", COLOR = "salmon", SEED = 600, plot_pval = T, run_anova = F, POSITIVE_CTRL = "WT_EL4",    NEGATIVE_CTRL = "204_TRIPLE_KO")
+plot4DAY(DAY = "2022-06-23", COLOR = "salmon", SEED = 600, plot_pval = T, run_anova = F, POSITIVE_CTRL = "WT_EL4",    NEGATIVE_CTRL = "204_TRIPLE_KO")
 plot4DAY(DAY = "2023-07-04", COLOR = "salmon", SEED = 600, plot_pval = T, run_anova = T, POSITIVE_CTRL = "MyD88-GFP", NEGATIVE_CTRL = "204_TRIPLE_KO")
 plot4DAY(DAY = "2023-05-12", COLOR = "salmon", SEED = 600, plot_pval = T, run_anova = F, POSITIVE_CTRL = "MyD88-GFP", NEGATIVE_CTRL = "204_TRIPLE_KO")
-plot4DAY(DAY = "2022-06-23", COLOR = "salmon", SEED = 600, plot_pval = T, run_anova = F, POSITIVE_CTRL = "WT_EL4",    NEGATIVE_CTRL = "204_TRIPLE_KO")
 
