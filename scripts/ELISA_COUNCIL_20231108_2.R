@@ -398,7 +398,6 @@ plot4DAY <- function(DAY, COLOR = "salmon", SEED = 600, plot_pval = T, run_anova
 
 plot4DAY(DAY = "2023-05-04", COLOR = "salmon", SEED = 600, plot_pval = T, run_anova = F, POSITIVE_CTRL = "WT_EL4",    NEGATIVE_CTRL = "204_TRIPLE_KO")
 plot4DAY(DAY = "2023-07-04", COLOR = "salmon", SEED = 600, plot_pval = T, run_anova = T, POSITIVE_CTRL = "MyD88-GFP", NEGATIVE_CTRL = "204_TRIPLE_KO")
-plot4DAY(DAY = "2023-05-04", COLOR = "salmon", SEED = 600, plot_pval = T, run_anova = F, POSITIVE_CTRL = "WT_EL4",    NEGATIVE_CTRL = "204_TRIPLE_KO")
 plot4DAY(DAY = "2023-05-12", COLOR = "salmon", SEED = 600, plot_pval = T, run_anova = F, POSITIVE_CTRL = "MyD88-GFP", NEGATIVE_CTRL = "204_TRIPLE_KO")
 plot4DAY(DAY = "2022-06-23", COLOR = "salmon", SEED = 600, plot_pval = T, run_anova = F, POSITIVE_CTRL = "WT_EL4",    NEGATIVE_CTRL = "204_TRIPLE_KO")
 
