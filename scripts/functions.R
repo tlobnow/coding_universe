@@ -120,54 +120,6 @@ jsonExtract <- function(JSON, OUT, FILE) {
   write.table(EXTRACT_noRecycle, file = paste0(OUT,".csv"),sep = ",", append = T, quote = F, row.names = F, col.names = F)
 }
 
-#######################################################################################################################
-#######################################################################################################################
-#######################################################################################################################
-
-# slurmExtract <- function(SLURM, OUT) {
-#   SLURM        <- fread(SLURM, sep = "\t", header = F)
-#   SLURM        <- SLURM %>% mutate(RECYCLED = F, TOP = F, INFO = F, GRAB = F, N_MON = F, MODEL = F)
-#   SLURM$RECYCLED[grep("*_recycled_*",      SLURM$V1)] <- T
-#   SLURM$INFO[grep("*Info:*",               SLURM$V1)] <- T
-#   SLURM$GRAB[grep("Info: num_clusters*",   SLURM$V1)] <- T
-#   SLURM$N_MON[grep("* to model *",         SLURM$V1)] <- T
-#   SLURM$MODEL[grep("*pLDDT*",              SLURM$V1)] <- T
-#   
-#   MODEL_INFO        <- SLURM %>% filter(MODEL == T & RECYCLED == F) %>% select(V1)
-#   MODEL_INFO        <- separate(data = MODEL_INFO, col = V1,   sep = ",",   into = c("NAME", "TOL", "pLDDT", "pTM", "piTM", "iScore", "iRes"), convert = T)
-#   MODEL_INFO        <- separate(data = MODEL_INFO, col = NAME, sep = " ",   into = c("INFO", "FILE", "MODEL", "PERFORMED", "X", "CYCLE"), convert = T)
-#   MODEL_INFO$TOL    <- as.numeric(unlist(lapply(strsplit(MODEL_INFO$TOL,   "= ", fixed=TRUE), function(x) return(x[2]))))
-#   MODEL_INFO$pLDDT  <- as.numeric(unlist(lapply(strsplit(MODEL_INFO$pLDDT, "= ", fixed=TRUE), function(x) return(x[2]))))
-#   MODEL_INFO$pTM    <- as.numeric(unlist(lapply(strsplit(MODEL_INFO$pTM,   "= ", fixed=TRUE), function(x) return(x[2]))))
-#   MODEL_INFO$piTM   <- as.numeric(unlist(lapply(strsplit(MODEL_INFO$piTM,  "= ", fixed=TRUE), function(x) return(x[2]))))
-#   MODEL_INFO$iScore <- as.numeric(unlist(lapply(strsplit(MODEL_INFO$iScore,"= ", fixed=TRUE), function(x) return(x[2]))))
-#   MODEL_INFO        <- separate(data = MODEL_INFO, col = iRes, sep =  "iCnt = ", into = c("iRes", "iCnt"), convert = T)
-#   MODEL_INFO$iRes   <- as.numeric(unlist(lapply(strsplit(MODEL_INFO$iRes,  "= ", fixed=TRUE), function(x) return(x[2]))))
-#   MODEL_INFO$iCnt   <- as.numeric(MODEL_INFO$iCnt)
-#   MODEL_INFO$Clash_Indicator <- MODEL_INFO$iRes / MODEL_INFO$iCnt
-#   
-#   CLUSTER_INFO               <- SLURM %>% filter(GRAB == T) %>% select(V1)
-#   CLUSTER_INFO               <- separate(data = CLUSTER_INFO, col = V1,   sep = " = ", into = c("V1", "NUM_CLUSTERS", "CLUSTER_SIZES", "CLUSTERS"), convert = T, remove = T)
-#   CLUSTER_INFO$NUM_CLUSTERS  <- as.numeric(unlist(lapply(strsplit(CLUSTER_INFO$NUM_CLUSTERS, ", ", fixed=TRUE), function(x) return(x[1]))))
-#   CLUSTER_INFO$CLUSTER_SIZES <- unlist(lapply(strsplit(CLUSTER_INFO$CLUSTER_SIZES, ",  clusters", fixed=TRUE), function(x) return(x[1])))
-#   CLUSTER_INFO$CLUSTER_SIZES <- str_replace(CLUSTER_INFO$CLUSTER_SIZES, ", ", "_")
-#   CLUSTER_INFO$CLUSTERS      <- str_replace(CLUSTER_INFO$CLUSTERS, ", ", "/")
-#   
-#   N_MONOMERS_INFO <- SLURM %>% filter(N_MON == T) %>% select(V1)
-#   N_MONOMERS_INFO <- separate(data = N_MONOMERS_INFO, col = V1,   sep = c("chain"), into = c("N_MONOMERS", "TRASH"), convert = T, remove = T) %>% unique()
-#   N_MONOMERS_INFO$N_MONOMERS <- unlist(lapply(strsplit(N_MONOMERS_INFO$N_MONOMERS, ": ", fixed=TRUE), function(x) return(x[2]))) %>% as.numeric()
-#   N_MONOMERS_INFO <- N_MONOMERS_INFO %>% select(N_MONOMERS)
-#   
-#   EXTRACT       <- bind_cols(MODEL_INFO, CLUSTER_INFO)
-#   EXTRACT       <- EXTRACT %>% 
-#     mutate(FILE_MODEL = paste(FILE, MODEL, sep = "_"), N_MONOMERS = N_MONOMERS_INFO$N_MONOMERS) %>% 
-#     select(FILE, MODEL, TOL, pLDDT, pTM, piTM, iScore, iRes, iCnt, FILE_MODEL, NUM_CLUSTERS, N_MONOMERS)
-#   EXTRACT$MODEL <- unlist(lapply(strsplit(EXTRACT$MODEL, "_multimer", fixed=TRUE), function(x) return(x[1])))
-#   EXTRACT       <- unique(EXTRACT)
-#   
-#   write.table(EXTRACT, file = paste0(OUT ,"_fromSLURM.csv"),sep = ",", append = T, quote = F, row.names = F, col.names = F)
-# }
-
 ################################################################################
 ################################################################################
 ################################################################################
@@ -185,9 +137,12 @@ join_timepoints <- function(DF1, DF2, DF3, OUT) {
 ELISA_Fx <- function(Input_Directory, Output_Directory) {
   # Initialize as an empty data frame
   All_plates_data = data.frame()
+  # Input_Directory = "~/Desktop/ALL"
+  # Output_Directory = "~/Desktop/ALL"
   
   # Get the list of subdirectories matching the pattern "Plate_"
-  subdirs <- list.files(Input_Directory, recursive = FALSE, full.names = TRUE, pattern = "^Plate_\\d+_\\d{8}$")
+  subdirs <- list.files(Input_Directory, recursive = FALSE, full.names = TRUE, pattern = "Plate_\\d+_\\d{8}$")
+  # input_plate_dir = "~/Desktop/ALL/Plate_1_20220609"
   
   if (length(subdirs) > 0) {
     print("Plates exist!")
@@ -197,66 +152,68 @@ ELISA_Fx <- function(Input_Directory, Output_Directory) {
       
       #Reading Plate Treatment 
       MEASUREMENTS <- fread(paste0(Input_plate, "/MEASUREMENTS.csv"), header = F)
-      CELL_LINES   <- fread(paste0(Input_plate, "/CELL_LINES.csv"), header = F)
-      CONDITIONS   <- fread(paste0(Input_plate, "/CONDITIONS.csv"), header = F)
-      STIM_DAYS    <- fread(paste0(Input_plate, "/STIM_DAYS.csv"), header = F)
+      CELL_LINES   <- fread(paste0(Input_plate, "/CELL_LINES.csv"),   header = F)
+      CONDITIONS   <- fread(paste0(Input_plate, "/CONDITIONS.csv"),   header = F)
+      STIM_DAYS    <- fread(paste0(Input_plate, "/STIM_DAYS.csv"),    header = F)
+      DILUTIONS    <- fread(paste0(Input_plate, "/DILUTIONS.csv"),    header = F)
       
       #Converting tables into vector for to make a single table
-      MEASUREMENTS <- as.vector(as.matrix(MEASUREMENTS))
-      CELL_LINES   <- as.vector(as.matrix(CELL_LINES))
-      CONDITIONS   <- as.vector(as.matrix(CONDITIONS))
-      STIM_DAYS    <- as.vector(as.matrix(STIM_DAYS))
+      MEASUREMENT <- as.vector(as.matrix(MEASUREMENTS))
+      CELL_LINE   <- as.vector(as.matrix(CELL_LINES))
+      CONDITION   <- as.vector(as.matrix(CONDITIONS))
+      STIM_DAY    <- as.vector(as.matrix(STIM_DAYS))
+      DILUTION    <- as.vector(as.matrix(DILUTIONS))
       
       #Creating Table containing all plate Information
       Plate <- NULL
-      Plate$MEASUREMENTS <- MEASUREMENTS
-      Plate$CELL_LINES <- CELL_LINES
-      Plate$CONDITIONS <- CONDITIONS
-      Plate$STIM_DAYS <- STIM_DAYS
+      Plate$MEASUREMENT <- MEASUREMENT
+      Plate$CELL_LINE   <- CELL_LINE
+      Plate$CONDITION   <- CONDITION
+      Plate$STIM_DAY    <- STIM_DAY
+
+      if (exists("DILUTION")) {
+        Plate$DILUTION <- DILUTION
+      } else {
+        Plate$DILUTION <- ifelse(Plate$CONDITION != "CALIBRATION", 5, NA_real_)
+      }
+      Plate$DILUTION <- as.numeric(Plate$DILUTION)
       
-      rm(MEASUREMENTS, CELL_LINES, CONDITIONS, STIM_DAYS)
+      rm(MEASUREMENT, CELL_LINE, CONDITION, STIM_DAY, DILUTION)
       
       Plate <- Plate %>% as.data.table()
       
       #Removing Empty Wells
-      Plate <- Plate %>% filter(CELL_LINES != "BLANK") %>% as.data.table()
+      Plate <- Plate %>% filter(CELL_LINE != "BLANK") %>% as.data.table()
       
       # Standard Curve ---------------------------------------------------------
-      Plate_Standards <- Plate %>% 
-        filter(CONDITIONS == "CALIBRATION") %>% 
-        group_by(CELL_LINES) %>% 
-        summarise(MEASUREMENTS_mean = mean(MEASUREMENTS)) %>%  #, 
-        #MEASUREMENTS_median = median(MEASUREMENTS)) %>%  
-        mutate(CELL_LINES = as.numeric(CELL_LINES),
+      Plate_Standards <- Plate[Plate$CONDITION == "CALIBRATION"]
+      Plate_Standards$CELL_LINE <- as.numeric(Plate_Standards$CELL_LINE)
+      
+      Plate_Standards <- Plate_Standards %>%
+        group_by(CELL_LINE) %>% 
+        summarise(MEASUREMENT_mean = mean(MEASUREMENT)) %>%
+        mutate(CELL_LINE = as.numeric(CELL_LINE),
                Date  = as_date(str_extract(basename(input_plate_dir), "\\d{8}"))) %>% 
-        arrange(CELL_LINES)
+        arrange(CELL_LINE)
       
-      # Plate_Date = Plate_Standards$Date %>% unique()
-      # 
-      # if (Plate_Date > "2023-01-01" & Plate_Date <= "2023-05-09") {
-      #   Fit <- lm(CELL_LINES ~ MEASUREMENTS_mean*5 - 1, data = Plate_Standards) #linear model of the Standard curve. -1 omits the intercept
-      # } else if (Plate_Date < "2023-01-01" | Plate_Date > "2023-05-09") {
-      #   Fit <- lm(CELL_LINES ~ MEASUREMENTS_mean - 1, data = Plate_Standards) #linear model of the Standard curve. -1 omits the intercept
-      # }
-      
-      Fit <- lm(CELL_LINES ~ MEASUREMENTS_mean - 1, data = Plate_Standards) #linear model of the Standard curve. -1 omits the intercept
+      # linear model of the Standard curve. -1 omits the intercept
+      # We will only use standard curve values of 1 and below (machine is optimized to measure absorptions between 0 and 1.1)
+      Fit <- lm(CELL_LINE ~ MEASUREMENT_mean - 1, data = Plate_Standards[Plate_Standards$MEASUREMENT_mean <= 1.1, ])
       
       R       <- summary(Fit)$r.squared
       Rsquare <- signif(R, digits = 4)
       
       print(paste0("IL2-Amount = slope*Intensity"))
       print(paste0("IL2-Amount = ", Fit$coefficients[1],"*Intensity"))
-      
-      Plate_Standards <- Plate_Standards %>% 
-        mutate(Fit_Test = (Fit$coefficients[1]*MEASUREMENTS_mean))
+      Plate_Standards <- Plate_Standards %>% mutate(Fit_Test = (Fit$coefficients[1]*MEASUREMENT_mean))
       
       # Plotting Standard Curve
       p <- ggplot(data = Plate_Standards) +
-        geom_point(aes(x = MEASUREMENTS_mean, y = CELL_LINES), size = 5) +
-        geom_line(aes(x = MEASUREMENTS_mean, y = Fit_Test), linetype = "dashed") +
+        geom_point(aes(x = MEASUREMENT_mean, y = CELL_LINE, col = MEASUREMENT_mean <= 1.5), size = 5) +
+        geom_line(aes(x = MEASUREMENT_mean, y = Fit_Test), linetype = "dashed") +
         annotate('text', x = 0.15, y = 700, label = paste0("R^2 = ", Rsquare), size = 10) +
         annotate('text', 
-                 x = max(Plate_Standards$MEASUREMENTS_mean) - (0.25 * max(Plate_Standards$MEASUREMENTS_mean)),
+                 x = max(Plate_Standards$MEASUREMENT_mean) - (0.25 * max(Plate_Standards$MEASUREMENT_mean)),
                  y = 150, label = paste0("IL-Amount = \n", signif(Fit$coefficients[1], digits = 4), " * Intensity")) +
         labs(x = "Measured Values",
              y = "IL-Concentration (pg/mL)") +
@@ -264,7 +221,8 @@ ELISA_Fx <- function(Input_Directory, Output_Directory) {
                 subtitle = paste0("R^2 = ", Rsquare, "\n IL-Amount = ", signif(Fit$coefficients[1], digits = 4), " * Intensity")) +
         theme_classic() +
         theme(axis.title = element_text(size = 30),
-              axis.text = element_text(size = 20))
+              axis.text = element_text(size = 20)) +
+        theme(legend.position = "none")
       
       # Saving the plot
       Save_Name <- paste0(basename(Input_plate), "_Standard_Curve.pdf")
@@ -276,15 +234,12 @@ ELISA_Fx <- function(Input_Directory, Output_Directory) {
       
       # Fitting Data To Standard Curve ----------------------------------------
       Plate <- Plate %>% 
-        filter(CONDITIONS != "CALIBRATION") %>% 
+        filter(CONDITION != "CALIBRATION") %>% 
         mutate(Plate = as.numeric(gsub("^Plate_(\\d+)_\\d{8}$", "\\1", basename(input_plate_dir))),
                Date  = as_date(str_extract(basename(input_plate_dir), "\\d{8}")),
-               Dilution_Factor = case_when(#Date <= "2023-01-01" ~ DILUTION_FACTOR_2,
-                 Date <= "2023-05-09" ~ DILUTION_FACTOR_5,
-                 Date >  "2023-05-09" ~ DILUTION_FACTOR_10),
-               MEASUREMENTS = as.numeric(MEASUREMENTS),
-               IL2_concentration = (Fit$coefficients[1]*MEASUREMENTS),
-               IL2_concentration_DILUTION_FACTOR = IL2_concentration*Dilution_Factor)
+               MEASUREMENT = as.numeric(MEASUREMENT),
+               IL2_concentration = (Fit$coefficients[1]*MEASUREMENT),
+               IL2_concentration_DILUTION_FACTOR = IL2_concentration*DILUTION)
       
       All_plates_data <- rbind(All_plates_data, Plate)
     }
@@ -647,3 +602,213 @@ plot_alphafold_results <- function(LOC, SUMMARY_FOLDER = NULL, xlab = "iScore", 
   } else return(plot)
   
 }
+
+################################################################################
+################################################################################
+################################################################################
+
+
+# Vectorized function for pattern matching
+matches_any_pattern_vec <- Vectorize(function(string, patterns) {
+  any(sapply(patterns, function(pattern) grepl(pattern, string)))
+}, vectorize.args = "string")
+
+# FILTER_VALUES = c("MyD88-GFP-synTRAF6-BD-1x", "MyD88-GFP-synTRAF6-BD-3x", "MyD88-GFP-synTRAF6-BD-5x")
+# FILTER_TYPE = "COHORT"        # Should be "COHORT" or "DAY"
+# COLOR = "salmon"
+# SEED = 600
+# plot_results = TRUE
+# plot_pval = TRUE
+# run_anova = FALSE
+# plot_faceted_by_date = FALSE
+# save_to = "~/Desktop"
+# POSITIVE_CTRL = c("WT")
+# NEGATIVE_CTRL = 0
+# DATA = All_plates_data
+
+filter_data <- function(DATA, FILTER_VALUES, FILTER_TYPE, POSITIVE_CTRL, NEGATIVE_CTRL) {
+  filter_pattern_func <- if (FILTER_TYPE %in% "COHORT") {
+    function(value, df) matches_any_pattern_vec(df$CELL_LINE, value) | matches_any_pattern_vec(df$CL_NAME_ON_PLOT, value)
+  } else if (FILTER_TYPE %in% "DAY") {
+    function(value, df) matches_any_pattern_vec(df$Date, value)
+  } else {
+    stop("Invalid FILTER_TYPE. Must be either 'COHORT' or 'DAY'.")
+  }
+  
+  # Generate lists for plates, dates, and stim_days based on the filter type
+  plates_list <- lapply(FILTER_VALUES, function(value) {
+    DATA %>%
+      filter(filter_pattern_func(value, DATA)) %>%
+      distinct(Plate) %>%
+      pull(Plate)
+  })
+  
+  dates_list <- lapply(FILTER_VALUES, function(value) {
+    DATA %>%
+      filter(filter_pattern_func(value, DATA)) %>%
+      distinct(Date) %>%
+      pull(Date)
+  })
+  
+  stim_list <- lapply(FILTER_VALUES, function(value) {
+    DATA %>%
+      filter(filter_pattern_func(value, DATA)) %>%
+      distinct(STIM_DAY) %>%
+      pull(STIM_DAY)
+  })
+  
+  condition_list <- lapply(FILTER_VALUES, function(value) {
+    DATA %>%
+      filter(filter_pattern_func(value, DATA)) %>%
+      distinct(CONDITION) %>%
+      pull(CONDITION)
+  })
+  
+  # Adding names to the list elements
+  names(plates_list)    <- FILTER_VALUES
+  names(dates_list)     <- FILTER_VALUES
+  names(stim_list)      <- FILTER_VALUES
+  names(condition_list) <- FILTER_VALUES
+  
+  # Create subset based on the lists
+  subset_list <- lapply(names(plates_list), function(value) {
+    plates <- plates_list[[value]]
+    dates  <- dates_list[[value]]
+    stim   <- stim_list[[value]]
+    cond   <- condition_list[[value]]
+    
+    DATA %>%
+      filter(Date %in% dates,
+             Plate %in% plates,
+             STIM_DAY %in% stim,
+             CONDITION %in% cond,
+             filter_pattern_func(c(POSITIVE_CTRL, NEGATIVE_CTRL, value), DATA))
+  })
+  
+  # Combine the subsets and return
+  FILTERED_SUBSET <- bind_rows(subset_list)
+  return(FILTERED_SUBSET)
+}
+
+calculate_baseline_and_control <- function(DATA, FILTER_TYPE, POSITIVE_CTRL, NEGATIVE_CTRL) {
+  # Determine the group_by and filter parameters based on FILTER_TYPE
+  if (FILTER_TYPE == "COHORT") {
+    group_vars <- c("Date", "STIM_DAY")
+    filter_var <- "CELL_LINE"
+  } else if (FILTER_TYPE == "DAY") {
+    group_vars <- c("Date", "STIM_DAY", "Plate")
+    filter_var <- "CELL_LINE"  # Assuming the correct variable for DAY filter
+  } else {
+    stop("Invalid FILTER_TYPE. Must be either 'cohort' or 'day'.")
+  }
+  
+  # Debugging information
+  # print(paste("Grouping by:", paste(group_vars, collapse = ", ")))
+  # print(paste("Filtering using variable:", filter_var))
+  
+  # Calculate the baseline control value
+  if (is.character(NEGATIVE_CTRL)) {
+    baseline <- DATA %>%
+      group_by(!!!syms(group_vars)) %>%
+      filter(matches_any_pattern_vec(!!sym(filter_var), NEGATIVE_CTRL), CONDITION == "UNSTIM") %>% 
+      summarise(baseline_control_value = mean(IL2_concentration_DILUTION_FACTOR))
+  } else {
+    baseline <- DATA %>%
+      group_by(!!!syms(group_vars)) %>%
+      filter(matches_any_pattern_vec(!!sym(filter_var), NEGATIVE_CTRL), CONDITION == "UNSTIM") %>% 
+      summarise(baseline_control_value = 0)
+  }
+  
+  # Join the calculated values with the dataset
+  data <- left_join(DATA, baseline, by = group_vars) %>%
+    mutate(IL2_concentration_DILUTION_FACTOR_REDUCED = case_when(!is.na(baseline_control_value) ~ IL2_concentration_DILUTION_FACTOR - baseline_control_value,
+                                                                 TRUE ~ IL2_concentration_DILUTION_FACTOR))
+  
+  # Calculate the mean of the stimulated, positive control per group
+  control_mean_per_day <- data %>%
+    filter(matches_any_pattern_vec(!!sym(filter_var), POSITIVE_CTRL), CONDITION == "STIM") %>% 
+    group_by(!!!syms(group_vars)) %>%
+    summarise(control_mean_MEASUREMENT = case_when(mean(IL2_concentration_DILUTION_FACTOR_REDUCED) > 0 ~ mean(IL2_concentration_DILUTION_FACTOR_REDUCED),
+                                                   TRUE ~ -Inf))
+  
+  # Join the calculated control means
+  data <- left_join(data, control_mean_per_day, by = group_vars)
+  
+  # Perform normalization
+  DATA_NORMALIZED <- data %>%
+    group_by(!!!syms(group_vars), CELL_LINE, CONDITION) %>%
+    mutate(IL2_concentration_DILUTION_FACTOR_NORMALIZED = case_when(IL2_concentration_DILUTION_FACTOR_REDUCED / control_mean_MEASUREMENT < 0 ~ 0,
+                                                                    TRUE ~ IL2_concentration_DILUTION_FACTOR_REDUCED / control_mean_MEASUREMENT),
+           triplicate_mean_per_day = mean(IL2_concentration_DILUTION_FACTOR_NORMALIZED)) %>%
+    ungroup()
+  return(DATA_NORMALIZED)
+}
+
+perform_statistical_analysis <- function(DATA, GROUP_BY_COLUMN) {
+  # Internal function for pairwise t-test
+  pairwise_ttest <- function(DATA, return_annotation = FALSE) {
+    p_values <- pairwise.t.test(DATA$triplicate_mean_per_day, DATA$CONDITION, p.adjust.method = "none")$p.value
+    
+    if (return_annotation) {
+      p_annotation <- ifelse(p_values < 0.001, '***', 
+                             ifelse(p_values < 0.01, '**', 
+                                    ifelse(p_values < 0.05, '*', 
+                                           'ns')))
+      return(p_annotation)
+    } else {
+      return(formatC(p_values, format = "e", digits = 3))
+    }
+  }
+  
+  # Calculate statistical significance using a t-test for each group
+  annotations <- sapply(split(DATA, DATA[[GROUP_BY_COLUMN]]), pairwise_ttest)
+  p_values    <- sapply(split(DATA, DATA[[GROUP_BY_COLUMN]]), function(DATA) pairwise_ttest(DATA, return_annotation = TRUE))
+  
+  return(list(annotations = annotations, p_values = p_values))
+}
+# Example usage
+# results <- perform_statistical_analysis(MEANS, "CL_NAME_ON_PLOT")
+
+create_plot <- function(FILTER_TYPE, MEANS, MOM_SUBSET, STATISTICAL_RESULTS, COLOR = "salmon", 
+                        x_label = "", y_label = "relative IL-2 conc.", plot_title = "IL-2 ELISA",
+                        SEED = 600, plot_pval = T, plot_faceted_by_date = F) {
+  plot <- ggplot(MEANS, aes(x = CL_NAME_ON_PLOT)) +
+    geom_col(     data = MOM_SUBSET,  aes(y = triplicate_mean_per_day, fill = CONDITION), position = position_dodge(width = 1), alpha = 0.5) +
+    geom_point(   data = MEANS,       aes(y = triplicate_mean_per_day, group = CONDITION, shape = STIM_DAY),               position = position_jitterdodge(jitter.height = 0, jitter.width = 1.2, seed = SEED), col = "white", size = 4) +
+    geom_point(   data = MEANS,       aes(y = triplicate_mean_per_day, group = CONDITION, shape = STIM_DAY), position = position_jitterdodge(jitter.height = 0, jitter.width = 1.2, seed = SEED), 
+                  col = "black",
+                  size = 3) +
+    geom_errorbar(data = MOM_SUBSET, aes(ymin = triplicate_mean_per_day - triplicate_sd_per_day, 
+                                         ymax = triplicate_mean_per_day + triplicate_sd_per_day, group = CONDITION), width = 0.25, position = position_dodge(width = 1)) +
+    labs(x = x_label,
+         y = y_label) +
+    scale_fill_manual(values = c("UNSTIM" = "gray50", "STIM" = COLOR)) +
+    ggtitle(plot_title) +
+    theme_cowplot() +
+    theme(legend.position = "bottom") +
+    theme(plot.title = element_text(hjust = 0.5))
+  
+  if (FILTER_TYPE == "DAY") {
+    plot_faceted_by_date = T
+    plot_pval = F
+  }
+  
+  if (plot_pval == T & plot_faceted_by_date == F) {
+    plot <- plot +
+      geom_text(data = data.frame(CL_NAME_ON_PLOT = names(STATISTICAL_RESULTS[["annotations"]]), y = max(MEANS$triplicate_mean_per_day) + 0.1, label = STATISTICAL_RESULTS[["annotations"]]), aes(y = y, label = label), col = "gray40", size = 4) +
+      geom_text(data = data.frame(CL_NAME_ON_PLOT = names(STATISTICAL_RESULTS[["p_values"]]), y = max(MEANS$triplicate_mean_per_day) + 0.2, label = STATISTICAL_RESULTS[["p_values"]]), aes(y = y, label = label), size = 7)
+  } else if (plot_pval == F & plot_faceted_by_date == T) {
+    plot <- plot  + 
+      facet_wrap(~Date, scales = "free_x")
+  } else {
+    plot_pval = F
+    plot <- plot  + 
+      facet_wrap(~Date, scales = "free_x")
+    print("Overriding p-value plotting. Option not available for date-faceted plots.")
+  }
+  
+  return(plot)
+}
+
+
+
