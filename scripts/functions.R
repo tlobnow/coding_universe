@@ -203,8 +203,8 @@ ELISA_Fx <- function(Input_Directory, Output_Directory) {
       R       <- summary(Fit)$r.squared
       Rsquare <- signif(R, digits = 4)
       
-      print(paste0("IL2-Amount = slope*Intensity"))
-      print(paste0("IL2-Amount = ", Fit$coefficients[1],"*Intensity"))
+      print(paste0("Secretion = slope*Intensity"))
+      print(paste0("Secretion = ", Fit$coefficients[1],"*Intensity"))
       Plate_Standards <- Plate_Standards %>% mutate(Fit_Test = (Fit$coefficients[1]*MEASUREMENT_mean))
       
       # Plotting Standard Curve
@@ -235,11 +235,11 @@ ELISA_Fx <- function(Input_Directory, Output_Directory) {
       # Fitting Data To Standard Curve ----------------------------------------
       Plate <- Plate %>% 
         filter(CONDITION != "CALIBRATION") %>% 
-        mutate(Plate = as.numeric(gsub("^Plate_(\\d+)_\\d{8}$", "\\1", basename(input_plate_dir))),
+        mutate(Plate = as.numeric(gsub("(DR_)?Plate_(\\d+)_\\d{8}$", "\\2", basename(input_plate_dir))),
                Date  = as_date(str_extract(basename(input_plate_dir), "\\d{8}")),
                MEASUREMENT = as.numeric(MEASUREMENT),
-               IL2_concentration = (Fit$coefficients[1]*MEASUREMENT),
-               IL2_concentration_DILUTION_FACTOR = IL2_concentration*DILUTION)
+               Concentration = (Fit$coefficients[1]*MEASUREMENT),
+               Concentration_DILUTION_FACTOR = Concentration*DILUTION)
       
       All_plates_data <- rbind(All_plates_data, Plate)
     }
@@ -711,7 +711,7 @@ calculate_baseline_and_control <- function(DATA, FILTER_TYPE, POSITIVE_CTRL, NEG
     baseline <- DATA %>%
       group_by(!!!syms(group_vars)) %>%
       filter(matches_any_pattern_vec(!!sym(filter_var), NEGATIVE_CTRL), CONDITION == "UNSTIM") %>% 
-      summarise(baseline_control_value = mean(IL2_concentration_DILUTION_FACTOR))
+      summarise(baseline_control_value = mean(Concentration_DILUTION_FACTOR))
   } else {
     baseline <- DATA %>%
       group_by(!!!syms(group_vars)) %>%
@@ -721,14 +721,14 @@ calculate_baseline_and_control <- function(DATA, FILTER_TYPE, POSITIVE_CTRL, NEG
   
   # Join the calculated values with the dataset
   data <- left_join(DATA, baseline, by = group_vars) %>%
-    mutate(IL2_concentration_DILUTION_FACTOR_REDUCED = case_when(!is.na(baseline_control_value) ~ IL2_concentration_DILUTION_FACTOR - baseline_control_value,
-                                                                 TRUE ~ IL2_concentration_DILUTION_FACTOR))
+    mutate(Concentration_DILUTION_FACTOR_REDUCED = case_when(!is.na(baseline_control_value) ~ Concentration_DILUTION_FACTOR - baseline_control_value,
+                                                                 TRUE ~ Concentration_DILUTION_FACTOR))
   
   # Calculate the mean of the stimulated, positive control per group
   control_mean_per_day <- data %>%
     filter(matches_any_pattern_vec(!!sym(filter_var), POSITIVE_CTRL), CONDITION == "STIM") %>% 
     group_by(!!!syms(group_vars)) %>%
-    summarise(control_mean_MEASUREMENT = case_when(mean(IL2_concentration_DILUTION_FACTOR_REDUCED) > 0 ~ mean(IL2_concentration_DILUTION_FACTOR_REDUCED),
+    summarise(control_mean_MEASUREMENT = case_when(mean(Concentration_DILUTION_FACTOR_REDUCED) > 0 ~ mean(Concentration_DILUTION_FACTOR_REDUCED),
                                                    TRUE ~ -Inf))
   
   # Join the calculated control means
@@ -737,9 +737,9 @@ calculate_baseline_and_control <- function(DATA, FILTER_TYPE, POSITIVE_CTRL, NEG
   # Perform normalization
   DATA_NORMALIZED <- data %>%
     group_by(!!!syms(group_vars), CELL_LINE, CONDITION) %>%
-    mutate(IL2_concentration_DILUTION_FACTOR_NORMALIZED = case_when(IL2_concentration_DILUTION_FACTOR_REDUCED / control_mean_MEASUREMENT < 0 ~ 0,
-                                                                    TRUE ~ IL2_concentration_DILUTION_FACTOR_REDUCED / control_mean_MEASUREMENT),
-           triplicate_mean_per_day = mean(IL2_concentration_DILUTION_FACTOR_NORMALIZED)) %>%
+    mutate(Concentration_DILUTION_FACTOR_NORMALIZED = case_when(Concentration_DILUTION_FACTOR_REDUCED / control_mean_MEASUREMENT < 0 ~ 0,
+                                                                    TRUE ~ Concentration_DILUTION_FACTOR_REDUCED / control_mean_MEASUREMENT),
+           triplicate_mean_per_day = mean(Concentration_DILUTION_FACTOR_NORMALIZED)) %>%
     ungroup()
   return(DATA_NORMALIZED)
 }
@@ -811,4 +811,126 @@ create_plot <- function(FILTER_TYPE, MEANS, MOM_SUBSET, STATISTICAL_RESULTS, COL
 }
 
 
+
+plot_dose_response_ELISA <- function(DATA, FILTER_VALUES, 
+                                     COLOR = "salmon", SEED = 600, 
+                                     plot_pval = TRUE, plot_results = TRUE, 
+                                     run_anova = FALSE, plot_faceted_by_date = FALSE, 
+                                     x_label = "IL-1 [ng/uL]", y_label = "relative IL-2 secretion", 
+                                     plot_title = "Dose Response IL-2 ELISA",
+                                     save_to = "~/Desktop") {
+  
+  group_vars <- c("CELL_LINE", "CL_NAME_ON_PLOT", "CONDITION")
+  extra_var <- "STIM_DAY" 
+  print("group_vars used:")
+  print(group_vars)
+  print(paste("extra_var used:", extra_var))
+      
+  ALL_COHORT_DATA <- lapply(FILTER_VALUES, function(FILTER_VALUE) {
+    
+    print("Step 1: Filter & Subset the main data into lists")
+    COHORT_DATA <- All_plates_data %>%
+      group_by(CELL_LINE, STIM_DAY, CONDITION, Date, Plate) %>%
+      filter(Date == FILTER_VALUE)
+    
+    print("Step 2: Calculate baseline values (lowest value per stimulation day")
+    baseline <- COHORT_DATA %>%
+      group_by(Plate) %>%
+      filter(Date == FILTER_VALUE) %>%
+      summarise(baseline_control_value = min(Concentration_DILUTION_FACTOR))
+    
+    print("Step 3: Subtract the lowest value from all measurements to normalize per plate (Machine Normalization).")
+    COHORT_DATA <- left_join(COHORT_DATA, baseline) %>%
+      mutate(Concentration_DILUTION_FACTOR_REDUCED    = case_when(!is.na(baseline_control_value) ~ Concentration_DILUTION_FACTOR - baseline_control_value,
+                                                                  TRUE ~ Concentration_DILUTION_FACTOR))
+    print("Step 4: Calculate the baseline-corrected means per cell line, per condition, per stimulation and retrieve the max values to normalize for day-to-day differences.")
+    control_mean_per_day <- COHORT_DATA %>%
+      group_by(CELL_LINE, CONDITION, Date, STIM_DAY, Plate) %>%
+      summarise(control_mean_MEASUREMENT = case_when(mean(Concentration_DILUTION_FACTOR_REDUCED) > 0 ~ mean(Concentration_DILUTION_FACTOR_REDUCED), TRUE ~ -Inf)) %>%
+      ungroup() %>%
+      group_by(STIM_DAY) %>%
+      summarise(control_mean_MEASUREMENT = max(control_mean_MEASUREMENT))
+    
+    print("Step 5: Normalize the baseline-corrected values by dividing each value by the max value per stimulation day.")
+    COHORT_DATA <- left_join(COHORT_DATA, control_mean_per_day) %>%
+      group_by(CELL_LINE, CONDITION, Date, STIM_DAY) %>%
+      mutate(Concentration_DILUTION_FACTOR_NORMALIZED = case_when(Concentration_DILUTION_FACTOR_REDUCED / control_mean_MEASUREMENT < 0 ~ 0, TRUE ~ Concentration_DILUTION_FACTOR_REDUCED / control_mean_MEASUREMENT),
+             triplicate_mean_per_day = mean(Concentration_DILUTION_FACTOR_NORMALIZED)) %>%
+      ungroup()
+    
+    # Make sure that the conditions are now read as numbers for plotting!
+    COHORT_DATA$CONDITION <- as.numeric(as.character(COHORT_DATA$CONDITION))
+    
+    # Additional processing steps can be added here
+    return(COHORT_DATA)
+  })
+  
+  COHORT_DATA <- ALL_COHORT_DATA[[1]]
+  
+  group_and_summarize <- function(COHORT_DATA, group_vars = c("CELL_LINE", "CL_NAME_ON_PLOT", "CONDITION"), extra_var = "STIM_DAY") {
+    
+    print("Step 6: Calculate the normalized means per grouped variables (group_vars + extra_vars)")
+    MEANS <- COHORT_DATA %>%
+      group_by_at(c(group_vars, extra_var)) %>%
+      distinct(triplicate_mean_per_day, STIM_DAY, .keep_all = TRUE) %>%
+      ungroup()
+    # print(MEANS)  # Debugging line
+    
+    print("Step 7: Calculate the mean of means (MOM) per cell line and per condition.")
+    MOM_SUBSET <- COHORT_DATA %>%
+      group_by(CELL_LINE, CL_NAME_ON_PLOT, CONDITION) %>%
+      summarise(triplicate_sd_per_day = sd(triplicate_mean_per_day),
+                triplicate_mean_per_day = mean(triplicate_mean_per_day)) %>%
+      distinct(.keep_all = TRUE)
+    # print(MOM_SUBSET)  # Debugging line
+    
+    return(list(MEANS = MEANS, MOM_SUBSET = MOM_SUBSET))
+  }
+  
+  result_list <- group_and_summarize(COHORT_DATA, group_vars, extra_var)
+  # Group, Summarize, and Extract Results from group_and_summarize
+  # result_list <- group_and_summarize(COHORT_DATA, group_vars, extra_var)
+  MEANS       <- result_list$MEANS
+  MOM_SUBSET  <- result_list$MOM_SUBSET
+  
+  print("Step 8: Plot the results.")
+
+  color_doseresponse <- setNames(DATA$PLOTTING_COLOR, DATA$CELL_LINE)
+  color_doseresponse <- unique(color_doseresponse) # Remove duplicates, if any
+  
+  if (plot_results) {
+    create_dose_response_plot <- function(MEANS = MEANS, MOM_SUBSET = MOM_SUBSET, title = "Dose Response Plot", x_label = "X-Axis", y_label = "Y-Axis", color_doseresponse) {
+      
+      # Deriving breaks from unique CONDITION values
+      condition_breaks <- sort(unique(MOM_SUBSET$CONDITION))
+      
+      PLOT <- ggplot(data = MOM_SUBSET, aes(x = CONDITION, y = triplicate_mean_per_day, group = CELL_LINE, color = CELL_LINE)) +
+        geom_path(size = 1.5) +
+        color_palette(palette = color_doseresponse) +
+        fill_palette(palette  = color_doseresponse) +
+        geom_point(data = MEANS, aes(x = CONDITION, y = triplicate_mean_per_day, fill = CELL_LINE), size = 3, 
+                   color = "black", shape = 21) +
+        geom_errorbar(data = MOM_SUBSET,
+                      aes(x = CONDITION, y = triplicate_mean_per_day, 
+                          ymin = triplicate_mean_per_day - triplicate_sd_per_day, 
+                          ymax = triplicate_mean_per_day + triplicate_sd_per_day), 
+                      col = "black", linewidth = .4, width = 0.25) +
+        scale_x_continuous(trans = "log10", breaks = condition_breaks,
+                           # remove scientific notation
+                           labels = scales::label_comma()) +
+        labs(x = "IL-1 (ng/mL)", y = "relative IL-2 secretion") +
+        theme_classic(base_size = 9)+
+        theme(legend.position = "bottom",
+              axis.text.x = element_text(color = "black"),
+              axis.text.y = element_text(color = "black"))
+      
+      return(PLOT)
+    }
+    
+    PLOT <- create_dose_response_plot(MEANS = MEANS, MOM_SUBSET = MOM_SUBSET, title = "Dose Response Plot", x_label = "X-Axis", y_label = "Y-Axis", color_doseresponse)
+    
+    return(PLOT)
+  }
+  
+}
 
