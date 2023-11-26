@@ -1,3 +1,5 @@
+# FUNCTIONS NEW VERSION 20231125
+
 #         .
 #       ":"
 #     ___:____     |"\/"|
@@ -170,7 +172,7 @@ ELISA_Fx <- function(Input_Directory, Output_Directory) {
       Plate$CELL_LINE   <- CELL_LINE
       Plate$CONDITION   <- CONDITION
       Plate$STIM_DAY    <- STIM_DAY
-
+      
       if (exists("DILUTION")) {
         Plate$DILUTION <- DILUTION
       } else {
@@ -239,7 +241,9 @@ ELISA_Fx <- function(Input_Directory, Output_Directory) {
                Date  = as_date(str_extract(basename(input_plate_dir), "\\d{8}")),
                MEASUREMENT = as.numeric(MEASUREMENT),
                Concentration = (Fit$coefficients[1]*MEASUREMENT),
-               Concentration_DILUTION_FACTOR = Concentration*DILUTION)
+               Concentration_DILUTION_FACTOR = Concentration*DILUTION,
+               Is_Dose_Response = ifelse(str_detect(basename(input_plate_dir), "^DR_"), TRUE, FALSE)
+        )
       
       All_plates_data <- rbind(All_plates_data, Plate)
     }
@@ -392,10 +396,10 @@ run_extraction <- function(LOC, MAIN = NULL, SUMMARY_FOLDER = NULL, ADD_2_EXISTI
           # dplyr::mutate(FILE_RECYCLE = paste0(FILE_MODEL, "_RECYCLE_", RECYCLE), RANK = NA) %>%
           dplyr::mutate(FILE_RECYCLE = paste0(FILE, "_RECYCLE_", RECYCLE), 
                         # RANK = NA
-                        ) %>%
+          ) %>%
           dplyr::distinct(FILE_RECYCLE, .keep_all = TRUE)# %>%
-          # dplyr::group_by(FILE) %>%
-          # dplyr::mutate(RANK = frank(desc(iScore), ties.method = "min"))
+        # dplyr::group_by(FILE) %>%
+        # dplyr::mutate(RANK = frank(desc(iScore), ties.method = "min"))
         
         data.table::fwrite(JE, CSV_FILE, row.names = FALSE)
         data.table::fwrite(JE, summaryWithRecycles, row.names = FALSE, append = T)
@@ -526,7 +530,7 @@ plot_alphafold_results <- function(LOC, SUMMARY_FOLDER = NULL, xlab = "iScore", 
           dplyr::select(FILE, RECYCLE, iScore, piTM) %>% 
           dplyr::arrange(desc(iScore)))
   
-
+  
   if (is.null(plot_title)) {
     plot_title = paste0("AlphaFold Results for ", LOC)
   }
@@ -603,10 +607,35 @@ plot_alphafold_results <- function(LOC, SUMMARY_FOLDER = NULL, xlab = "iScore", 
   
 }
 
-################################################################################
-################################################################################
-################################################################################
+################################################################################################################################################################
+################################################################################################################################################################
+################################################################################################################################################################
 
+# Define the function to save plots with specified dimensions
+save_plots <- function(folder_name, plots, path = save_to, width = 12, height = 8) {
+  # Create the full path for the folder
+  folder_path <- file.path(save_to, folder_name)
+  
+  # Check if the folder exists, and if not, create it
+  if (!dir.exists(folder_path)) {
+    dir.create(folder_path, recursive = TRUE)
+  }
+  
+  # Loop through the plots and save them
+  for (i in seq_along(plots)) {
+    file_base <- file.path(folder_path, paste0(folder_name, "_plot_", i))
+    
+    # Save as SVG
+    ggsave(paste0(file_base, ".svg"), plot = plots[[i]], device = "svg", width = width, height = height)
+    
+    # Save as PNG
+    ggsave(paste0(file_base, ".png"), plot = plots[[i]], device = "png", width = width, height = height)
+  }
+}
+
+################################################################################################################################################################
+################################################################################################################################################################
+################################################################################################################################################################
 
 # Vectorized function for pattern matching
 matches_any_pattern_vec <- Vectorize(function(string, patterns) {
@@ -690,6 +719,7 @@ filter_data <- function(DATA, FILTER_VALUES, FILTER_TYPE, POSITIVE_CTRL, NEGATIV
   return(FILTERED_SUBSET)
 }
 
+# DATA = FILTERED_SUBSET
 calculate_baseline_and_control <- function(DATA, FILTER_TYPE, POSITIVE_CTRL, NEGATIVE_CTRL) {
   # Determine the group_by and filter parameters based on FILTER_TYPE
   if (FILTER_TYPE == "COHORT") {
@@ -712,38 +742,74 @@ calculate_baseline_and_control <- function(DATA, FILTER_TYPE, POSITIVE_CTRL, NEG
       group_by(!!!syms(group_vars)) %>%
       filter(matches_any_pattern_vec(!!sym(filter_var), NEGATIVE_CTRL), CONDITION == "UNSTIM") %>% 
       summarise(baseline_control_value = mean(Concentration_DILUTION_FACTOR))
+    
+    # Join the calculated values with the dataset
+    data <- left_join(DATA, baseline, by = group_vars) %>%
+      mutate(Concentration_DILUTION_FACTOR_REDUCED = case_when(!is.na(baseline_control_value) ~ Concentration_DILUTION_FACTOR - baseline_control_value,
+                                                               TRUE ~ Concentration_DILUTION_FACTOR))
   } else {
-    baseline <- DATA %>%
-      group_by(!!!syms(group_vars)) %>%
-      filter(matches_any_pattern_vec(!!sym(filter_var), NEGATIVE_CTRL), CONDITION == "UNSTIM") %>% 
-      summarise(baseline_control_value = 0)
+    # baseline <- DATA %>%
+    #   group_by(!!!syms(group_vars)) %>%
+    #   summarise(baseline_control_value = min(Concentration_DILUTION_FACTOR))
+    baseline <- data %>%
+      group_by(Date) %>%
+      filter(Date == FILTER_VALUE) %>%
+      summarise(baseline_control_value = min(Concentration_DILUTION_FACTOR))
+    
+    # Join the calculated values with the dataset
+    data <- left_join(DATA, baseline) %>%
+      mutate(Concentration_DILUTION_FACTOR_REDUCED = case_when(!is.na(baseline_control_value) ~ Concentration_DILUTION_FACTOR - baseline_control_value,
+                                                               TRUE ~ Concentration_DILUTION_FACTOR))
   }
   
-  # Join the calculated values with the dataset
-  data <- left_join(DATA, baseline, by = group_vars) %>%
-    mutate(Concentration_DILUTION_FACTOR_REDUCED = case_when(!is.na(baseline_control_value) ~ Concentration_DILUTION_FACTOR - baseline_control_value,
-                                                                 TRUE ~ Concentration_DILUTION_FACTOR))
   
-  # Calculate the mean of the stimulated, positive control per group
-  control_mean_per_day <- data %>%
-    filter(matches_any_pattern_vec(!!sym(filter_var), POSITIVE_CTRL), CONDITION == "STIM") %>% 
-    group_by(!!!syms(group_vars)) %>%
-    summarise(control_mean_MEASUREMENT = case_when(mean(Concentration_DILUTION_FACTOR_REDUCED) > 0 ~ mean(Concentration_DILUTION_FACTOR_REDUCED),
-                                                   TRUE ~ -Inf))
+  if (is.character(POSITIVE_CTRL)) {
+    control_mean_per_day <- data %>%
+      filter(matches_any_pattern_vec(!!sym(filter_var), POSITIVE_CTRL), CONDITION == "STIM") %>% 
+      group_by(!!!syms(group_vars)) %>%
+      summarise(control_mean_MEASUREMENT = case_when(mean(Concentration_DILUTION_FACTOR_REDUCED) > 0 ~ mean(Concentration_DILUTION_FACTOR_REDUCED), TRUE ~ -Inf))
+    
+    # Join the calculated control means
+    data <- left_join(data, control_mean_per_day, by = group_vars)
+    
+    # Perform normalization
+    DATA_NORMALIZED <- data %>%
+      group_by(!!!syms(group_vars), CELL_LINE, CONDITION) %>%
+      mutate(Concentration_DILUTION_FACTOR_NORMALIZED = case_when(Concentration_DILUTION_FACTOR_REDUCED / control_mean_MEASUREMENT < 0 ~ 0,
+                                                                  TRUE ~ Concentration_DILUTION_FACTOR_REDUCED / control_mean_MEASUREMENT),
+             triplicate_mean_per_day = mean(Concentration_DILUTION_FACTOR_NORMALIZED)) %>%
+      ungroup()
+    
+  } else {
+    # Calculate control mean using an alternative method, e.g., mean value per group
+    # control_mean_per_day <- data %>%
+    #   group_by(!!!syms(group_vars)) %>%
+    #   summarise(control_mean_MEASUREMENT = mean(Concentration_DILUTION_FACTOR_REDUCED))
+    control_mean_per_day <- data %>%
+      group_by(STIM_DAY) %>%
+      reframe(Concentration_DILUTION_FACTOR_REDUCED = Concentration_DILUTION_FACTOR_REDUCED) %>%
+      ungroup() %>%
+      group_by(STIM_DAY) %>%
+      reframe(control_MEASUREMENT = max(Concentration_DILUTION_FACTOR_REDUCED),
+              STIM_DAY = STIM_DAY) %>%
+      unique()
+    
+    # Join the calculated control means
+    data <- left_join(data, control_mean_per_day)
+    
+    # Perform normalization
+    DATA_NORMALIZED <- data %>%
+      group_by(!!!syms(group_vars), CELL_LINE, CONDITION) %>%
+      mutate(Concentration_DILUTION_FACTOR_NORMALIZED = case_when(Concentration_DILUTION_FACTOR_REDUCED / control_MEASUREMENT < 0 ~ 0,
+                                                                  TRUE ~ Concentration_DILUTION_FACTOR_REDUCED / control_MEASUREMENT),
+             triplicate_mean_per_day = mean(Concentration_DILUTION_FACTOR_NORMALIZED)) %>%
+      ungroup()
+  }
   
-  # Join the calculated control means
-  data <- left_join(data, control_mean_per_day, by = group_vars)
-  
-  # Perform normalization
-  DATA_NORMALIZED <- data %>%
-    group_by(!!!syms(group_vars), CELL_LINE, CONDITION) %>%
-    mutate(Concentration_DILUTION_FACTOR_NORMALIZED = case_when(Concentration_DILUTION_FACTOR_REDUCED / control_mean_MEASUREMENT < 0 ~ 0,
-                                                                    TRUE ~ Concentration_DILUTION_FACTOR_REDUCED / control_mean_MEASUREMENT),
-           triplicate_mean_per_day = mean(Concentration_DILUTION_FACTOR_NORMALIZED)) %>%
-    ungroup()
   return(DATA_NORMALIZED)
 }
 
+# DATA = DATA_NORMALIZED
 perform_statistical_analysis <- function(DATA, GROUP_BY_COLUMN) {
   # Internal function for pairwise t-test
   pairwise_ttest <- function(DATA, return_annotation = FALSE) {
@@ -769,8 +835,9 @@ perform_statistical_analysis <- function(DATA, GROUP_BY_COLUMN) {
 # Example usage
 # results <- perform_statistical_analysis(MEANS, "CL_NAME_ON_PLOT")
 
-create_plot <- function(FILTER_TYPE, MEANS, MOM_SUBSET, STATISTICAL_RESULTS, COLOR = "salmon", 
-                        x_label = "", y_label = "relative IL-2 conc.", plot_title = "IL-2 ELISA",
+create_plot <- function(FILTER_VALUES, FILTER_TYPE, MEANS, MOM_SUBSET, STATISTICAL_RESULTS, COLOR = "salmon", 
+                        x_label = xlabel, y_label = y_label, plot_title = plot_title,
+                        subtitle = paste0("Assay performed for ", FILTER_VALUES, ", based on filter type ", FILTER_TYPE),
                         SEED = 600, plot_pval = T, plot_faceted_by_date = F) {
   plot <- ggplot(MEANS, aes(x = CL_NAME_ON_PLOT)) +
     geom_col(     data = MOM_SUBSET,  aes(y = triplicate_mean_per_day, fill = CONDITION), position = position_dodge(width = 1), alpha = 0.5) +
@@ -810,51 +877,126 @@ create_plot <- function(FILTER_TYPE, MEANS, MOM_SUBSET, STATISTICAL_RESULTS, COL
   return(plot)
 }
 
+# I am providing an example cohort of the All_plates_data data frame to debug the functions:
+# FILTER_VALUES = c("BDLD_57", "BDLD_6-")  # Example cohort names
+# FILTER_TYPE = "COHORT"        # Should be "COHORT" or "DAY"
+# save_to = "~/Desktop"
+# POSITIVE_CTRL = c("3E10_GFP", "MyD88_GFP")
+# NEGATIVE_CTRL = c("204_TRIPLE_KO", "tKO_EL4")
 
+plot_ELISA <- function(FILTER_VALUES, FILTER_TYPE, POSITIVE_CTRL = 0, NEGATIVE_CTRL = 0,
+                       COLOR = "salmon", SEED = 600, 
+                       plot_pval = TRUE,  plot_results = TRUE, 
+                       run_anova = FALSE, plot_faceted_by_date = FALSE, 
+                       x_label = "", y_label = "relative IL-2 conc.", plot_title = "IL-2 ELISA",
+                       subtitle = paste0("Assay performed for ", FILTER_VALUES, ", based on filter type ", FILTER_TYPE)) {
+  
+  ALL_COHORT_DATA <- lapply(FILTER_VALUES, function(FILTER_VALUE) {
+    # Step 1: Filter & Subset the main data into lists
+    COHORT_DATA <- filter_data(All_plates_data, FILTER_VALUE, FILTER_TYPE, POSITIVE_CTRL, NEGATIVE_CTRL)
+    # Step 2 and Step 3
+    NORMALIZED_DATA <- calculate_baseline_and_control(COHORT_DATA, FILTER_TYPE, POSITIVE_CTRL, NEGATIVE_CTRL)
+    return(NORMALIZED_DATA)
+  })
+  
+  # Step 4: Combine the subset lists into one data frame
+  COMBINED_DATA <- bind_rows(ALL_COHORT_DATA)
+  # print(COMBINED_DATA)  # Debugging line
+  
+  # Step 5: Calculate the means per cohort
+  MEANS <- COMBINED_DATA %>%
+    group_by(CELL_LINE, CONDITION, Date) %>%
+    distinct(triplicate_mean_per_day, STIM_DAY, .keep_all = TRUE) %>%
+    ungroup()
+  # print(MEANS)  # Debugging line
+  
+  # Step 6: Calculate the mean of means (MOM) per cohort
+  MOM_SUBSET <- MEANS %>%
+    group_by(CELL_LINE, CL_NAME_ON_PLOT, CONDITION, Date) %>%
+    summarise(triplicate_sd_per_day = sd(triplicate_mean_per_day),
+              triplicate_mean_per_day = mean(triplicate_mean_per_day)) %>%
+    distinct(.keep_all = TRUE)
+  # print(MOM_SUBSET)  # Debugging line
+  
+  # Step 7: Perform statistics per cohort
+  STATISTICAL_RESULTS <- perform_statistical_analysis(MEANS, "CL_NAME_ON_PLOT")
+  # print(STATISTICAL_RESULTS)  # Debugging line
+  
+  # Step 8: Plot the results
+  if (plot_results) {
+    if (all(POSITIVE_CTRL == 0) & all(NEGATIVE_CTRL == 0)) {
+      PLOT <- ggplot(MEANS, aes(x = CL_NAME_ON_PLOT)) +
+        geom_col(     data = MOM_SUBSET,  aes(y = triplicate_mean_per_day, fill = CONDITION, group = CONDITION), position = position_dodge(width = 1), alpha = 0.5) +
+        labs(x = x_label,
+             y = y_label) +
+        scale_fill_manual(values = c("UNSTIM" = "gray50", "STIM" = COLOR)) +
+        labs(x = x_label, y = y_label) +
+        ggtitle(label = plot_title, subtitle = subtitle) +
+        theme_cowplot() +
+        theme(legend.position = "bottom") +
+        theme(plot.title = element_text(hjust = 0.5)) +
+        facet_wrap(~STIM_DAY)
+      
+      PLOT
+      
+    } else {
+      PLOT <- create_plot(FILTER_VALUES, FILTER_TYPE, MEANS, MOM_SUBSET, STATISTICAL_RESULTS, COLOR = "salmon", SEED = 600,
+                          x_label = x_label, y_label = y_label, plot_title = plot_title, subtitle = subtitle)
+    }
+    list(PLOT)
+  }
+}
+
+################################################################################################################################################################
+################################################################################################################################################################
+################################################################################################################################################################
 
 plot_dose_response_ELISA <- function(DATA, FILTER_VALUES, 
-                                     COLOR = "salmon", SEED = 600, 
+                                     COLOR_PALETTE_KEY = color_palette_key,
+                                     SEED = 600, 
                                      plot_pval = TRUE, plot_results = TRUE, 
                                      run_anova = FALSE, plot_faceted_by_date = FALSE, 
-                                     x_label = "IL-1 [ng/uL]", y_label = "relative IL-2 secretion", 
+                                     x_label = "Stimulant Conc.", 
+                                     y_label = "Relative Response", 
                                      plot_title = "Dose Response IL-2 ELISA",
-                                     save_to = "~/Desktop") {
+                                     subtitle = paste0("Assay performed on ", FILTER_VALUES),
+                                     without_scientific_notation = FALSE) {
   
   group_vars <- c("CELL_LINE", "CL_NAME_ON_PLOT", "CONDITION")
   extra_var <- "STIM_DAY" 
-  print("group_vars used:")
-  print(group_vars)
-  print(paste("extra_var used:", extra_var))
-      
+  cat("group_vars used:\n")
+  cat(group_vars, "\n")
+  cat(paste("extra_var used:", extra_var, "\n"))
+  
   ALL_COHORT_DATA <- lapply(FILTER_VALUES, function(FILTER_VALUE) {
     
-    print("Step 1: Filter & Subset the main data into lists")
+    cat("Step 1: Filter & Subset the main data into lists\n")
     COHORT_DATA <- All_plates_data %>%
       group_by(CELL_LINE, STIM_DAY, CONDITION, Date, Plate) %>%
       filter(Date == FILTER_VALUE)
     
-    print("Step 2: Calculate baseline values (lowest value per stimulation day")
+    cat("Step 2: Calculate baseline values (lowest value per plate)\n")
     baseline <- COHORT_DATA %>%
       group_by(Plate) %>%
       filter(Date == FILTER_VALUE) %>%
       summarise(baseline_control_value = min(Concentration_DILUTION_FACTOR))
     
-    print("Step 3: Subtract the lowest value from all measurements to normalize per plate (Machine Normalization).")
+    cat("Step 3: Subtract the lowest value from all measurements to normalize per plate (Machine Normalization).\n")
     COHORT_DATA <- left_join(COHORT_DATA, baseline) %>%
       mutate(Concentration_DILUTION_FACTOR_REDUCED    = case_when(!is.na(baseline_control_value) ~ Concentration_DILUTION_FACTOR - baseline_control_value,
                                                                   TRUE ~ Concentration_DILUTION_FACTOR))
-    print("Step 4: Calculate the baseline-corrected means per cell line, per condition, per stimulation and retrieve the max values to normalize for day-to-day differences.")
+    cat("Step 4: Baseline-corrected per cell line, per condition, per stimulation and retrieve the max values to normalize for day-to-day differences.\n")
     control_mean_per_day <- COHORT_DATA %>%
       group_by(CELL_LINE, CONDITION, Date, STIM_DAY, Plate) %>%
-      summarise(control_mean_MEASUREMENT = case_when(mean(Concentration_DILUTION_FACTOR_REDUCED) > 0 ~ mean(Concentration_DILUTION_FACTOR_REDUCED), TRUE ~ -Inf)) %>%
+      reframe(Concentration_DILUTION_FACTOR_REDUCED = Concentration_DILUTION_FACTOR_REDUCED) %>%
       ungroup() %>%
       group_by(STIM_DAY) %>%
-      summarise(control_mean_MEASUREMENT = max(control_mean_MEASUREMENT))
+      reframe(control_MEASUREMENT = max(Concentration_DILUTION_FACTOR_REDUCED))
     
-    print("Step 5: Normalize the baseline-corrected values by dividing each value by the max value per stimulation day.")
+    cat("Step 5: Normalize the baseline-corrected values by dividing each value by the max value per stimulation day.\n")
     COHORT_DATA <- left_join(COHORT_DATA, control_mean_per_day) %>%
       group_by(CELL_LINE, CONDITION, Date, STIM_DAY) %>%
-      mutate(Concentration_DILUTION_FACTOR_NORMALIZED = case_when(Concentration_DILUTION_FACTOR_REDUCED / control_mean_MEASUREMENT < 0 ~ 0, TRUE ~ Concentration_DILUTION_FACTOR_REDUCED / control_mean_MEASUREMENT),
+      mutate(Concentration_DILUTION_FACTOR_NORMALIZED = case_when(Concentration_DILUTION_FACTOR_REDUCED / control_MEASUREMENT < 0 ~ 0, TRUE ~ Concentration_DILUTION_FACTOR_REDUCED / control_MEASUREMENT),
              triplicate_mean_per_day = mean(Concentration_DILUTION_FACTOR_NORMALIZED)) %>%
       ungroup()
     
@@ -869,14 +1011,14 @@ plot_dose_response_ELISA <- function(DATA, FILTER_VALUES,
   
   group_and_summarize <- function(COHORT_DATA, group_vars = c("CELL_LINE", "CL_NAME_ON_PLOT", "CONDITION"), extra_var = "STIM_DAY") {
     
-    print("Step 6: Calculate the normalized means per grouped variables (group_vars + extra_vars)")
+    cat("Step 6: Calculate the normalized means per grouped variables (group_vars + extra_vars)\n")
     MEANS <- COHORT_DATA %>%
       group_by_at(c(group_vars, extra_var)) %>%
       distinct(triplicate_mean_per_day, STIM_DAY, .keep_all = TRUE) %>%
       ungroup()
     # print(MEANS)  # Debugging line
     
-    print("Step 7: Calculate the mean of means (MOM) per cell line and per condition.")
+    cat("Step 7: Calculate the mean of means (MOM) per cell line and per condition.\n")
     MOM_SUBSET <- COHORT_DATA %>%
       group_by(CELL_LINE, CL_NAME_ON_PLOT, CONDITION) %>%
       summarise(triplicate_sd_per_day = sd(triplicate_mean_per_day),
@@ -887,50 +1029,218 @@ plot_dose_response_ELISA <- function(DATA, FILTER_VALUES,
     return(list(MEANS = MEANS, MOM_SUBSET = MOM_SUBSET))
   }
   
-  result_list <- group_and_summarize(COHORT_DATA, group_vars, extra_var)
   # Group, Summarize, and Extract Results from group_and_summarize
-  # result_list <- group_and_summarize(COHORT_DATA, group_vars, extra_var)
+  result_list <- group_and_summarize(COHORT_DATA, group_vars, extra_var)
   MEANS       <- result_list$MEANS
   MOM_SUBSET  <- result_list$MOM_SUBSET
   
-  print("Step 8: Plot the results.")
-
-  color_doseresponse <- setNames(DATA$PLOTTING_COLOR, DATA$CELL_LINE)
-  color_doseresponse <- unique(color_doseresponse) # Remove duplicates, if any
+  cat("Step 8: Plot the results.\n")
   
   if (plot_results) {
-    create_dose_response_plot <- function(MEANS = MEANS, MOM_SUBSET = MOM_SUBSET, title = "Dose Response Plot", x_label = "X-Axis", y_label = "Y-Axis", color_doseresponse) {
+    create_dose_response_plot <- function(MEANS = MEANS, MOM_SUBSET = MOM_SUBSET, plot_title = plot_title, subtitle = subtitle, x_label = x_label, y_label = y_label, COLOR_PALETTE_KEY = COLOR_PALETTE_KEY) {
       
       # Deriving breaks from unique CONDITION values
       condition_breaks <- sort(unique(MOM_SUBSET$CONDITION))
       
       PLOT <- ggplot(data = MOM_SUBSET, aes(x = CONDITION, y = triplicate_mean_per_day, group = CELL_LINE, color = CELL_LINE)) +
         geom_path(size = 1.5) +
-        color_palette(palette = color_doseresponse) +
-        fill_palette(palette  = color_doseresponse) +
-        geom_point(data = MEANS, aes(x = CONDITION, y = triplicate_mean_per_day, fill = CELL_LINE), size = 3, 
-                   color = "black", shape = 21) +
-        geom_errorbar(data = MOM_SUBSET,
+        color_palette(palette = COLOR_PALETTE_KEY) +
+        fill_palette(palette  = COLOR_PALETTE_KEY) +
+        geom_point(data = MEANS, aes(x = CONDITION, y = triplicate_mean_per_day, fill = CELL_LINE), size = 3, color = "black", shape = 21) +
+        geom_errorbar(data = MOM_SUBSET, col = "black", linewidth = .4, width = 0.25,
                       aes(x = CONDITION, y = triplicate_mean_per_day, 
                           ymin = triplicate_mean_per_day - triplicate_sd_per_day, 
-                          ymax = triplicate_mean_per_day + triplicate_sd_per_day), 
-                      col = "black", linewidth = .4, width = 0.25) +
-        scale_x_continuous(trans = "log10", breaks = condition_breaks,
-                           # remove scientific notation
-                           labels = scales::label_comma()) +
-        labs(x = "IL-1 (ng/mL)", y = "relative IL-2 secretion") +
-        theme_classic(base_size = 9)+
-        theme(legend.position = "bottom",
-              axis.text.x = element_text(color = "black"),
-              axis.text.y = element_text(color = "black"))
+                          ymax = triplicate_mean_per_day + triplicate_sd_per_day)) +
+        labs(x = x_label, y = y_label) +
+        ggtitle(label = plot_title, subtitle = subtitle) +
+        theme_cowplot() +
+        theme(legend.position = "bottom", axis.text.x = element_text(color = "black"), axis.text.y = element_text(color = "black"))
+      
+      if (without_scientific_notation) {
+        PLOT <- PLOT +
+          scale_x_continuous(trans = "log10", breaks = condition_breaks,
+                             # removes the scientific notation
+                             labels = scales::label_comma())
+      } else {
+        PLOT <- PLOT +
+          scale_x_continuous(trans = "log10", breaks = condition_breaks)
+      }
       
       return(PLOT)
     }
     
-    PLOT <- create_dose_response_plot(MEANS = MEANS, MOM_SUBSET = MOM_SUBSET, title = "Dose Response Plot", x_label = "X-Axis", y_label = "Y-Axis", color_doseresponse)
-    
-    return(PLOT)
+    DR_PLOT <- create_dose_response_plot(MEANS = MEANS, MOM_SUBSET = MOM_SUBSET, plot_title = plot_title, subtitle = subtitle, x_label = x_label, y_label = y_label, COLOR_PALETTE_KEY = COLOR_PALETTE_KEY)
+    list(DR_PLOT, MOM_SUBSET, MEANS, COHORT_DATA)
+  }
+}
+
+################################################################################################################################################################
+################################################################################################################################################################
+################################################################################################################################################################
+
+# Plot for a specific day
+# FILTER_VALUES = c("2023-11-21")
+# FILTER_VALUES = c("2023-11-16")
+# FILTER_TYPE = "DAY"
+# POSITIVE_CTRL = 0
+# NEGATIVE_CTRL = 0
+# DATA = All_plates_data
+
+plot_dose_response_ELISA_2 <- function(FILTER_VALUES, FILTER_TYPE = "DAY", DATA = All_plates_data, POSITIVE_CTRL = 0, NEGATIVE_CTRL = 0,
+                                       x_label = "X-Axis", y_label = "Y-Axis", 
+                                       plot_title = "Dose Response Plot", 
+                                       subtitle = paste0("Assay performed on ", FILTER_VALUES),
+                                       COLOR_PALETTE_KEY = color_palette_key) {
+  cat("This function is optimized for FILTER_TYPE = 'DAY'. Using this as default for subsetting data.\n")
+  
+  filter_pattern_func <- if (FILTER_TYPE %in% "COHORT") {
+    # function(value, df) matches_any_pattern_vec(df$CELL_LINE, value) | matches_any_pattern_vec(df$CL_NAME_ON_PLOT, value)
+    print("plot_dose_response_ELISA_2() is currently optizimed for 'DAY' inputs only. Please adjust your input accordingly to use this function.")
+  } else if (FILTER_TYPE %in% "DAY") {
+    function(value, df) matches_any_pattern_vec(df$Date, value)
+    # cat(paste0("Filter Type is 'DAY'. Subsetting for the Date supplied in FILTER_VALUES: ", FILTER_VALUES, "\n"))
+  } else {
+    stop("Invalid FILTER_TYPE. Must be either 'COHORT' or 'DAY'.")
   }
   
+  # Generate lists for plates, dates, and stim_days based on the filter type
+  plates_list <- lapply(FILTER_VALUES, function(value) {
+    DATA %>%
+      filter(filter_pattern_func(value, DATA)) %>%
+      distinct(Plate) %>%
+      pull(Plate)
+  })
+  
+  dates_list <- lapply(FILTER_VALUES, function(value) {
+    DATA %>%
+      filter(filter_pattern_func(value, DATA)) %>%
+      distinct(Date) %>%
+      pull(Date)
+  })
+  
+  stim_list <- lapply(FILTER_VALUES, function(value) {
+    DATA %>%
+      filter(filter_pattern_func(value, DATA)) %>%
+      distinct(STIM_DAY) %>%
+      pull(STIM_DAY)
+  })
+  
+  condition_list <- lapply(FILTER_VALUES, function(value) {
+    DATA %>%
+      filter(filter_pattern_func(value, DATA)) %>%
+      distinct(CONDITION) %>%
+      pull(CONDITION)
+  })
+  
+  # Adding names to the list elements
+  names(plates_list)    <- FILTER_VALUES
+  names(dates_list)     <- FILTER_VALUES
+  names(stim_list)      <- FILTER_VALUES
+  names(condition_list) <- FILTER_VALUES
+  
+  # Create subset based on the lists
+  subset_list <- lapply(names(plates_list), function(value) {
+    plates <- plates_list[[value]]
+    dates  <- dates_list[[value]]
+    stim   <- stim_list[[value]]
+    cond   <- condition_list[[value]]
+    
+    DATA %>%
+      filter(Date %in% dates,
+             Plate %in% plates,
+             STIM_DAY %in% stim,
+             CONDITION %in% cond,
+             filter_pattern_func(c(POSITIVE_CTRL, NEGATIVE_CTRL, value), DATA))
+  })
+  
+  # Combine the subsets and return
+  FILTERED_SUBSET <- bind_rows(subset_list)
+  # return(FILTERED_SUBSET)
+  cat("Filtered Data.\n")
+  
+  # DATA = FILTERED_SUBSET
+  
+  group_vars <- c("Date", "STIM_DAY", "Plate")
+  filter_var <- "CELL_LINE"  # Assuming the correct variable for DAY filter
+  
+  # Debugging information
+  # print(paste("Grouping by:", paste(group_vars, collapse = ", ")))
+  # print(paste("Filtering using variable:", filter_var))
+  
+  # DATA_NORMALIZED <- DATA %>% # Debugging line
+  DATA_NORMALIZED <- FILTERED_SUBSET %>%
+    group_by(Date, Plate) %>%
+    filter(Date == FILTER_VALUES) %>%
+    mutate(baseline_control_value =  min(Concentration_DILUTION_FACTOR),
+           Concentration_DILUTION_FACTOR_REDUCED = Concentration_DILUTION_FACTOR - baseline_control_value,
+           Concentration_DILUTION_FACTOR_REDUCED = case_when(Concentration_DILUTION_FACTOR_REDUCED < 0 ~ 0, TRUE ~ Concentration_DILUTION_FACTOR_REDUCED)) %>%
+    ungroup() %>%
+    group_by(Plate) %>%
+    mutate(max_control_value = max(Concentration_DILUTION_FACTOR),
+           Concentration_DILUTION_FACTOR_REDUCED_NORMALIZED = Concentration_DILUTION_FACTOR_REDUCED/max_control_value)
+  cat("Extracted min value per plate to perform baseline-normalization.\n")
+  cat("Extracted max value per plate to perform upper limit normalization for relative secretion.\n")
+  
+  DATA_NORMALIZED <- DATA_NORMALIZED %>%
+    group_by(CELL_LINE, CONDITION, STIM_DAY) %>%
+    mutate(triplicate_mean_per_day = mean(Concentration_DILUTION_FACTOR_REDUCED_NORMALIZED),
+           triplicate_sd_per_day = sd(Concentration_DILUTION_FACTOR_REDUCED_NORMALIZED))
+  # return(DATA_NORMALIZED)
+  cat("Calculated means per cell line, condition, and stimulation.\n")
+  
+  # Set the dodge width
+  dodge_width  <- 0.9
+  jitter_width <- 0.3
+  
+  cat("Plotting results:\n")
+  DR2_PLOT_1 <- ggplot(DATA_NORMALIZED, aes(x = CONDITION, y = triplicate_mean_per_day, fill = CELL_LINE, group = CELL_LINE)) +
+    geom_col(position = position_dodge(width = dodge_width)) +
+    geom_point(aes(y = Concentration_DILUTION_FACTOR_REDUCED_NORMALIZED, shape = as.factor(DILUTION)), 
+               position = position_jitterdodge(dodge.width = dodge_width, jitter.width = jitter_width), 
+               size = 3,
+               show.legend = T) +
+    geom_errorbar(aes(ymin = triplicate_mean_per_day - triplicate_sd_per_day,
+                      ymax = triplicate_mean_per_day + triplicate_sd_per_day),
+                  position = position_dodge(width = dodge_width)) +
+    facet_wrap(~paste0(STIM_DAY, "h"), nrow = 1) +
+    labs(x = x_label, y = y_label) +
+    ggtitle(label = plot_title, subtitle = subtitle) +
+    theme_cowplot() +
+    theme(legend.position = "bottom")
+  
+  
+  DR2_PLOT_2 <- ggplot(DATA_NORMALIZED, aes(x = CONDITION, y = Concentration_DILUTION_FACTOR_REDUCED_NORMALIZED, fill = CELL_LINE, group = CELL_LINE)) +
+    geom_col(position = position_dodge(width = dodge_width)) +
+    facet_wrap(~paste0(STIM_DAY, "h")+DILUTION, nrow = 1) +
+    labs(x = x_label, y = y_label) +
+    ggtitle(label = plot_title, subtitle = subtitle) +
+    theme_cowplot() +
+    theme(legend.position = "bottom")
+  
+  
+  DR2_PLOT_3 <- ggplot(DATA_NORMALIZED, aes(x = CONDITION, y = triplicate_mean_per_day, fill = STIM_DAY, group = STIM_DAY)) +
+    geom_col(position = position_dodge(width = 1)) +
+    facet_wrap(~CELL_LINE, nrow = 1) +
+    labs(x = x_label, y = y_label) +
+    ggtitle(label = plot_title, subtitle = subtitle) +
+    theme_cowplot() +
+    theme(legend.position = "bottom")
+  
+  
+  DR2_PLOT_4 <- ggplot(DATA_NORMALIZED, aes(x = STIM_DAY, y = triplicate_mean_per_day, fill = CONDITION, group = CONDITION)) +
+    geom_col(position = position_dodge(width = 1)) +
+    facet_wrap(~CELL_LINE+CONDITION, nrow = 1) +
+    labs(x = x_label, y = y_label) +
+    ggtitle(label = plot_title, subtitle = subtitle) +
+    theme_cowplot() +
+    theme(legend.position = "bottom")
+  
+  
+  return(list(FILTERED_SUBSET = FILTERED_SUBSET, 
+              DATA_NORMALIZED = DATA_NORMALIZED, 
+              DR2_PLOT_1 = DR2_PLOT_1, 
+              DR2_PLOT_2 = DR2_PLOT_2, 
+              DR2_PLOT_3 = DR2_PLOT_3, 
+              DR2_PLOT_4 = DR2_PLOT_4))
 }
 
