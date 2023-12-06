@@ -41,11 +41,11 @@ All_plates_data <- All_plates_data %>% filter(!is.na(MEASUREMENT))
 
 # POINT 3: Set negative values to 0
 # We cannot really measure negative fluorescence values - this is unrealistic.
-All_plates_data <- All_plates_data %>%
-  mutate(Plate = case_when(is.na(Plate) ~ 0, TRUE ~ Plate), # ensure that Dose Response Experiments are marked as Plate = 0
-         MEASUREMENT      = case_when(MEASUREMENT < 0 ~ 0, TRUE ~ MEASUREMENT),
-         Concentration = case_when(Concentration < 0 ~ 0, TRUE ~ Concentration),
-         Concentration_DILUTION_FACTOR = case_when(Concentration_DILUTION_FACTOR < 0 ~ 0, TRUE ~ Concentration_DILUTION_FACTOR))
+# All_plates_data <- All_plates_data %>%
+  # mutate(Plate = case_when(is.na(Plate) ~ 0, TRUE ~ Plate), # ensure that Dose Response Experiments are marked as Plate = 0
+         # MEASUREMENT      = case_when(MEASUREMENT < 0 ~ 0, TRUE ~ MEASUREMENT),
+         # Concentration = case_when(Concentration < 0 ~ 0, TRUE ~ Concentration),
+         # Concentration_DILUTION_FACTOR = case_when(Concentration_DILUTION_FACTOR < 0 ~ 0, TRUE ~ Concentration_DILUTION_FACTOR))
 
 # Adjust the column types as needed
 # we want to turn stimulation CONDITION and stimulation days into factors for easier handling downstream
@@ -60,8 +60,50 @@ color_palette_key <- unique(color_palette_key) # Remove duplicates, if any
 ################################################################################################################################################################
 
 # Plot for different cohorts & respective positive/negative controls
-plot_by_cohorts <- plot_ELISA(FILTER_VALUES = c("BDLD_57", "BDLD_6-"), FILTER_TYPE = "COHORT", POSITIVE_CTRL = c("3E10_GFP", "MyD88_GFP"), NEGATIVE_CTRL = c("204_TRIPLE_KO", "tKO_EL4"))
-save_plots(folder_name = "BDLD_57_BDLD_6", plots = list(plot_by_cohorts[[1]]))
+plot_by_cohorts <- plot_ELISA(FILTER_VALUES = c("MyD88-T6BD",
+                                                "BDLD_57",
+                                                "BDLD_50",
+                                                "BDLD_67",
+                                                "BDLD_69",
+                                                "BDLD_6-",
+                                                "BDLD_62"), 
+                              FILTER_TYPE = "COHORT", 
+                              POSITIVE_CTRL = c("3E10_GFP", "MyD88_GFP"), 
+                              NEGATIVE_CTRL = c("204_TRIPLE_KO", "tKO_EL4"))
+
+plot_by_cohorts[1]
+COMBINED_DATA <- as.data.frame(plot_by_cohorts[2])
+MEANS         <- as.data.frame(plot_by_cohorts[3])
+MOM_SUBSET    <- as.data.frame(plot_by_cohorts[4])
+# x_label = ""
+# y_label = "relative IL-2 conc."
+# plot_title = "IL-2 ELISA"
+# 
+# COLOR = "#047869"
+# COLOR = "#f8ba00"
+# COLOR = "#24414e"
+# COLOR = "#ff968d"
+# SEED = 600
+# 
+# ggplot(MEANS, aes(x = CL_NAME_ON_PLOT)) +
+#   geom_col(     data = MOM_SUBSET,  aes(y = triplicate_mean_per_day, fill = CONDITION), position = position_dodge(width = 1), alpha = 0.5) +
+#   geom_point(   data = MEANS,       aes(y = triplicate_mean_per_day, group = CONDITION, shape = STIM_DAY),               position = position_jitterdodge(jitter.height = 0, jitter.width = 1.2, seed = SEED), col = "white", size = 4) +
+#   geom_point(   data = MEANS,       aes(y = triplicate_mean_per_day, group = CONDITION, shape = STIM_DAY), position = position_jitterdodge(jitter.height = 0, jitter.width = 1.2, seed = SEED), 
+#                 col = "black",
+#                 size = 3) +
+#   geom_errorbar(data = MOM_SUBSET, aes(ymin = triplicate_mean_per_day - triplicate_sd_per_day, 
+#                                        ymax = triplicate_mean_per_day + triplicate_sd_per_day, group = CONDITION), width = 0.25, position = position_dodge(width = 1)) +
+#   labs(x = x_label,
+#        y = y_label) +
+#   scale_fill_manual(values = c("UNSTIM" = "gray50", "STIM" = COLOR)) +
+#   ggtitle(plot_title) +
+#   theme_cowplot() +
+#   theme(legend.position = "bottom") +
+#   theme(plot.title = element_text(hjust = 0.5)) +
+#   coord_flip()
+
+# save_plots(folder_name = "BDLD_57_BDLD_6", plots = list(plot_by_cohorts[[1]]))
+save_plots(folder_name = "BDLD_57", plots = list(plot_by_cohorts[[1]]))
 
 # Plot for a specific day
 plot_by_day <- plot_ELISA(FILTER_VALUES = c("2023-06-21"), FILTER_TYPE = "DAY", POSITIVE_CTRL = c("3E10_GFP", "MyD88_GFP"), NEGATIVE_CTRL = c("204_TRIPLE_KO", "tKO_EL4"), plot_faceted_by_date = T)
@@ -78,9 +120,11 @@ list(plot_dr_by_day[[1]])
 save_plots(folder_name = "DR_20221208", plots = list(plot_dr_by_day[[1]]))
 
 plot_dr_by_day <- plot_dose_response_ELISA(DATA = All_plates_data, FILTER_VALUES = c("2022-11-24"))
+list(plot_dr_by_day[[1]])
 save_plots(folder_name = "DR_20221124", plots = list(plot_dr_by_day[[1]]))
 
 plot_dr_by_day <- plot_dose_response_ELISA(DATA = All_plates_data, FILTER_VALUES = c("2022-10-06"))
+list(plot_dr_by_day[[1]])
 save_plots(folder_name = "DR_20221006", plots = list(plot_dr_by_day[[1]]))
 
 ################################################################################################################################################################

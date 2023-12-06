@@ -241,11 +241,11 @@ ELISA_Fx <- function(Input_Directory, Output_Directory) {
                Date  = as_date(str_extract(basename(input_plate_dir), "\\d{8}")),
                MEASUREMENT = as.numeric(MEASUREMENT),
                # 20231206 @Fakun: We should adjust for the dilution factor BEFORE extrapolating values based on the Standard Curve..
-               MEASUREMENT_DIL_ADJ = MEASUREMENT*DILUTION,
-               # 20231206 @Fakun: see comment above
+               MEASUREMENT_DIL_ADJ = (case_when(MEASUREMENT < 0 ~ 0, TRUE ~ MEASUREMENT)*DILUTION),
+               # 20231206 @Fakun: see comment above, we are removing Concentration_DILUTION_FACTOR from downstream analysis!
                # Concentration = (Fit$coefficients[1]*MEASUREMENT),
                # Concentration_DILUTION_FACTOR = Concentration*DILUTION,
-               Concentration_DILUTION_FACTOR = (Fit$coefficients[1]*MEASUREMENT_DIL_ADJ),
+               Concentration = (Fit$coefficients[1]*MEASUREMENT_DIL_ADJ),
                Is_Dose_Response = ifelse(str_detect(basename(input_plate_dir), "^DR_"), TRUE, FALSE)
         )
       
@@ -745,25 +745,25 @@ calculate_baseline_and_control <- function(DATA, FILTER_TYPE, POSITIVE_CTRL, NEG
     baseline <- DATA %>%
       group_by(!!!syms(group_vars)) %>%
       filter(matches_any_pattern_vec(!!sym(filter_var), NEGATIVE_CTRL), CONDITION == "UNSTIM") %>% 
-      summarise(baseline_control_value = mean(Concentration_DILUTION_FACTOR))
+      summarise(baseline_control_value = mean(Concentration))
     
     # Join the calculated values with the dataset
     data <- left_join(DATA, baseline, by = group_vars) %>%
-      mutate(Concentration_DILUTION_FACTOR_REDUCED = case_when(!is.na(baseline_control_value) ~ Concentration_DILUTION_FACTOR - baseline_control_value,
-                                                               TRUE ~ Concentration_DILUTION_FACTOR))
+      mutate(Concentration_REDUCED = case_when(!is.na(baseline_control_value) ~ Concentration - baseline_control_value,
+                                                               TRUE ~ Concentration))
   } else {
     # baseline <- DATA %>%
     #   group_by(!!!syms(group_vars)) %>%
-    #   summarise(baseline_control_value = min(Concentration_DILUTION_FACTOR))
+    #   summarise(baseline_control_value = min(Concentration))
     baseline <- data %>%
       group_by(Date) %>%
       filter(Date == FILTER_VALUE) %>%
-      summarise(baseline_control_value = min(Concentration_DILUTION_FACTOR))
+      summarise(baseline_control_value = min(Concentration))
     
     # Join the calculated values with the dataset
     data <- left_join(DATA, baseline) %>%
-      mutate(Concentration_DILUTION_FACTOR_REDUCED = case_when(!is.na(baseline_control_value) ~ Concentration_DILUTION_FACTOR - baseline_control_value,
-                                                               TRUE ~ Concentration_DILUTION_FACTOR))
+      mutate(Concentration_REDUCED = case_when(!is.na(baseline_control_value) ~ Concentration - baseline_control_value,
+                                                               TRUE ~ Concentration))
   }
   
   
@@ -771,7 +771,7 @@ calculate_baseline_and_control <- function(DATA, FILTER_TYPE, POSITIVE_CTRL, NEG
     control_mean_per_day <- data %>%
       filter(matches_any_pattern_vec(!!sym(filter_var), POSITIVE_CTRL), CONDITION == "STIM") %>% 
       group_by(!!!syms(group_vars)) %>%
-      summarise(control_mean_MEASUREMENT = case_when(mean(Concentration_DILUTION_FACTOR_REDUCED) > 0 ~ mean(Concentration_DILUTION_FACTOR_REDUCED), TRUE ~ -Inf))
+      summarise(control_mean_MEASUREMENT = case_when(mean(Concentration_REDUCED) > 0 ~ mean(Concentration_REDUCED), TRUE ~ -Inf))
     
     # Join the calculated control means
     data <- left_join(data, control_mean_per_day, by = group_vars)
@@ -779,22 +779,22 @@ calculate_baseline_and_control <- function(DATA, FILTER_TYPE, POSITIVE_CTRL, NEG
     # Perform normalization
     DATA_NORMALIZED <- data %>%
       group_by(!!!syms(group_vars), CELL_LINE, CONDITION) %>%
-      mutate(Concentration_DILUTION_FACTOR_NORMALIZED = case_when(Concentration_DILUTION_FACTOR_REDUCED / control_mean_MEASUREMENT < 0 ~ 0,
-                                                                  TRUE ~ Concentration_DILUTION_FACTOR_REDUCED / control_mean_MEASUREMENT),
-             triplicate_mean_per_day = mean(Concentration_DILUTION_FACTOR_NORMALIZED)) %>%
+      mutate(Concentration_NORMALIZED = case_when(Concentration_REDUCED / control_mean_MEASUREMENT < 0 ~ 0,
+                                                                  TRUE ~ Concentration_REDUCED / control_mean_MEASUREMENT),
+             triplicate_mean_per_day = mean(Concentration_NORMALIZED)) %>%
       ungroup()
     
   } else {
     # Calculate control mean using an alternative method, e.g., mean value per group
     # control_mean_per_day <- data %>%
     #   group_by(!!!syms(group_vars)) %>%
-    #   summarise(control_mean_MEASUREMENT = mean(Concentration_DILUTION_FACTOR_REDUCED))
+    #   summarise(control_mean_MEASUREMENT = mean(Concentration_REDUCED))
     control_mean_per_day <- data %>%
       group_by(STIM_DAY) %>%
-      reframe(Concentration_DILUTION_FACTOR_REDUCED = Concentration_DILUTION_FACTOR_REDUCED) %>%
+      reframe(Concentration_REDUCED = Concentration_REDUCED) %>%
       ungroup() %>%
       group_by(STIM_DAY) %>%
-      reframe(control_MEASUREMENT = max(Concentration_DILUTION_FACTOR_REDUCED),
+      reframe(control_MEASUREMENT = max(Concentration_REDUCED),
               STIM_DAY = STIM_DAY) %>%
       unique()
     
@@ -804,9 +804,9 @@ calculate_baseline_and_control <- function(DATA, FILTER_TYPE, POSITIVE_CTRL, NEG
     # Perform normalization
     DATA_NORMALIZED <- data %>%
       group_by(!!!syms(group_vars), CELL_LINE, CONDITION) %>%
-      mutate(Concentration_DILUTION_FACTOR_NORMALIZED = case_when(Concentration_DILUTION_FACTOR_REDUCED / control_MEASUREMENT < 0 ~ 0,
-                                                                  TRUE ~ Concentration_DILUTION_FACTOR_REDUCED / control_MEASUREMENT),
-             triplicate_mean_per_day = mean(Concentration_DILUTION_FACTOR_NORMALIZED)) %>%
+      mutate(Concentration_NORMALIZED = case_when(Concentration_REDUCED / control_MEASUREMENT < 0 ~ 0,
+                                                                  TRUE ~ Concentration_REDUCED / control_MEASUREMENT),
+             triplicate_mean_per_day = mean(Concentration_NORMALIZED)) %>%
       ungroup()
   }
   
@@ -983,25 +983,25 @@ plot_dose_response_ELISA <- function(DATA, FILTER_VALUES,
     baseline <- COHORT_DATA %>%
       group_by(Plate) %>%
       filter(Date == FILTER_VALUE) %>%
-      summarise(baseline_control_value = min(Concentration_DILUTION_FACTOR))
+      summarise(baseline_control_value = min(Concentration))
     
     cat("Step 3: Subtract the lowest value from all measurements to normalize per plate (Machine Normalization).\n")
     COHORT_DATA <- left_join(COHORT_DATA, baseline) %>%
-      mutate(Concentration_DILUTION_FACTOR_REDUCED    = case_when(!is.na(baseline_control_value) ~ Concentration_DILUTION_FACTOR - baseline_control_value,
-                                                                  TRUE ~ Concentration_DILUTION_FACTOR))
+      mutate(Concentration_REDUCED    = case_when(!is.na(baseline_control_value) ~ Concentration - baseline_control_value,
+                                                                  TRUE ~ Concentration))
     cat("Step 4: Baseline-corrected per cell line, per condition, per stimulation and retrieve the max values to normalize for day-to-day differences.\n")
     control_mean_per_day <- COHORT_DATA %>%
       group_by(CELL_LINE, CONDITION, Date, STIM_DAY, Plate) %>%
-      reframe(Concentration_DILUTION_FACTOR_REDUCED = Concentration_DILUTION_FACTOR_REDUCED) %>%
+      reframe(Concentration_REDUCED = Concentration_REDUCED) %>%
       ungroup() %>%
       group_by(STIM_DAY) %>%
-      reframe(control_MEASUREMENT = max(Concentration_DILUTION_FACTOR_REDUCED))
+      reframe(control_MEASUREMENT = max(Concentration_REDUCED))
     
     cat("Step 5: Normalize the baseline-corrected values by dividing each value by the max value per stimulation day.\n")
     COHORT_DATA <- left_join(COHORT_DATA, control_mean_per_day) %>%
       group_by(CELL_LINE, CONDITION, Date, STIM_DAY) %>%
-      mutate(Concentration_DILUTION_FACTOR_NORMALIZED = case_when(Concentration_DILUTION_FACTOR_REDUCED / control_MEASUREMENT < 0 ~ 0, TRUE ~ Concentration_DILUTION_FACTOR_REDUCED / control_MEASUREMENT),
-             triplicate_mean_per_day = mean(Concentration_DILUTION_FACTOR_NORMALIZED)) %>%
+      mutate(Concentration_NORMALIZED = case_when(Concentration_REDUCED / control_MEASUREMENT < 0 ~ 0, TRUE ~ Concentration_REDUCED / control_MEASUREMENT),
+             triplicate_mean_per_day = mean(Concentration_NORMALIZED)) %>%
       ungroup()
     
     # Make sure that the conditions are now read as numbers for plotting!
@@ -1175,20 +1175,20 @@ plot_dose_response_ELISA_2 <- function(FILTER_VALUES, FILTER_TYPE = "DAY", DATA 
   DATA_NORMALIZED <- FILTERED_SUBSET %>%
     group_by(Date, Plate) %>%
     filter(Date == FILTER_VALUES) %>%
-    mutate(baseline_control_value =  min(Concentration_DILUTION_FACTOR),
-           Concentration_DILUTION_FACTOR_REDUCED = Concentration_DILUTION_FACTOR - baseline_control_value,
-           Concentration_DILUTION_FACTOR_REDUCED = case_when(Concentration_DILUTION_FACTOR_REDUCED < 0 ~ 0, TRUE ~ Concentration_DILUTION_FACTOR_REDUCED)) %>%
+    mutate(baseline_control_value =  min(Concentration),
+           Concentration_REDUCED = Concentration - baseline_control_value,
+           Concentration_REDUCED = case_when(Concentration_REDUCED < 0 ~ 0, TRUE ~ Concentration_REDUCED)) %>%
     ungroup() %>%
     group_by(Plate) %>%
-    mutate(max_control_value = max(Concentration_DILUTION_FACTOR),
-           Concentration_DILUTION_FACTOR_REDUCED_NORMALIZED = Concentration_DILUTION_FACTOR_REDUCED/max_control_value)
+    mutate(max_control_value = max(Concentration),
+           Concentration_REDUCED_NORMALIZED = Concentration_REDUCED/max_control_value)
   cat("Extracted min value per plate to perform baseline-normalization.\n")
   cat("Extracted max value per plate to perform upper limit normalization for relative secretion.\n")
   
   DATA_NORMALIZED <- DATA_NORMALIZED %>%
     group_by(CELL_LINE, CONDITION, STIM_DAY) %>%
-    mutate(triplicate_mean_per_day = mean(Concentration_DILUTION_FACTOR_REDUCED_NORMALIZED),
-           triplicate_sd_per_day = sd(Concentration_DILUTION_FACTOR_REDUCED_NORMALIZED))
+    mutate(triplicate_mean_per_day = mean(Concentration_REDUCED_NORMALIZED),
+           triplicate_sd_per_day = sd(Concentration_REDUCED_NORMALIZED))
   # return(DATA_NORMALIZED)
   cat("Calculated means per cell line, condition, and stimulation.\n")
   
@@ -1199,7 +1199,7 @@ plot_dose_response_ELISA_2 <- function(FILTER_VALUES, FILTER_TYPE = "DAY", DATA 
   cat("Plotting results:\n")
   DR2_PLOT_1 <- ggplot(DATA_NORMALIZED, aes(x = CONDITION, y = triplicate_mean_per_day, fill = CELL_LINE, group = CELL_LINE)) +
     geom_col(position = position_dodge(width = dodge_width)) +
-    geom_point(aes(y = Concentration_DILUTION_FACTOR_REDUCED_NORMALIZED, shape = as.factor(DILUTION)), 
+    geom_point(aes(y = Concentration_REDUCED_NORMALIZED, shape = as.factor(DILUTION)), 
                position = position_jitterdodge(dodge.width = dodge_width, jitter.width = jitter_width), 
                size = 3,
                show.legend = T) +
@@ -1213,7 +1213,7 @@ plot_dose_response_ELISA_2 <- function(FILTER_VALUES, FILTER_TYPE = "DAY", DATA 
     theme(legend.position = "bottom")
   
   
-  DR2_PLOT_2 <- ggplot(DATA_NORMALIZED, aes(x = CONDITION, y = Concentration_DILUTION_FACTOR_REDUCED_NORMALIZED, fill = CELL_LINE, group = CELL_LINE)) +
+  DR2_PLOT_2 <- ggplot(DATA_NORMALIZED, aes(x = CONDITION, y = Concentration_REDUCED_NORMALIZED, fill = CELL_LINE, group = CELL_LINE)) +
     geom_col(position = position_dodge(width = dodge_width)) +
     facet_wrap(~paste0(STIM_DAY, "h")+DILUTION, nrow = 1) +
     labs(x = x_label, y = y_label) +
