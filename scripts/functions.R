@@ -240,8 +240,12 @@ ELISA_Fx <- function(Input_Directory, Output_Directory) {
         mutate(Plate = as.numeric(gsub("(DR_)?Plate_(\\d+)_\\d{8}$", "\\2", basename(input_plate_dir))),
                Date  = as_date(str_extract(basename(input_plate_dir), "\\d{8}")),
                MEASUREMENT = as.numeric(MEASUREMENT),
-               Concentration = (Fit$coefficients[1]*MEASUREMENT),
-               Concentration_DILUTION_FACTOR = Concentration*DILUTION,
+               # 20231206 @Fakun: We should adjust for the dilution factor BEFORE extrapolating values based on the Standard Curve..
+               MEASUREMENT_DIL_ADJ = MEASUREMENT*DILUTION,
+               # 20231206 @Fakun: see comment above
+               # Concentration = (Fit$coefficients[1]*MEASUREMENT),
+               # Concentration_DILUTION_FACTOR = Concentration*DILUTION,
+               Concentration_DILUTION_FACTOR = (Fit$coefficients[1]*MEASUREMENT_DIL_ADJ),
                Is_Dose_Response = ifelse(str_detect(basename(input_plate_dir), "^DR_"), TRUE, FALSE)
         )
       
@@ -943,7 +947,7 @@ plot_ELISA <- function(FILTER_VALUES, FILTER_TYPE, POSITIVE_CTRL = 0, NEGATIVE_C
       PLOT <- create_plot(FILTER_VALUES, FILTER_TYPE, MEANS, MOM_SUBSET, STATISTICAL_RESULTS, COLOR = "salmon", SEED = 600,
                           x_label = x_label, y_label = y_label, plot_title = plot_title, subtitle = subtitle)
     }
-    list(PLOT)
+    list(PLOT, COMBINED_DATA, MEANS, MOM_SUBSET, MEANS)
   }
 }
 
