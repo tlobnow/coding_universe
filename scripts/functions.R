@@ -240,12 +240,22 @@ ELISA_Fx <- function(Input_Directory, Output_Directory) {
         mutate(Plate = as.numeric(gsub("(DR_)?Plate_(\\d+)_\\d{8}$", "\\2", basename(input_plate_dir))),
                Date  = as_date(str_extract(basename(input_plate_dir), "\\d{8}")),
                MEASUREMENT = as.numeric(MEASUREMENT),
-               # 20231206 @Fakun: We should adjust for the dilution factor BEFORE extrapolating values based on the Standard Curve..
-               MEASUREMENT_DIL_ADJ = (case_when(MEASUREMENT < 0 ~ 0, TRUE ~ MEASUREMENT)*DILUTION),
-               # 20231206 @Fakun: see comment above, we are removing Concentration_DILUTION_FACTOR from downstream analysis!
+               
+               # METHOD I: Correct negative values to zero, multiply measurements by dilution factor and THEN extrapolate values based on SC
+               # ########  20231206 @Fakun: We should adjust for the dilution factor BEFORE extrapolating values based on the Standard Curve..
+               # ########
+               # MEASUREMENT_DIL_ADJ = (case_when(MEASUREMENT < 0 ~ 0, TRUE ~ MEASUREMENT)*DILUTION),
+               # Concentration = (Fit$coefficients[1]*MEASUREMENT_DIL_ADJ),
+               
+               # METHOD II: Extrapolate values based on SC and THEN multiply measurements by dilution factor
+               # ########  20231206 @Finn: set machine measurement errors to zero (raw values below zero should be set to zero before extrapolating etc)
+               # ########  20231206 @Finn:  We remove the column name *Concentration_DILUTION_FACTOR* from downstream analysis and simply stick to *Concentration*!
+               # ########
                # Concentration = (Fit$coefficients[1]*MEASUREMENT),
                # Concentration_DILUTION_FACTOR = Concentration*DILUTION,
-               Concentration = (Fit$coefficients[1]*MEASUREMENT_DIL_ADJ),
+               Concentration = (Fit$coefficients[1] * (case_when(MEASUREMENT < 0 ~ 0, TRUE ~ MEASUREMENT))),
+               Concentration = Concentration * DILUTION,
+               
                Is_Dose_Response = ifelse(str_detect(basename(input_plate_dir), "^DR_"), TRUE, FALSE)
         )
       
@@ -1248,3 +1258,93 @@ plot_dose_response_ELISA_2 <- function(FILTER_VALUES, FILTER_TYPE = "DAY", DATA 
               DR2_PLOT_4 = DR2_PLOT_4))
 }
 
+################################################################################################################################################################
+################################################################################################################################################################
+################################################################################################################################################################
+# DALI Z-Score Plot
+
+#Load libraries
+library(pacman)
+pacman::p_load(data.table)
+
+extract_dali_scores <- function(data_path) {
+  dir_path  <- dirname(data_path)
+  file_name <- sub("\\..*$", "", basename(data_path)) 
+  
+  # read the input file
+  lines     <- readLines(data_path, warn = FALSE)
+  
+  # identify the lines of interest (all lines that contain the "MOLECULE:" pattern)
+  molecule_lines <- grep("MOLECULE:", lines, value = TRUE)
+  
+  # 1) Split Lines into Parts: Split each line into parts. For lines with a long description, the "%id" column will be part of the description.
+  # 2) Extract and Concatenate Description: Identify and concatenate the description parts correctly. 
+  #    This involves splitting the line at "MOLECULE:" and handling the parts before and after this keyword separately.
+  # 3) Reconstruct the Parts: Reconstruct the line with the correct number of columns, ensuring that the "%id" and "PDB" columns are correctly identified.
+  data_list <- lapply(molecule_lines, function(line) {
+    # Split the line by spaces, but not when spaces are part of the description
+    parts <- strsplit(line, "\\s+(?![^MOLECULE:]*\")", perl = TRUE)[[1]]
+    # Adjust based on the expected number of columns before the description
+    if (length(parts) > 8) {
+      # Concatenate the description parts back together
+      description <- paste(parts[9:length(parts)], collapse = " ")
+      parts       <- parts[1:9]
+      parts[9]    <- description
+    }
+    return(parts)
+  })
+  
+  # Convert to a DataFrame
+  data_df <- do.call(rbind, data_list)
+  data_df <- as.data.frame(data_df, stringsAsFactors = FALSE)
+  
+  # Set column names
+  colnames(data_df) <- c("empty", "No", "PDB_Chain", "Z", "RMSD", "Lali", "Nres", "%ID", "Description")
+  
+  # Remove 'MOLECULE:' pattern
+  data_df$Description <- gsub("MOLECULE:", "", data_df$Description)
+  
+  # Replace underscores with spaces
+  data_df$Description <- gsub("_", " ", data_df$Description)
+  
+  # Remove the semicolons
+  data_df$Description <- gsub(";", "", data_df$Description)
+  
+  # Split the 'Chain' Column 
+  split_chain <- strsplit(data_df$PDB_Chain, "-", fixed = TRUE)
+  
+  # Create New Columns
+  data_df$PDB    <- sapply(split_chain, function(x) ifelse(length(x) > 1, x[1], NA))
+  data_df$Chain  <- sapply(split_chain, function(x) ifelse(length(x) > 1, x[2], x[1]))
+  
+  # Reset the row names to normal numbers
+  rownames(data_df) <- seq(nrow(data_df))
+  
+  data_df_final         <- data_df[, c("PDB", "Chain", "Z", "RMSD", "Lali", "Nres", "%ID", "Description", "PDB_Chain")]
+  data_df_final$Origin  <- file_name
+  data_df_final$ID      <- unlist(lapply(strsplit(data_df_final$Origin,   "_", fixed=TRUE), function(x) return(x[2])))
+  data_df_final$Origin  <- unlist(lapply(strsplit(data_df_final$Origin,   "_", fixed=TRUE), function(x) return(x[3])))
+  
+  # Write the final data frame to a csv file
+  fwrite(x = data_df_final, file = paste0(dir_path, "/", file_name, "_extracted.csv"))
+}
+
+# Function to process all .txt files in a directory and combine CSVs
+process_directory <- function(directory_path) {
+  # List all .txt files in the directory
+  txt_files <- list.files(directory_path, pattern = "\\.txt$", full.names = TRUE)
+  
+  # Extract data from each .txt file and create a CSV summary
+  for (txt_file in txt_files) {
+    extract_dali_scores(data_path = txt_file)
+  }
+  
+  # List all created CSV files in the directory
+  csv_files <- list.files(directory_path, pattern = "\\.csv$", full.names = TRUE)
+  
+  # Read each CSV file and combine them into one data frame
+  combined_df <- rbindlist(lapply(csv_files, fread), fill = TRUE)
+  
+  # Write the combined DataFrame to a CSV file
+  fwrite(combined_df, file = file.path(directory_path, "combined_summary.csv"))
+}
