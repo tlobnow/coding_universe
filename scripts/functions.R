@@ -1263,13 +1263,16 @@ plot_dose_response_ELISA_2 <- function(FILTER_VALUES, FILTER_TYPE = "DAY", DATA 
 ################################################################################################################################################################
 # DALI Z-Score Plot
 
-#Load libraries
-library(pacman)
-pacman::p_load(data.table)
-
-extract_dali_scores <- function(data_path) {
+extract_dali_scores <- function(data_path, overwrite_existing = FALSE) {
   dir_path  <- dirname(data_path)
-  file_name <- sub("\\..*$", "", basename(data_path)) 
+  file_name <- sub("\\..*$", "", basename(data_path))
+  output_file <- paste0(dir_path, "/", file_name, "_extracted.csv")
+  
+  # Check if the output file exists and overwrite_existing is FALSE
+  if (file.exists(output_file) && !overwrite_existing) {
+    print(paste("CSV file", output_file, "already exists. Set 'overwrite_existing' to TRUE to overwrite and create new files."))
+    return()
+  }
   
   # read the input file
   lines     <- readLines(data_path, warn = FALSE)
@@ -1326,17 +1329,22 @@ extract_dali_scores <- function(data_path) {
   data_df_final$Origin  <- unlist(lapply(strsplit(data_df_final$Origin,   "_", fixed=TRUE), function(x) return(x[3])))
   
   # Write the final data frame to a csv file
-  fwrite(x = data_df_final, file = paste0(dir_path, "/", file_name, "_extracted.csv"))
+  fwrite(x = data_df_final, file = output_file)
 }
 
-# Function to process all .txt files in a directory and combine CSVs
-process_directory <- function(directory_path) {
+process_directory <- function(directory_path, overwrite_existing = FALSE) {
   # List all .txt files in the directory
   txt_files <- list.files(directory_path, pattern = "\\.txt$", full.names = TRUE)
   
+  # If overwrite_existing is TRUE, remove existing .csv files
+  if (overwrite_existing) {
+    csv_files_to_remove <- list.files(directory_path, pattern = "\\.csv$", full.names = TRUE)
+    file.remove(csv_files_to_remove)
+  }
+  
   # Extract data from each .txt file and create a CSV summary
   for (txt_file in txt_files) {
-    extract_dali_scores(data_path = txt_file)
+    extract_dali_scores(data_path = txt_file, overwrite_existing = overwrite_existing)
   }
   
   # List all created CSV files in the directory
@@ -1346,5 +1354,15 @@ process_directory <- function(directory_path) {
   combined_df <- rbindlist(lapply(csv_files, fread), fill = TRUE)
   
   # Write the combined DataFrame to a CSV file
-  fwrite(combined_df, file = file.path(directory_path, "combined_summary.csv"))
+  combined_csv_path <- file.path(directory_path, "combined_summary.csv")
+  if (overwrite_existing || !file.exists(combined_csv_path)) {
+    fwrite(combined_df, file = combined_csv_path)
+  } else {
+    print(paste0("combined_summary.csv already exists. Set 'overwrite_existing' to TRUE to overwrite.")) 
+  }
+}
+
+read_mmseqs2_results <- function(path,pattern) {
+  df  <- fread(file.path(path, list.files(path = path, pattern = pattern)),  sep = "\t")
+  return(df)
 }
