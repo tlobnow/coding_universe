@@ -1362,7 +1362,28 @@ process_directory <- function(directory_path, overwrite_existing = FALSE) {
   }
 }
 
-read_mmseqs2_results <- function(path,pattern) {
-  df  <- fread(file.path(path, list.files(path = path, pattern = pattern)),  sep = "\t")
-  return(df)
+read_mmseqs2_results <- function(path, pattern) {
+  file_paths <- file.path(path, list.files(path = path, pattern = pattern))
+  data_list <- lapply(file_paths, function(file_path) {
+    if (file.size(file_path) > 0) {
+      df <- fread(file_path, sep = "\t", fill = TRUE)
+      df$Origin <- pattern
+      return(df)
+    } else {
+      return(NULL)
+    }
+  })
+  # Remove NULL entries from the list
+  data_list <- Filter(Negate(is.null), data_list)
+  
+  # Combine all non-empty data frames
+  combined_df <- rbindlist(data_list, fill = TRUE)
+  return(combined_df)
+}
+
+# Function to handle file overwriting
+handle_file_overwrite <- function(file_path, overwrite) {
+  if (overwrite && file.exists(file_path)) {
+    file.remove(file_path)
+  }
 }
