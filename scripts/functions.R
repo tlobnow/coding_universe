@@ -485,7 +485,8 @@ run_extraction <- function(LOC, MAIN = NULL, SUMMARY_FOLDER = NULL, ADD_2_EXISTI
 
 plot_alphafold_results <- function(LOC, SUMMARY_FOLDER = NULL, xlab = "iScore", ylab = "piTM", 
                                    plot_title = NULL, pattern = NULL, best_only = FALSE,
-                                   plot_interactive = FALSE) {
+                                   plot_interactive = FALSE,
+                                   plot_labels = FALSE) {
   pacman::p_load(ggplot2, dplyr, data.table, ggrepel, ggalt, stringr, plotly)
   
   if (is.null(SUMMARY_FOLDER)) {
@@ -586,6 +587,16 @@ plot_alphafold_results <- function(LOC, SUMMARY_FOLDER = NULL, xlab = "iScore", 
   plot <- plot + 
     expand_limits(x=c(0,1), y=c(0,1)) +
     labs(x = xlab, y = ylab, title = plot_title)
+  
+  if (plot_labels) {
+    plot <- plot +
+      geom_label_repel(data = mean_labeling, aes(mean_iScore, mean_piTM, label = FILE, fill = Confidence), force_pull = 0.1, max.overlaps = 30) +
+      scale_fill_manual(name = "Confidence",
+                        values = c("Low" = "gray80",
+                                   "Medium" = "gray40",
+                                   "High" = "cornflowerblue",
+                                   "Very High" = "lightgreen"))
+  }
   
   
   if (plot_interactive) {
@@ -1385,5 +1396,193 @@ read_mmseqs2_results <- function(path, pattern) {
 handle_file_overwrite <- function(file_path, overwrite) {
   if (overwrite && file.exists(file_path)) {
     file.remove(file_path)
+  }
+}
+
+################################################################################################################################################################
+################################################################################################################################################################
+################################################################################################################################################################
+# script to identify files with max values of interest and copy to a new summary folder
+library(dplyr)
+library(fs)
+
+copy_max_score_files <- function(dataframe, main_dir, base_path, file_col, origin_col, recycle_col, model_dir = "MODELS", file_ext = ".pdb") {
+  
+  # Dynamically reference columns
+  file_col_sym <- rlang::ensym(file_col)
+  origin_col_sym <- rlang::ensym(origin_col)
+  recycle_col_sym <- rlang::ensym(recycle_col)
+  
+  dataframe %>%
+    group_by(!!file_col_sym) %>%
+    filter(iScore == max(iScore)) %>%
+    mutate(
+      source_path = file.path(main_dir, !!origin_col_sym, model_dir, paste0(!!origin_col_sym, "_", !!recycle_col_sym, file_ext)),
+      dest_path = base_path
+    ) -> result_df
+  
+  # Copy files
+  for(i in 1:nrow(result_df)) {
+    if(file_exists(result_df$source_path[i])) {
+      dir_create(dirname(result_df$dest_path[i]))
+      file_copy(result_df$source_path[i], result_df$dest_path[i], overwrite = TRUE)
+    } else {
+      warning("Source file does not exist:", result_df$source_path[i])
+    }
+  }
+}
+
+# # Example usage
+# copy_max_score_files(
+#   dataframe = dataframe,
+#   main_dir = MAIN,
+#   base_path = base_path,
+#   file_col = "FILE",       # column name for file identifier
+#   origin_col = "ORIGIN",   # column name for origin identifier
+#   recycle_col = "RECYCLE"  # column name for recycle identifier
+# )
+
+################################################################################################################################################################
+################################################################################################################################################################
+################################################################################################################################################################
+# Function to extract slurm files
+
+library(stringr)
+library(lubridate)
+
+extract_data_from_slurm <- function(file_path) {
+  lines <- readLines(file_path)
+  
+  models_data <- list()
+  file_name    <- ""
+  origin       <- ""
+  job_end_date <- ""
+  
+  for (i in 1:length(lines)) {
+    line <- lines[i]
+    
+    # Initialize variables for each iteration
+    num_clusters     <- NA
+    n_monomers       <- NA
+    model_identifier <- NA
+    
+    if (grepl("Job end:", line)) {
+      date_str     <- str_extract(line, "\\w{3} \\w{3} \\d{2} \\d{2}:\\d{2}:\\d{2} CET \\d{4}")
+      job_end_date <- format(as.Date(date_str, format = "%a %b %d %H:%M:%S CET %Y"), "%Y%m%d")
+    } else if (grepl("Info: input file name is", line)) {
+      file_name    <- str_extract(line, "(?<=is ).*$")
+      origin       <- file_name
+    } else if (grepl("Info: .*recycled_", line)) {
+      # Extracting for intermediate models
+      model_identifier_match <- str_match(line, "model_\\d+_multimer_v\\d+_p\\d+_\\d+_\\d+_recycled_\\d+")
+      model_identifier       <- model_identifier_match[1]
+    } else if (grepl("Info: .*model_.* performed", line)) {
+      # Extracting for the final model
+      if (i < length(lines)) {
+        next_line    <- lines[i + 1]
+        num_clusters <- as.numeric(str_extract(next_line, "(?<=num_clusters = )\\d+"))
+        n_monomers   <- as.numeric(str_extract(next_line, "(?<=cluster_sizes = \\[)\\d+"))
+      }
+      model_identifier_match <- str_match(line, "model_\\d+_multimer_v\\d+_p\\d+_\\d+_\\d+")
+      model_identifier       <- model_identifier_match[1]
+    }
+    
+    if (grepl("Info: .*recycled_", line) || grepl("Info: .*model_.* performed", line)) {
+      # Common extraction logic for all models
+      tol    <- str_extract(line, "(?<=tol = )inf|[-+]?\\d{1,2}\\.\\d{2}")
+      tol    <- ifelse(tol == "inf", "9999", tol)
+      plddt  <- str_extract(line, "(?<=pLDDT = )[-+]?[0-9]*\\.?[0-9]+")
+      ptm    <- str_extract(line, "(?<=iptm\\+ptm = )[-+]?[0-9]*\\.?[0-9]+") 
+      pitm   <- str_extract(line, "(?<=piTM-score = )[-+]?[0-9]*\\.?[0-9]+")
+      iScore <- str_extract(line, "(?<=interface-score = )[-+]?[0-9]*\\.?[0-9]+")
+      iRes   <- str_extract(line, "(?<=iRes = )\\d+")
+      iCnt   <- str_extract(line, "(?<=iCnt = )\\d+")
+      
+      file_recycle <- paste(file_name, "RECYCLE", model_identifier, sep="_")
+      
+      current_model <- list(
+        FILE = file_name,
+        ORIGIN = origin,
+        NUM_CLUSTERS = num_clusters,
+        N_MONOMERS = n_monomers,
+        RECYCLE = model_identifier,
+        DATE = job_end_date,
+        TOL = tol,
+        pLDDT = plddt,
+        pTM = ptm,
+        piTM = pitm,
+        iScore = iScore,
+        iRes = iRes,
+        iCnt = iCnt,
+        FILE_RECYCLE = file_recycle
+      )
+      
+      models_data <- c(models_data, list(current_model))
+    }
+  }
+  
+  return(models_data)
+}
+
+create_data_frame <- function(models_data) {
+  models_df <- do.call(rbind, lapply(models_data, function(x) data.frame(matrix(unlist(x), nrow=1, byrow=T))))
+  colnames(models_df) <- names(models_data[[1]])
+  return(models_df)
+}
+
+## Example usage
+# file_path <- "/Users/u_lobnow/Desktop/project_2xTIR/IL1R_MOUSE-TIR_x1_Q8YF53_TCPB_BRUME_x4_IL1RAP_MOUSE-TIR_1/RUN_DETAILS/slurm-8560960_1.out"
+# file_path <- "/Users/u_lobnow/Desktop/project_2xTIR/IL1R_MOUSE-TIR_x1_A0A0H2V8B5_TCPC_ECOL6_x2_IL1RAP_MOUSE-TIR_1/RUN_DETAILS/slurm-8541205.out"
+# extracted_data   <- extract_data_from_slurm(file_path)
+# model_data_frame <- create_data_frame(extracted_data)
+
+# Assuming extract_data_from_slurm() function is already defined
+run_SLURM_extraction <- function(folder_path, output_csv) {
+  # List all slurm files in the folder
+  slurm_files <- list.files(folder_path, pattern = "slurm-.*\\.out", full.names = TRUE, recursive = T)
+  
+  # Initialize an empty list to store data frames
+  all_data <- list()
+  
+  # Iterate over slurm files and extract data
+  for (file_path in slurm_files) {
+    file_data <- extract_data_from_slurm(file_path)
+    all_data  <- c(all_data, file_data)
+  }
+  
+  # Combine all data frames into one
+  combined_data <- do.call(rbind, lapply(all_data, data.frame))
+  
+  # Save the combined data to a CSV file
+  write.csv(combined_data, output_csv, row.names = FALSE)
+}
+
+################################################################################################################################################################
+################################################################################################################################################################
+################################################################################################################################################################
+# Function to extract JSON files OR SLURM files (depending on the presence of JSON files 
+# [unfinished slurm jobs usually fail to create JSON files, so SLURM files must be extracted instead])
+# Wrapper function to handle the extraction process with backup
+
+run_extraction_wrapper <- function(LOC, MAIN = NULL, SUMMARY_FOLDER = NULL, ADD_2_EXISTING_DF = FALSE, EXISTING_DF = NULL) {
+  # Path for the final data
+  summary_csv <- paste0(SUMMARY_FOLDER, LOC, ".csv")
+  
+  # Load existing data if present
+  existing_data <- if (file.exists(summary_csv)) read.csv(summary_csv) else NULL
+  initial_row_count <- nrow(existing_data)
+  
+  # Run the JSON extraction
+  run_extraction(LOC = LOC, MAIN = MAIN, SUMMARY_FOLDER = SUMMARY_FOLDER, ADD_2_EXISTING_DF = ADD_2_EXISTING_DF, EXISTING_DF = EXISTING_DF)
+  
+  # Load updated data and check if new rows were added
+  updated_data      <- if (file.exists(summary_csv)) read.csv(summary_csv) else NULL
+  updated_row_count <- nrow(updated_data)
+  
+  # If no new data is added, run the slurm file extraction as a backup
+  if (is.null(updated_data) || updated_row_count == initial_row_count) {
+    # Run the slurm file extraction
+    slurm_folder_path <- MAIN  # Assuming the slurm files are in the MAIN directory
+    run_SLURM_extraction(slurm_folder_path, summary_csv)
   }
 }
