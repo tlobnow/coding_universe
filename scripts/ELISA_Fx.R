@@ -136,55 +136,6 @@ ELISA_Fx <- function(Input_Directory, Output_Directory) {
 ################################################################################################################################################################
 ################################################################################################################################################################
 
-# Define the function to save plots with specified dimensions
-save_plots <- function(folder_name, plots, path = save_to, width = 12, height = 8) {
-  # Create the full path for the folder
-  folder_path <- file.path(save_to, folder_name)
-  
-  # Check if the folder exists, and if not, create it
-  if (!dir.exists(folder_path)) {
-    dir.create(folder_path, recursive = TRUE)
-  }
-  
-  # Loop through the plots and save them
-  for (i in seq_along(plots)) {
-    file_base <- file.path(folder_path, paste0(folder_name, "_plot_", i))
-    
-    # Save as SVG
-    ggsave(paste0(file_base, ".svg"), plot = plots[[i]], device = "svg", width = width, height = height)
-    
-    # Save as PNG
-    ggsave(paste0(file_base, ".png"), plot = plots[[i]], device = "png", width = width, height = height)
-  }
-}
-
-
-################################################################################################################################################################
-################################################################################################################################################################
-################################################################################################################################################################
-
-# Vectorized function for pattern matching
-matches_any_pattern_vec <- Vectorize(function(string, patterns) {
-  any(sapply(patterns, function(pattern) grepl(pattern, string)))
-}, vectorize.args = "string")
-
-################################################################################################################################################################
-################################################################################################################################################################
-################################################################################################################################################################
-
-# FILTER_VALUES = c("MyD88-GFP-synTRAF6-BD-1x", "MyD88-GFP-synTRAF6-BD-3x", "MyD88-GFP-synTRAF6-BD-5x")
-# FILTER_TYPE = "COHORT"        # Should be "COHORT" or "DAY"
-# COLOR = "salmon"
-# SEED = 600
-# plot_results = TRUE
-# plot_pval = TRUE
-# run_anova = FALSE
-# plot_faceted_by_date = FALSE
-# save_to = "~/Desktop"
-# POSITIVE_CTRL = c("WT")
-# NEGATIVE_CTRL = 0
-# DATA = All_plates_data
-
 filter_data <- function(DATA, FILTER_VALUES, FILTER_TYPE, POSITIVE_CTRL, NEGATIVE_CTRL) {
   filter_pattern_func <- if (FILTER_TYPE %in% "COHORT") {
     function(value, df) matches_any_pattern_vec(df$CELL_LINE, value) | matches_any_pattern_vec(df$CL_NAME_ON_PLOT, value)
@@ -223,6 +174,20 @@ filter_data <- function(DATA, FILTER_VALUES, FILTER_TYPE, POSITIVE_CTRL, NEGATIV
       pull(CONDITION)
   })
   
+  # stim_concentration_list <- lapply(FILTER_VALUES, function(value) {
+  #   DATA %>%
+  #     filter(filter_pattern_func(value, DATA)) %>%
+  #     distinct(STIM_CONCENTRATION) %>%
+  #     pull(STIM_CONCENTRATION)
+  # })
+  # 
+  # stim_time_list <- lapply(FILTER_VALUES, function(value) {
+  #   DATA %>%
+  #     filter(filter_pattern_func(value, DATA)) %>%
+  #     distinct(STIM_TIME) %>%
+  #     pull(STIM_TIME)
+  # })
+  
   # Adding names to the list elements
   names(plates_list)    <- FILTER_VALUES
   names(dates_list)     <- FILTER_VALUES
@@ -258,12 +223,16 @@ calculate_baseline_and_control <- function(DATA, FILTER_TYPE, POSITIVE_CTRL, NEG
   # Determine the group_by and filter parameters based on FILTER_TYPE
   if (FILTER_TYPE == "COHORT") {
     group_vars <- c("Date", "STIM_DAY")
-    filter_var <- "CELL_LINE"
+    # filter_var <- "CELL_LINE"
+    filter_var <- "CL_NAME_ON_PLOT"
   } else if (FILTER_TYPE == "DAY") {
     group_vars <- c("Date", "STIM_DAY", "Plate")
-    filter_var <- "CELL_LINE"  # Assuming the correct variable for DAY filter
+    # filter_var <- "CELL_LINE"  # Assuming the correct variable for DAY filter
+    filter_var <- "CL_NAME_ON_PLOT"  # Assuming the correct variable for DAY filter
+    
+    # filter_var <- c("CELL_LINE", "CL_NAME_ON_PLOT")
   } else {
-    stop("Invalid FILTER_TYPE. Must be either 'cohort' or 'day'.")
+    stop("Invalid FILTER_TYPE. Must be either 'COHORT' or 'DAY'.")
   }
   
   # Debugging information
@@ -274,16 +243,13 @@ calculate_baseline_and_control <- function(DATA, FILTER_TYPE, POSITIVE_CTRL, NEG
   if (is.character(NEGATIVE_CTRL)) {
     baseline <- DATA %>%
       group_by(!!!syms(group_vars)) %>%
-      filter(matches_any_pattern_vec(!!sym(filter_var), NEGATIVE_CTRL), CONDITION == "UNSTIM") %>% 
+      filter(matches_any_pattern_vec(!!sym(filter_var), NEGATIVE_CTRL), CONDITION == "UNSTIM") %>%
       summarise(baseline_control_value = mean(Concentration))
     
     # Join the calculated values with the dataset
     data <- left_join(DATA, baseline, by = group_vars) %>%
       mutate(Concentration_REDUCED = case_when(!is.na(baseline_control_value) ~ Concentration - baseline_control_value, TRUE ~ Concentration))
   } else {
-    # baseline <- DATA %>%
-    #   group_by(!!!syms(group_vars)) %>%
-    #   summarise(baseline_control_value = min(Concentration))
     baseline <- data %>%
       group_by(Date) %>%
       filter(Date == FILTER_VALUE) %>%
@@ -291,14 +257,13 @@ calculate_baseline_and_control <- function(DATA, FILTER_TYPE, POSITIVE_CTRL, NEG
     
     # Join the calculated values with the dataset
     data <- left_join(DATA, baseline) %>%
-      mutate(Concentration_REDUCED = case_when(!is.na(baseline_control_value) ~ Concentration - baseline_control_value,
-                                               TRUE ~ Concentration))
+      mutate(Concentration_REDUCED = case_when(!is.na(baseline_control_value) ~ Concentration - baseline_control_value, TRUE ~ Concentration))
   }
   
   
   if (is.character(POSITIVE_CTRL)) {
     control_mean_per_day <- data %>%
-      filter(matches_any_pattern_vec(!!sym(filter_var), POSITIVE_CTRL), CONDITION == "STIM") %>% 
+      filter(matches_any_pattern_vec(!!sym(filter_var), POSITIVE_CTRL), CONDITION == "STIM") %>%
       group_by(!!!syms(group_vars)) %>%
       summarise(control_mean_MEASUREMENT = case_when(mean(Concentration_REDUCED) > 0 ~ mean(Concentration_REDUCED), TRUE ~ -Inf))
     
@@ -315,9 +280,6 @@ calculate_baseline_and_control <- function(DATA, FILTER_TYPE, POSITIVE_CTRL, NEG
     
   } else {
     # Calculate control mean using an alternative method, e.g., mean value per group
-    # control_mean_per_day <- data %>%
-    #   group_by(!!!syms(group_vars)) %>%
-    #   summarise(control_mean_MEASUREMENT = mean(Concentration_REDUCED))
     control_mean_per_day <- data %>%
       group_by(STIM_DAY) %>%
       reframe(Concentration_REDUCED = Concentration_REDUCED) %>%
@@ -341,6 +303,39 @@ calculate_baseline_and_control <- function(DATA, FILTER_TYPE, POSITIVE_CTRL, NEG
   
   return(DATA_NORMALIZED)
 }
+
+
+# Define the function to save plots with specified dimensions
+save_plots <- function(folder_name, plots, path = save_to, width = 12, height = 8) {
+  # Create the full path for the folder
+  folder_path <- file.path(save_to, folder_name)
+  
+  # Check if the folder exists, and if not, create it
+  if (!dir.exists(folder_path)) {
+    dir.create(folder_path, recursive = TRUE)
+  }
+  
+  # Loop through the plots and save them
+  for (i in seq_along(plots)) {
+    file_base <- file.path(folder_path, paste0(folder_name, "_plot_", i))
+    
+    # Save as SVG
+    ggsave(paste0(file_base, ".svg"), plot = plots[[i]], device = "svg", width = width, height = height)
+    
+    # Save as PNG
+    ggsave(paste0(file_base, ".png"), plot = plots[[i]], device = "png", width = width, height = height)
+  }
+}
+
+
+################################################################################################################################################################
+################################################################################################################################################################
+################################################################################################################################################################
+
+# Vectorized function for pattern matching
+matches_any_pattern_vec <- Vectorize(function(string, patterns) {
+  any(sapply(patterns, function(pattern) grepl(pattern, string)))
+}, vectorize.args = "string")
 
 ################################################################################################################################################################
 ################################################################################################################################################################
@@ -794,3 +789,4 @@ plot_dose_response_ELISA_2 <- function(FILTER_VALUES, FILTER_TYPE = "DAY", DATA 
 ################################################################################################################################################################
 ################################################################################################################################################################
 ################################################################################################################################################################
+
