@@ -17,13 +17,32 @@ ELISA_Fx <- function(Input_Directory, Output_Directory) {
     for (input_plate_dir in subdirs) {
       
       Input_plate <- input_plate_dir
+      Input_plate_list <- list.files(Input_plate)
       
       #Reading Plate Treatment 
-      MEASUREMENTS <- fread(paste0(Input_plate, "/MEASUREMENTS.csv"), header = F)
-      CELL_LINES   <- fread(paste0(Input_plate, "/CELL_LINES.csv"),   header = F)
-      CONDITIONS   <- fread(paste0(Input_plate, "/CONDITIONS.csv"),   header = F)
-      STIM_DAYS    <- fread(paste0(Input_plate, "/STIM_DAYS.csv"),    header = F)
-      DILUTIONS    <- fread(paste0(Input_plate, "/DILUTIONS.csv"),    header = F)
+      MEASUREMENTS_PATTERNS <- c("MEASURE", "VALUE")
+      CELL_LINES_PATTERNS   <- c("CELL","LINE", "COHORT")
+      CONDITIONS_PATTERNS   <- c("COND")
+      DILUTIONS_PATTERNS    <- c("DIL")
+      STIM_DAYS_PATTERNS    <- c("DAY")
+      STIM_TIME_PATTERNS    <- c("TIME")
+      STIM_CONCENTRATIONS_PATTERNS <- c("CONC")
+      
+      MEASUREMENTS <- grep(paste(MEASUREMENTS_PATTERNS, collapse="|"), Input_plate_list, ignore.case = TRUE, value = TRUE)
+      CELL_LINES   <- grep(paste(CELL_LINES_PATTERNS,   collapse="|"), Input_plate_list, ignore.case = TRUE, value = TRUE)
+      CONDITIONS   <- grep(paste(CONDITIONS_PATTERNS,   collapse="|"), Input_plate_list, ignore.case = TRUE, value = TRUE)
+      DILUTIONS    <- grep(paste(DILUTIONS_PATTERNS,    collapse="|"), Input_plate_list, ignore.case = TRUE, value = TRUE)
+      STIM_DAYS    <- grep(paste(STIM_DAYS_PATTERNS,    collapse="|"), Input_plate_list, ignore.case = TRUE, value = TRUE)
+      STIM_TIME    <- grep(paste(STIM_TIME_PATTERNS,    collapse="|"), Input_plate_list, ignore.case = TRUE, value = TRUE)
+      STIM_CONCENTRATIONS <- grep(paste(STIM_CONCENTRATIONS_PATTERNS, collapse="|"), Input_plate_list, ignore.case = TRUE, value = TRUE)
+      
+      MEASUREMENTS <- fread(file.path(Input_plate, MEASUREMENTS), header = F)
+      CELL_LINES   <- fread(file.path(Input_plate, CELL_LINES),   header = F)
+      CONDITIONS   <- fread(file.path(Input_plate, CONDITIONS),   header = F)
+      STIM_DAYS    <- fread(file.path(Input_plate, STIM_DAYS),    header = F)
+      DILUTIONS    <- fread(file.path(Input_plate, DILUTIONS),    header = F)
+      STIM_TIMES    <- fread(file.path(Input_plate, STIM_TIME),    header = F)
+      STIM_CONCENTRATIONS <- fread(file.path(Input_plate, STIM_CONCENTRATIONS),    header = F)
       
       #Converting tables into vector for to make a single table
       MEASUREMENT <- as.vector(as.matrix(MEASUREMENTS))
@@ -31,6 +50,8 @@ ELISA_Fx <- function(Input_Directory, Output_Directory) {
       CONDITION   <- as.vector(as.matrix(CONDITIONS))
       STIM_DAY    <- as.vector(as.matrix(STIM_DAYS))
       DILUTION    <- as.vector(as.matrix(DILUTIONS))
+      STIM_TIME   <- as.vector(as.matrix(STIM_TIME))
+      STIM_CONCENTRATION <- as.vector(as.matrix(STIM_CONCENTRATIONS))
       
       #Creating Table containing all plate Information
       Plate <- NULL
@@ -39,14 +60,19 @@ ELISA_Fx <- function(Input_Directory, Output_Directory) {
       Plate$CONDITION   <- CONDITION
       Plate$STIM_DAY    <- STIM_DAY
       
-      if (exists("DILUTION")) {
-        Plate$DILUTION <- DILUTION
-      } else {
-        Plate$DILUTION <- ifelse(Plate$CONDITION != "CALIBRATION", 5, NA_real_)
-      }
+      # If DILUTION was found, we will fill the Plate column with the created values, otherwise we will set the default to 5-fold dilution
+      if (exists("DILUTION")) {Plate$DILUTION <- DILUTION} else {Plate$DILUTION <- ifelse(Plate$CONDITION != "CALIBRATION", 5, NA_real_)}
       Plate$DILUTION <- as.numeric(Plate$DILUTION)
       
-      rm(MEASUREMENT, CELL_LINE, CONDITION, STIM_DAY, DILUTION)
+      # If STIM_TIME was found, we will fill the Plate column with the created values, otherwise we will set the default to 24hrs
+      if (exists("STIM_TIME")) {Plate$STIM_TIME <- STIM_TIME} else {Plate$STIM_TIME <- ifelse(Plate$CONDITION != "CALIBRATION", 24, NA_real_)}
+      Plate$STIM_TIME <- as.numeric(Plate$STIM_TIME)
+      
+      # If STIM_CONCENTRATION was found, we will fill the Plate column with the created values, otherwise we will set the default to 24hrs
+      if (exists("STIM_CONCENTRATION")) {Plate$STIM_CONCENTRATION <- STIM_CONCENTRATION} else {Plate$CONDITION <- ifelse(Plate$CONDITION != "CALIBRATION", 5, NA_real_)}
+      Plate$STIM_CONCENTRATION <- as.numeric(Plate$STIM_CONCENTRATION)
+      
+      rm(MEASUREMENT, CELL_LINE, CONDITION, STIM_DAY, DILUTION, STIM_TIME, STIM_CONCENTRATION)
       
       Plate <- Plate %>% as.data.table()
       
