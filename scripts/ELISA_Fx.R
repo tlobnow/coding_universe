@@ -3,141 +3,187 @@
 ################################################################################################################################################################
 
 ELISA_Fx <- function(Input_Directory, Output_Directory) {
-  # Initialize as an empty data frame
+  # Initialize an empty data frame to store all plates' data
   All_plates_data = data.frame()
-  # Input_Directory = "~/Desktop/ALL"
-  # Output_Directory = "~/Desktop/ALL"
-  
-  # Get the list of subdirectories matching the pattern "Plate_"
+
+  # Get a list of subdirectories matching the pattern "Plate_"
   subdirs <- list.files(Input_Directory, recursive = FALSE, full.names = TRUE, pattern = "Plate_\\d+_\\d{8}$")
   # input_plate_dir = "~/Desktop/ALL/Plate_1_20220609"
-  
+
+  # Check if there are plates found
   if (length(subdirs) > 0) {
     print("Plates exist!")
+    # Iterate through each plate directory
     for (input_plate_dir in subdirs) {
-      
+
+      # Input_plate <- '/Users/u_lobnow/Desktop/ALL_TEST/Plate_1_20230314'
       Input_plate <- input_plate_dir
-      Input_plate_list <- list.files(Input_plate)
-      
-      #Reading Plate Treatment 
-      MEASUREMENTS_PATTERNS <- c("MEASURE", "VALUE")
-      CELL_LINES_PATTERNS   <- c("CELL","LINE", "COHORT")
-      CONDITIONS_PATTERNS   <- c("COND")
-      DILUTIONS_PATTERNS    <- c("DIL")
-      STIM_DAYS_PATTERNS    <- c("DAY")
-      STIM_TIME_PATTERNS    <- c("TIME")
-      STIM_CONCENTRATIONS_PATTERNS <- c("CONC")
-      
-      MEASUREMENTS <- grep(paste(MEASUREMENTS_PATTERNS, collapse="|"), Input_plate_list, ignore.case = TRUE, value = TRUE)
-      CELL_LINES   <- grep(paste(CELL_LINES_PATTERNS,   collapse="|"), Input_plate_list, ignore.case = TRUE, value = TRUE)
-      CONDITIONS   <- grep(paste(CONDITIONS_PATTERNS,   collapse="|"), Input_plate_list, ignore.case = TRUE, value = TRUE)
-      DILUTIONS    <- grep(paste(DILUTIONS_PATTERNS,    collapse="|"), Input_plate_list, ignore.case = TRUE, value = TRUE)
-      STIM_DAYS    <- grep(paste(STIM_DAYS_PATTERNS,    collapse="|"), Input_plate_list, ignore.case = TRUE, value = TRUE)
-      STIM_TIME    <- grep(paste(STIM_TIME_PATTERNS,    collapse="|"), Input_plate_list, ignore.case = TRUE, value = TRUE)
-      STIM_CONCENTRATIONS <- grep(paste(STIM_CONCENTRATIONS_PATTERNS, collapse="|"), Input_plate_list, ignore.case = TRUE, value = TRUE)
-      
-      MEASUREMENTS <- fread(file.path(Input_plate, MEASUREMENTS), header = F)
-      CELL_LINES   <- fread(file.path(Input_plate, CELL_LINES),   header = F)
-      CONDITIONS   <- fread(file.path(Input_plate, CONDITIONS),   header = F)
-      STIM_DAYS    <- fread(file.path(Input_plate, STIM_DAYS),    header = F)
-      DILUTIONS    <- fread(file.path(Input_plate, DILUTIONS),    header = F)
-      STIM_TIMES    <- fread(file.path(Input_plate, STIM_TIME),    header = F)
-      STIM_CONCENTRATIONS <- fread(file.path(Input_plate, STIM_CONCENTRATIONS),    header = F)
-      
-      #Converting tables into vector for to make a single table
-      MEASUREMENT <- as.vector(as.matrix(MEASUREMENTS))
-      CELL_LINE   <- as.vector(as.matrix(CELL_LINES))
-      CONDITION   <- as.vector(as.matrix(CONDITIONS))
-      STIM_DAY    <- as.vector(as.matrix(STIM_DAYS))
-      DILUTION    <- as.vector(as.matrix(DILUTIONS))
-      STIM_TIME   <- as.vector(as.matrix(STIM_TIME))
-      STIM_CONCENTRATION <- as.vector(as.matrix(STIM_CONCENTRATIONS))
-      
-      #Creating Table containing all plate Information
-      Plate <- NULL
-      Plate$MEASUREMENT <- MEASUREMENT
-      Plate$CELL_LINE   <- CELL_LINE
-      Plate$CONDITION   <- CONDITION
-      Plate$STIM_DAY    <- STIM_DAY
-      
-      # If DILUTION was found, we will fill the Plate column with the created values, otherwise we will set the default to 5-fold dilution
-      if (exists("DILUTION")) {Plate$DILUTION <- DILUTION} else {Plate$DILUTION <- ifelse(Plate$CONDITION != "CALIBRATION", 5, NA_real_)}
-      Plate$DILUTION <- as.numeric(Plate$DILUTION)
-      
-      # If STIM_TIME was found, we will fill the Plate column with the created values, otherwise we will set the default to 24hrs
-      if (exists("STIM_TIME")) {Plate$STIM_TIME <- STIM_TIME} else {Plate$STIM_TIME <- ifelse(Plate$CONDITION != "CALIBRATION", 24, NA_real_)}
-      Plate$STIM_TIME <- as.numeric(Plate$STIM_TIME)
-      
-      # If STIM_CONCENTRATION was found, we will fill the Plate column with the created values, otherwise we will set the default to 24hrs
-      if (exists("STIM_CONCENTRATION")) {Plate$STIM_CONCENTRATION <- STIM_CONCENTRATION} else {Plate$CONDITION <- ifelse(Plate$CONDITION != "CALIBRATION", 5, NA_real_)}
-      Plate$STIM_CONCENTRATION <- as.numeric(Plate$STIM_CONCENTRATION)
-      
-      rm(MEASUREMENT, CELL_LINE, CONDITION, STIM_DAY, DILUTION, STIM_TIME, STIM_CONCENTRATION)
-      
-      Plate <- Plate %>% as.data.table()
-      
+
+      # List all files in the current plate directory
+      Input_plate_list <- list.files(Input_plate, full.names = TRUE)
+
+      # Separate Excel and CSV files
+      excel_files <- Input_plate_list[grepl("\\.xlsx$", Input_plate_list, ignore.case = TRUE)]
+      csv_files   <- Input_plate_list[grepl("\\.csv$", Input_plate_list, ignore.case = TRUE)]
+
+      # Define patterns for reading sheets in files
+      MEASUREMENTS_PATTERN <- c("MEASURE", "VALUE")
+      CELL_LINES_PATTERN   <- c("CELL", "LINE", "COHORT")
+      CONDITIONS_PATTERN   <- c("COND")
+      DILUTIONS_PATTERN    <- c("DIL")
+      STIM_DAYS_PATTERN    <- c("DAY")
+      STIM_TIMES_PATTERN   <- c("TIME")
+      STIM_CONCENTRATIONS_PATTERN <- c("CONC")
+
+      # Function to find matching sheets in an Excel file and read them into data frames
+      read_matching_sheets <- function(file, patterns) {
+        sheets <- excel_sheets(file)
+        matching_sheets <- sheets[str_detect(sheets, regex(paste(patterns, collapse="|"), ignore_case = TRUE))]
+
+        # Read each matching sheet into a data frame
+        sheet_dfs <- lapply(matching_sheets, function(sheet) read_excel(file, sheet = sheet))
+
+        # Return a list of data frames
+        names(sheet_dfs) <- matching_sheets
+        return(sheet_dfs)
+      }
+
+      # Function to read and process a CSV file based on a pattern
+      read_and_process_csv <- function(file, pattern) {
+        if (grepl(pattern, file, ignore.case = TRUE)) {
+          data <- fread(file, header = FALSE)
+          data <- as.vector(as.matrix(data))
+          return(data)
+        } else {
+          return(NULL)
+        }
+      }
+
+      # Initialize lists for storing results
+      MEASUREMENTS <- list()
+      CELL_LINES   <- list()
+      CONDITIONS   <- list()
+      DILUTIONS    <- list()
+      STIM_DAYS    <- list()
+      STIM_TIMES   <- list()
+      STIM_CONCENTRATIONS <- list()
+
+      # If there are Excel files, extract sheets based on patterns
+      if (length(excel_files) > 0) {
+        for (file in excel_files) {
+          MEASUREMENTS <- c(MEASUREMENTS, read_matching_sheets(file, patterns = MEASUREMENTS_PATTERN))
+          CELL_LINES   <- c(CELL_LINES, read_matching_sheets(file, patterns = CELL_LINES_PATTERN))
+          CONDITIONS   <- c(CONDITIONS, read_matching_sheets(file, patterns = CONDITIONS_PATTERN))
+          DILUTIONS    <- c(DILUTIONS,  read_matching_sheets(file, patterns = DILUTIONS_PATTERN))
+          STIM_DAYS    <- c(STIM_DAYS,  read_matching_sheets(file, patterns = STIM_DAYS_PATTERN))
+          STIM_TIMES   <- c(STIM_TIMES,  read_matching_sheets(file, patterns = STIM_TIMES_PATTERN))
+          STIM_CONCENTRATIONS <- c(STIM_CONCENTRATIONS, read_matching_sheets(file, patterns = STIM_CONCENTRATIONS_PATTERN))
+        }
+      } else if (length(csv_files) > 0) {
+        # If there are CSV files, process them based on patterns
+        for (file in csv_files) {
+          MEASUREMENTS <- c(MEASUREMENTS, read_and_process_csv(file, pattern = MEASUREMENTS_PATTERN))
+          CELL_LINES   <- c(CELL_LINES, read_and_process_csv(file, pattern = CELL_LINES_PATTERN))
+          CONDITIONS   <- c(CONDITIONS, read_and_process_csv(file, pattern = CONDITIONS_PATTERN))
+          DILUTIONS    <- c(DILUTIONS,  read_and_process_csv(file, pattern = DILUTIONS_PATTERN))
+          STIM_DAYS    <- c(STIM_DAYS,  read_and_process_csv(file, pattern = STIM_DAYS_PATTERN))
+          STIM_TIMES   <- c(STIM_TIMES,  read_and_process_csv(file, pattern = STIM_TIMES_PATTERN))
+          STIM_CONCENTRATIONS <- c(STIM_CONCENTRATIONS, read_and_process_csv(file, pattern = STIM_CONCENTRATIONS_PATTERN))
+        }
+      }
+
+      # Replace NULL values with defaults
+      default_dilution <- 5           # 1:5 dilution
+      default_stim_time <- 24         # 24 hours
+      default_stim_concentration <- 5 # 5ng/µL for IL-1ß stimulation
+
+      DILUTIONS           <- lapply(DILUTIONS,  function(dilutions)     if (is.null(dilutions)) default_dilution else dilutions)
+      STIM_TIMES          <- lapply(STIM_TIMES, function(time)          if (is.null(time)) default_stim_time else time)
+      STIM_CONCENTRATIONS <- lapply(STIM_CONCENTRATIONS, function(conc) if (is.null(conc)) default_stim_concentration else conc)
+
+      # Create Plate data.table
+      Plate <- suppressWarnings(data.table(
+        MEASUREMENT = unlist(MEASUREMENTS),
+        CELL_LINE = unlist(CELL_LINES),
+        CONDITION = unlist(CONDITIONS),
+        DILUTION = as.numeric(unlist(DILUTIONS)),
+        STIM_DAY = as.numeric(unlist(STIM_DAYS)),
+        STIM_TIME = as.numeric(unlist(STIM_TIMES)),
+        STIM_CONCENTRATION = as.numeric(unlist(STIM_CONCENTRATIONS))
+      ))
+
       #Removing Empty Wells
       Plate <- Plate %>% filter(CELL_LINE != "BLANK") %>% as.data.table()
-      
+
       # Standard Curve ---------------------------------------------------------
       Plate_Standards <- Plate[Plate$CONDITION == "CALIBRATION"]
       Plate_Standards$CELL_LINE <- as.numeric(Plate_Standards$CELL_LINE)
-      
+
       Plate_Standards <- Plate_Standards %>%
-        group_by(CELL_LINE) %>% 
+        group_by(CELL_LINE) %>%
         summarise(MEASUREMENT_mean = mean(MEASUREMENT)) %>%
         mutate(CELL_LINE = as.numeric(CELL_LINE),
-               Date  = as_date(str_extract(basename(input_plate_dir), "\\d{8}"))) %>% 
+               Date  = as_date(str_extract(basename(input_plate_dir), "\\d{8}"))) %>%
         arrange(CELL_LINE)
+
+      # Why do we add the -1 in the formula?
+        # The use of -1 in the regression formula is specifically about forcing the intercept to be zero. If you omit the -1 or use + 0 in the formula, 
+        # you're allowing the model to estimate the intercept, and it could be any real number, not necessarily 1. 
+        # The general form of a linear regression model without forcing the intercept to be zero is: y=β0 + β1 ⋅x + ϵ
+        # Here, β0 is the intercept term. When you include an intercept term, the model is free to estimate any real number for β0. 
+        # If you omit the intercept term (using -1 or + 0), the model becomes: y = β1 ⋅ x + ϵ 
+        # In this case, the intercept is *forced to be zero*, and the line goes through the origin (0,0). 
+        # If you include the intercept term, the line is allowed to have a non-zero intercept. 
+        # So, in summary, without forcing the intercept to be zero, the intercept can take any real value. 
+        # If you force it to be zero (using -1 or + 0), the intercept is constrained to be exactly zero.
       
       # We will only use standard curve values of 1 and below (machine is optimized to measure absorptions between 0 and 1.1)
       Fit <- lm(CELL_LINE ~ MEASUREMENT_mean - 1, data = Plate_Standards[Plate_Standards$MEASUREMENT_mean <= 1.1, ])
-      
+
       R       <- summary(Fit)$r.squared
       Rsquare <- signif(R, digits = 4)
-      
+
       print(paste0("Secretion = slope*Intensity"))
       print(paste0("Secretion = ", Fit$coefficients[1],"*Intensity"))
       Plate_Standards <- Plate_Standards %>% mutate(Fit_Test = (Fit$coefficients[1]*MEASUREMENT_mean))
-      
+
       # Plotting Standard Curve
       p <- ggplot(data = Plate_Standards) +
         geom_point(aes(x = MEASUREMENT_mean, y = CELL_LINE, col = MEASUREMENT_mean <= 1.5), size = 5) +
         geom_line(aes(x = MEASUREMENT_mean, y = Fit_Test), linetype = "dashed") +
         annotate('text', x = 0.15, y = 700, label = paste0("R^2 = ", Rsquare), size = 10) +
-        annotate('text', 
+        annotate('text',
                  x = max(Plate_Standards$MEASUREMENT_mean) - (0.25 * max(Plate_Standards$MEASUREMENT_mean)),
                  y = 150, label = paste0("IL-Amount = \n", signif(Fit$coefficients[1], digits = 4), " * Intensity")) +
         labs(x = "Measured Values",
              y = "IL-Concentration (pg/mL)") +
-        ggtitle(label = paste0(basename(Input_plate)),
-                subtitle = paste0("R^2 = ", Rsquare, "\n IL-Amount = ", signif(Fit$coefficients[1], digits = 4), " * Intensity")) +
+        ggtitle(label = paste0(basename(Input_plate)), subtitle = paste0("R^2 = ", Rsquare, "\n IL-Amount = ", signif(Fit$coefficients[1], digits = 4), " * Intensity")) +
+        scale_color_manual(values = c("#79d2a3", "salmon"), guide = FALSE) +
         theme_classic() +
         theme(axis.title = element_text(size = 30),
               axis.text  = element_text(size = 20)) +
         theme(legend.position = "none")
-      
+
       # Saving the plot
-      Save_Name <- paste0(basename(Input_plate), "_Standard_Curve.pdf")
-      Save_Name <- file.path(Output_Directory, Save_Name)
+      Save_Name <- paste0(Input_plate, "/", basename(Input_plate), "_Standard_Curve.pdf")
       ggsave(Save_Name, plot = p, height = 3 * 3, width = 5 * 4)
-      
+
       # Further processing of the Plate object if needed
-      
-      
+
+
       # Fitting Data To Standard Curve ----------------------------------------
-      Plate <- Plate %>% 
-        filter(CONDITION != "CALIBRATION") %>% 
+      Plate <- Plate %>%
+        filter(CONDITION != "CALIBRATION") %>%
         mutate(Plate = as.numeric(gsub("(DR_)?Plate_(\\d+)_\\d{8}$", "\\2", basename(input_plate_dir))),
                Date  = as_date(str_extract(basename(input_plate_dir), "\\d{8}")),
                MEASUREMENT = as.numeric(MEASUREMENT),
-               
+
                # METHOD I: Correct negative values to zero, multiply measurements by dilution factor and THEN extrapolate values based on SC
                # ########  20231206 @Fakun: We should adjust for the dilution factor BEFORE extrapolating values based on the Standard Curve..
                # ########
                # MEASUREMENT_DIL_ADJ = (case_when(MEASUREMENT < 0 ~ 0, TRUE ~ MEASUREMENT)*DILUTION),
                # Concentration = (Fit$coefficients[1]*MEASUREMENT_DIL_ADJ),
-               
+
                # METHOD II: Extrapolate values based on SC and THEN multiply measurements by dilution factor
                # ########  20231206 @Finn: set machine measurement errors to zero (raw values below zero should be set to zero before extrapolating etc)
                # ########  20231206 @Finn:  We remove the column name *Concentration_DILUTION_FACTOR* from downstream analysis and simply stick to *Concentration*!
@@ -146,10 +192,10 @@ ELISA_Fx <- function(Input_Directory, Output_Directory) {
                # Concentration_DILUTION_FACTOR = Concentration*DILUTION,
                Concentration = (Fit$coefficients[1] * (case_when(MEASUREMENT < 0 ~ 0, TRUE ~ MEASUREMENT))),
                Concentration = Concentration * DILUTION,
-               
+
                Is_Dose_Response = ifelse(str_detect(basename(input_plate_dir), "^DR_"), TRUE, FALSE)
         )
-      
+
       All_plates_data <- rbind(All_plates_data, Plate)
     }
   } else {
@@ -199,20 +245,6 @@ filter_data <- function(DATA, FILTER_VALUES, FILTER_TYPE, POSITIVE_CTRL, NEGATIV
       distinct(CONDITION) %>%
       pull(CONDITION)
   })
-  
-  # stim_concentration_list <- lapply(FILTER_VALUES, function(value) {
-  #   DATA %>%
-  #     filter(filter_pattern_func(value, DATA)) %>%
-  #     distinct(STIM_CONCENTRATION) %>%
-  #     pull(STIM_CONCENTRATION)
-  # })
-  # 
-  # stim_time_list <- lapply(FILTER_VALUES, function(value) {
-  #   DATA %>%
-  #     filter(filter_pattern_func(value, DATA)) %>%
-  #     distinct(STIM_TIME) %>%
-  #     pull(STIM_TIME)
-  # })
   
   # Adding names to the list elements
   names(plates_list)    <- FILTER_VALUES
@@ -264,6 +296,7 @@ calculate_baseline_and_control <- function(DATA, FILTER_TYPE, POSITIVE_CTRL, NEG
   # Debugging information
   # print(paste("Grouping by:", paste(group_vars, collapse = ", ")))
   # print(paste("Filtering using variable:", filter_var))
+  # DATA = COHORT_DATA
   
   # Calculate the baseline control value
   if (is.character(NEGATIVE_CTRL)) {
