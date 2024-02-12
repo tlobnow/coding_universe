@@ -1,0 +1,177 @@
+---
+title: "Step by Step Analysis"
+date: "(`r format(Sys.time(), '%d %b %Y')`)"
+author: "Taylor Lab"
+output: 
+  github_document:
+    toc: true
+    df_print: kable
+---
+
+### Loading the necessary libraries and packages
+
+``` {r}
+library(pacman)
+pacman::p_load(data.table, ggplot2, lubridate, stringr, ggpubr, dplyr, cowplot, readxl, scales, knitr)
+```
+
+
+### Set paths to input and output
+
+1. Where do you store your all of the **plate folders** containing the excel files?
+2. Output files will be stored in the same location!
+3. Do you want to store the created **figures** here or somewhere else?
+
+``` {r}
+Input_Directory <- "./ALL/"
+save_to         <- Input_Directory
+```
+
+4. Add your cell line names for plots
+
+In the lab we all know that cl204 is our triple KO cell line that lacks MyD88/IRAK4/IRAK1. However, it is likely cryptic to other readers. In addition, many of us use slightly different names, but mean the same thing.. To make plots that can be published and unify all sorts of synonyms, you may want to rename your cell lines in a reproducible manner. For this purpose, take a look at the **ELISA_CL_KEY.csv** and add your names!
+  
+- CELL_LINE contains the name used on the plates
+- CL_NUMBER specifies the cell line number in our system
+- CL_NAME_ON_PLOT is equivalent to what you want to print in figures
+- PURPOSE is optional and just designates whether the cell line is used as a positive/negative/XYZ control or just a sample
+- INFO can be used to add additional information
+- PLOTTING_COLOR can be used to alter the color of your cell lines in the figures (not necessary, but it can add a nice touch if you wish)
+- ORDER_NO is used to plot your cell lines in the correct order
+- The most important cell lines against which we compare (the positive controls) are ranked highly (1 for WT, 2 for cl069, 3 for 3E10)
+- Negative controls follow (order number 4 and lower)
+- Samples come last - order them as you wish (I have continuously numbered them - synonyms can carry the same number)
+
+``` {r}
+# adjust the names as needed!
+NAME_KEY <- fread("./ELISA_CL_KEY.csv", header = T) 
+head(NAME_KEY, n = 10)
+```
+
+5. We will need several functions to analyze the data. You do not need to change this.
+``` {r}
+source(file = ifelse(exists("https://raw.githubusercontent.com/tlobnow/coding_universe/main/scripts/ELISA_Fx.R"), 
+                     yes =  "https://raw.githubusercontent.com/tlobnow/coding_universe/main/scripts/ELISA_Fx.R",
+                     no  =  "./scripts/ELISA_Fx.R"))
+```
+
+### From raw measurements to estimated sample concentrations
+
+1. Calculate the mean values per Standard Curve dilution step
+2. Plot the Standard curve and fit a linear trend line
+3. Save the plots
+
+We use the equation to estimate IL-2 conc. of our unknown samples
+
+Run ELISA_Fx() to generate standard curves and calculate the IL-2 concentrations.
+
+``` {r, echo = F, warning = F, message = F}
+All_plates_data_raw <- ELISA_Fx(Input_Directory, Output_Directory)
+All_plates_data     <- left_join(All_plates_data_raw, NAME_KEY)
+All_plates_data     <- All_plates_data %>% filter(CELL_LINE != "NA")
+```
+
+
+### Example #1
+
+In the first example data set, we are checking the **results of the ELISA assay**, so the entire **plate**. In order to process and plot this data, you need to provide some information. First of all, we need to know the Date you want to check. Supply the date as follows: "YYYY-MM-DD". Since we are looking at dates, the filter type must be set to "DATE" (Below you can also find a tutorial where the filter type differs to check for specific cell lines across several experiments).
+
+1. We want to filter for our **date** of interest "2022-06-09"
+2. Accordingly, we set the filter **type** to "DATE"
+3. Supply the name of your **positive control**, here "WT_EL4" - you can provide either plate names (CELL_LINE) or the plotting names (CL_NAME_ON_PLOT)
+4. Supply the name of your **negative control**, here "tKO_EL4"
+
+``` {r, echo = F, message = F, warning = F}
+# What to adjust:
+FILTER_VALUES = "2022-06-09"
+FILTER_TYPE   = "DATE" # or "COHORT"
+POSITIVE_CTRL = c("WT_EL4")
+NEGATIVE_CTRL = c("tKO_EL4", "204_TRIPLE_KO")
+COLOR         = "cornflowerblue"
+x_label       = ""
+y_label       = "relative IL-2 conc."
+plot_title    = "IL-2 ELISA"
+subtitle      = paste0("Assay performed for ", FILTER_VALUES, ", based on filter type ", FILTER_TYPE)
+save          = T
+
+
+# Automatic settings
+DF = All_plates_data
+DF$CL_NAME_ON_PLOT = reorder(DF$CL_NAME_ON_PLOT, -DF$ORDER_NO)
+
+SEED = 600
+plot_pval = T
+plot_faceted_by_date = F
+formatted_date <- format(as.IDate(FILTER_VALUES), "%Y%m%d")
+
+# processing ELISA
+ALL_COHORT_DATA <- lapply(FILTER_VALUES, function(FILTER_VALUE) {
+  # Step 1: Filter & Subset the main data into lists
+  COHORT_DATA <- filter_data(DF, FILTER_VALUE, FILTER_TYPE, POSITIVE_CTRL, NEGATIVE_CTRL)
+  # Step 2 and Step 3
+  NORMALIZED_DATA <- calculate_baseline_and_control(COHORT_DATA, FILTER_TYPE, POSITIVE_CTRL, NEGATIVE_CTRL)
+  return(NORMALIZED_DATA)
+})
+
+# Step 4: Combine the subset lists into one data frame
+COMBINED_DATA <- bind_rows(ALL_COHORT_DATA)
+
+# Step 5: Calculate the means per cohort
+MEANS <- COMBINED_DATA %>%
+  group_by(CELL_LINE, CONDITION, Date) %>%
+  distinct(triplicate_mean_per_day, STIM_DAY, .keep_all = TRUE) %>%
+  ungroup()
+
+MEANS$STIM_DAY <- as.factor(MEANS$STIM_DAY)
+
+
+# Step 6: Calculate the mean of means (MOM) per cohort
+MOM_SUBSET <- MEANS %>%
+  group_by(CELL_LINE, CL_NAME_ON_PLOT, CONDITION, Date) %>%
+  summarise(triplicate_sd_per_day = sd(triplicate_mean_per_day),
+            triplicate_mean_per_day = mean(triplicate_mean_per_day)) %>%
+  distinct(.keep_all = TRUE)
+
+# Step 7: Perform statistics per cohort
+STATISTICAL_RESULTS <- perform_statistical_analysis(MEANS, "CL_NAME_ON_PLOT")
+
+# Step 8: Plotting
+my_plot <- ggplot(MEANS, aes(x = CL_NAME_ON_PLOT)) +
+  geom_col(data = MOM_SUBSET,
+           aes(y = triplicate_mean_per_day, fill = CONDITION), position = position_dodge(width = 1), alpha = 0.5) +
+  geom_point(data = MEANS,
+             aes(y = triplicate_mean_per_day, group = CONDITION, shape = STIM_DAY),
+             position = position_jitterdodge(jitter.height = 0, jitter.width = 1.2, seed = SEED),
+             col = "white", size = 4) +
+  geom_point(data = MEANS, aes(y = triplicate_mean_per_day, group = CONDITION, shape = STIM_DAY),
+             position = position_jitterdodge(jitter.height = 0, jitter.width = 1.2, seed = SEED),
+             col = "black", size = 3) +
+  geom_errorbar(data = MOM_SUBSET, aes(ymin = triplicate_mean_per_day - triplicate_sd_per_day,
+                                       ymax = triplicate_mean_per_day + triplicate_sd_per_day, group = CONDITION),
+                width = 0.25, position = position_dodge(width = 1)) +
+  labs(x = x_label, y = y_label) +
+  scale_fill_manual(values = c("UNSTIM" = "gray50", "STIM" = COLOR)) +
+  ggtitle(plot_title) +
+  theme_cowplot() +
+  theme(legend.position = "bottom") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  # geom_text(data = data.frame(CL_NAME_ON_PLOT = names(STATISTICAL_RESULTS[["annotations"]]), y = max(MEANS$triplicate_mean_per_day) + 0.1, label = STATISTICAL_RESULTS[["annotations"]]), aes(y = y, label = label), col = "gray40", size = 4) +
+  # geom_text(data = data.frame(CL_NAME_ON_PLOT = names(STATISTICAL_RESULTS[["p_values"]]), y = max(MEANS$triplicate_mean_per_day) + 0.2, label = STATISTICAL_RESULTS[["p_values"]]), aes(y = y, label = label), size = 7) +
+  coord_flip() +
+  facet_wrap(~Date)
+
+my_plot
+
+if (save) {
+  # Step 9: Create Output Folder
+  folder_path <- file.path(save_to, paste0("Plate_1_", formatted_date))
+  if (!dir.exists(folder_path)) {dir.create(folder_path, recursive = TRUE)}   # Check if the folder exists, and if not, create it
+  
+  # Step 10: Save Plots and Data
+  save_plots(folder_name = basename(folder_path), plots = list(my_plot))
+  fwrite(COMBINED_DATA,       file = paste0(folder_path, "/COMBINED_DATA.csv"),       append = F, quote = F, row.names = F, col.names = T)
+  fwrite(MEANS,               file = paste0(folder_path, "/MEANS.csv"),               append = F, quote = F, row.names = F, col.names = T)
+  fwrite(MOM_SUBSET,          file = paste0(folder_path, "/MOM_SUBSET.csv"),          append = F, quote = F, row.names = F, col.names = T)
+  fwrite(STATISTICAL_RESULTS, file = paste0(folder_path, "/STATISTICAL_RESULTS.csv"), append = F, quote = F, row.names = F, col.names = T)
+}
+```
