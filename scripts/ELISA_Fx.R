@@ -31,7 +31,7 @@ ELISA_Fx <- function(Input_Directory, Output_Directory) {
       CELL_LINES_PATTERN   <- c("CELL", "LINE", "COHORT")
       CONDITIONS_PATTERN   <- c("COND")
       DILUTIONS_PATTERN    <- c("DIL")
-      STIM_DAYS_PATTERN    <- c("DAY")
+      STIM_DAYS_PATTERN    <- c("DATE")
       STIM_TIMES_PATTERN   <- c("TIME")
       STIM_CONCENTRATIONS_PATTERN <- c("CONC")
 
@@ -212,7 +212,7 @@ ELISA_Fx <- function(Input_Directory, Output_Directory) {
 filter_data <- function(DATA, FILTER_VALUES, FILTER_TYPE, POSITIVE_CTRL, NEGATIVE_CTRL) {
   filter_pattern_func <- if (FILTER_TYPE %in% "COHORT") {
     function(value, df) matches_any_pattern_vec(df$CELL_LINE, value) | matches_any_pattern_vec(df$CL_NAME_ON_PLOT, value)
-  } else if (FILTER_TYPE %in% "DAY") {
+  } else if (FILTER_TYPE %in% "DATE") {
     function(value, df) matches_any_pattern_vec(df$Date, value)
   } else {
     stop("Invalid FILTER_TYPE. Must be either 'COHORT' or 'DAY'.")
@@ -282,29 +282,26 @@ calculate_baseline_and_control <- function(DATA, FILTER_TYPE, POSITIVE_CTRL, NEG
   # Determine the group_by and filter parameters based on FILTER_TYPE
   if (FILTER_TYPE == "COHORT") {
     group_vars <- c("Date", "STIM_DAY")
-    # filter_var <- "CELL_LINE"
-    filter_var <- "CL_NAME_ON_PLOT"
-  } else if (FILTER_TYPE == "DAY") {
+  } else if (FILTER_TYPE == "DATE") {
     group_vars <- c("Date", "STIM_DAY", "Plate")
-    # filter_var <- "CELL_LINE"  # Assuming the correct variable for DAY filter
-    filter_var <- "CL_NAME_ON_PLOT"  # Assuming the correct variable for DAY filter
-    
-    # filter_var <- c("CELL_LINE", "CL_NAME_ON_PLOT")
   } else {
     stop("Invalid FILTER_TYPE. Must be either 'COHORT' or 'DAY'.")
   }
   
   # Debugging information
-  # print(paste("Grouping by:", paste(group_vars, collapse = ", ")))
-  # print(paste("Filtering using variable:", filter_var))
-  
-  # DATA = COHORT_DATA
+    # print(paste("Grouping by:", paste(group_vars, collapse = ", ")))
+    # print(paste("Filtering using variable:", filter_var))
   
   # Calculate the baseline control value
   if (is.character(NEGATIVE_CTRL)) {
     baseline <- DATA %>%
       group_by(!!!syms(group_vars)) %>%
-      filter(matches_any_pattern_vec(!!sym(filter_var), NEGATIVE_CTRL), CONDITION == "UNSTIM") %>%
+      # !! is the bang-bang operator, and sym() is a function from the rlang package. 
+      # The !! operator, also called the unquote operator, is used for unquoting expressions
+      # Here, we supply filter_var as a character string, but want to use it for filtering, therefore it must be passed on without quotation marks! 
+      # The sym() function is used to convert a string to a symbol. Symbols are a type of data in R that represent variable names. 
+      # filter(matches_any_pattern_vec(!!sym(filter_var), NEGATIVE_CTRL), CONDITION == "UNSTIM") %>%
+      filter((CELL_LINE %in% NEGATIVE_CTRL & CONDITION == "UNSTIM") | (CL_NAME_ON_PLOT %in% NEGATIVE_CTRL & CONDITION == "UNSTIM")) %>%
       summarise(baseline_control_value = mean(Concentration))
     
     # Join the calculated values with the dataset
@@ -324,7 +321,8 @@ calculate_baseline_and_control <- function(DATA, FILTER_TYPE, POSITIVE_CTRL, NEG
   
   if (is.character(POSITIVE_CTRL)) {
     control_mean_per_day <- data %>%
-      filter(matches_any_pattern_vec(!!sym(filter_var), POSITIVE_CTRL), CONDITION == "STIM") %>%
+      # filter(matches_any_pattern_vec(!!sym(filter_var), POSITIVE_CTRL), CONDITION == "STIM") %>%
+      filter((CELL_LINE %in% POSITIVE_CTRL & CONDITION == "STIM") | (CL_NAME_ON_PLOT %in% POSITIVE_CTRL & CONDITION == "STIM")) %>%
       group_by(!!!syms(group_vars)) %>%
       summarise(control_mean_MEASUREMENT = case_when(mean(Concentration_REDUCED) > 0 ~ mean(Concentration_REDUCED), TRUE ~ -Inf))
     
@@ -334,9 +332,8 @@ calculate_baseline_and_control <- function(DATA, FILTER_TYPE, POSITIVE_CTRL, NEG
     # Perform normalization
     DATA_NORMALIZED <- data %>%
       group_by(!!!syms(group_vars), CELL_LINE, CONDITION) %>%
-      mutate(Concentration_NORMALIZED = case_when(Concentration_REDUCED / control_mean_MEASUREMENT < 0 ~ 0,
-                                                  TRUE ~ Concentration_REDUCED / control_mean_MEASUREMENT),
-             triplicate_mean_per_day = mean(Concentration_NORMALIZED)) %>%
+      mutate(Concentration_NORMALIZED = case_when(Concentration_REDUCED / control_mean_MEASUREMENT < 0 ~ 0, TRUE ~ Concentration_REDUCED / control_mean_MEASUREMENT),
+             triplicate_mean_per_day  = mean(Concentration_NORMALIZED)) %>%
       ungroup()
     
   } else {
@@ -452,7 +449,7 @@ create_plot <- function(FILTER_VALUES, FILTER_TYPE, MEANS, MOM_SUBSET, STATISTIC
     theme(legend.position = "bottom") +
     theme(plot.title = element_text(hjust = 0.5))
   
-  if (FILTER_TYPE == "DAY") {
+  if (FILTER_TYPE == "DATE") {
     plot_faceted_by_date = T
     plot_pval = F
   }
@@ -480,7 +477,7 @@ create_plot <- function(FILTER_VALUES, FILTER_TYPE, MEANS, MOM_SUBSET, STATISTIC
 
 # I am providing an example cohort of the All_plates_data data frame to debug the functions:
 # FILTER_VALUES = c("BDLD_57", "BDLD_6-")  # Example cohort names
-# FILTER_TYPE = "COHORT"        # Should be "COHORT" or "DAY"
+# FILTER_TYPE = "COHORT"        # Should be "COHORT" or "DATE"
 # save_to = "~/Desktop"
 # POSITIVE_CTRL = c("3E10_GFP", "MyD88_GFP")
 # NEGATIVE_CTRL = c("204_TRIPLE_KO", "tKO_EL4")
@@ -684,12 +681,12 @@ plot_dose_response_ELISA <- function(DATA, FILTER_VALUES,
 # Plot for a specific day
 # FILTER_VALUES = c("2023-11-21")
 # FILTER_VALUES = c("2023-11-16")
-# FILTER_TYPE = "DAY"
+# FILTER_TYPE = "DATE"
 # POSITIVE_CTRL = 0
 # NEGATIVE_CTRL = 0
 # DATA = All_plates_data
 
-plot_dose_response_ELISA_2 <- function(FILTER_VALUES, FILTER_TYPE = "DAY", DATA = All_plates_data, POSITIVE_CTRL = 0, NEGATIVE_CTRL = 0,
+plot_dose_response_ELISA_2 <- function(FILTER_VALUES, FILTER_TYPE = "DATE", DATA = All_plates_data, POSITIVE_CTRL = 0, NEGATIVE_CTRL = 0,
                                        x_label = "X-Axis", y_label = "Y-Axis", 
                                        plot_title = "Dose Response Plot", 
                                        subtitle = paste0("Assay performed on ", FILTER_VALUES),
@@ -699,7 +696,7 @@ plot_dose_response_ELISA_2 <- function(FILTER_VALUES, FILTER_TYPE = "DAY", DATA 
   filter_pattern_func <- if (FILTER_TYPE %in% "COHORT") {
     # function(value, df) matches_any_pattern_vec(df$CELL_LINE, value) | matches_any_pattern_vec(df$CL_NAME_ON_PLOT, value)
     print("plot_dose_response_ELISA_2() is currently optizimed for 'DAY' inputs only. Please adjust your input accordingly to use this function.")
-  } else if (FILTER_TYPE %in% "DAY") {
+  } else if (FILTER_TYPE %in% "DATE") {
     function(value, df) matches_any_pattern_vec(df$Date, value)
     # cat(paste0("Filter Type is 'DAY'. Subsetting for the Date supplied in FILTER_VALUES: ", FILTER_VALUES, "\n"))
   } else {
