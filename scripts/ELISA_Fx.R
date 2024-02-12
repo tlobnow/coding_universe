@@ -8,7 +8,7 @@ ELISA_Fx <- function(Input_Directory, Output_Directory) {
 
   # Get a list of subdirectories matching the pattern "Plate_"
   subdirs <- list.files(Input_Directory, recursive = FALSE, full.names = TRUE, pattern = "Plate_\\d+_\\d{8}$")
-  # input_plate_dir = "~/Desktop/ALL/Plate_1_20220609"
+  # input_plate_dir = "/Users/u_lobnow/Documents/Github/coding_universe/ALL/Plate_1_20220609"
 
   # Check if there are plates found
   if (length(subdirs) > 0) {
@@ -41,7 +41,7 @@ ELISA_Fx <- function(Input_Directory, Output_Directory) {
         matching_sheets <- sheets[str_detect(sheets, regex(paste(patterns, collapse="|"), ignore_case = TRUE))]
 
         # Read each matching sheet into a data frame
-        sheet_dfs <- lapply(matching_sheets, function(sheet) read_excel(file, sheet = sheet))
+        sheet_dfs <- lapply(matching_sheets, function(sheet) read_excel(file, sheet = sheet, col_names = F))
 
         # Return a list of data frames
         names(sheet_dfs) <- matching_sheets
@@ -102,7 +102,7 @@ ELISA_Fx <- function(Input_Directory, Output_Directory) {
       STIM_CONCENTRATIONS <- lapply(STIM_CONCENTRATIONS, function(conc) if (is.null(conc)) default_stim_concentration else conc)
 
       # Create Plate data.table
-      Plate <- suppressWarnings(data.table(
+      Plate <- data.table(
         MEASUREMENT = unlist(MEASUREMENTS),
         CELL_LINE = unlist(CELL_LINES),
         CONDITION = unlist(CONDITIONS),
@@ -110,7 +110,7 @@ ELISA_Fx <- function(Input_Directory, Output_Directory) {
         STIM_DAY = as.numeric(unlist(STIM_DAYS)),
         STIM_TIME = as.numeric(unlist(STIM_TIMES)),
         STIM_CONCENTRATION = as.numeric(unlist(STIM_CONCENTRATIONS))
-      ))
+      )
 
       #Removing Empty Wells
       Plate <- Plate %>% filter(CELL_LINE != "BLANK") %>% as.data.table()
@@ -137,7 +137,7 @@ ELISA_Fx <- function(Input_Directory, Output_Directory) {
         # So, in summary, without forcing the intercept to be zero, the intercept can take any real value. 
         # If you force it to be zero (using -1 or + 0), the intercept is constrained to be exactly zero.
       
-      # We will only use standard curve values of 1 and below (machine is optimized to measure absorptions between 0 and 1.1)
+      # We will only use standard curve values of 1 and below (machine is optimized to measure absorption values between 0 and 1.1)
       Fit <- lm(CELL_LINE ~ MEASUREMENT_mean - 1, data = Plate_Standards[Plate_Standards$MEASUREMENT_mean <= 1.1, ])
 
       R       <- summary(Fit)$r.squared
@@ -296,6 +296,7 @@ calculate_baseline_and_control <- function(DATA, FILTER_TYPE, POSITIVE_CTRL, NEG
   # Debugging information
   # print(paste("Grouping by:", paste(group_vars, collapse = ", ")))
   # print(paste("Filtering using variable:", filter_var))
+  
   # DATA = COHORT_DATA
   
   # Calculate the baseline control value
