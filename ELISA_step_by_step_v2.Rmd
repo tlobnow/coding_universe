@@ -14,20 +14,19 @@ output:
   - Folder names should be formatted as **PLATE_n_YYYYMMDD** (see examples below)
   ![](./ELISA_step_by_step_v2_files/FOLDER_ORGANIZATION.png){width=40%}
 
-#### Notes on Excel Organization
+### Notes on Excel Organization
 
-Each plate folder should contain an **Excel** file with multiple sheets:
+- Each plate folder should contain an **Excel** file with multiple sheets:
+- see */ELISA_step_by_step_v2_files/ELISA_TEMPLATE.xlsx*
+- please be aware that these excel sheets should not contain sheets other than those intended for analysis
+- one plate per excel file
+- sheet names should match patterns that mark them uniquely
+- Please try to work with the *ELISA_TEMPLATE.xlsx* to ensure smooth analysis
 
-  - see */ELISA_step_by_step_v2_files/ELISA_TEMPLATE.xlsx*
-  - please be aware that these excel sheets should not contain sheets other than those intended for analysis
-  - one plate per excel file
-  - sheet names should match patterns that mark them uniquely
-  - Please try to work with the *ELISA_TEMPLATE.xlsx* to ensure smooth analysis
-  
-    ![](./ELISA_step_by_step_v2_files/ELISA_TEMPLATE.png)
+![](./ELISA_step_by_step_v2_files/ELISA_TEMPLATE.png)
 
   - **MEASUREMENTS** contains the **raw measured values** per plate
-    - each plate should contain at least two standard replicates
+    - each plate should contain at least two standard replicates, ideally also a positive + negative control
     ![](./ELISA_step_by_step_v2_files/MEASUREMENTS.png)
   
   
