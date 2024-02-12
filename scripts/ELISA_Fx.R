@@ -31,7 +31,7 @@ ELISA_Fx <- function(Input_Directory, Output_Directory) {
       CELL_LINES_PATTERN   <- c("CELL", "LINE", "COHORT")
       CONDITIONS_PATTERN   <- c("COND")
       DILUTIONS_PATTERN    <- c("DIL")
-      STIM_DAYS_PATTERN    <- c("DATE")
+      STIM_DAYS_PATTERN    <- c("DAY")
       STIM_TIMES_PATTERN   <- c("TIME")
       STIM_CONCENTRATIONS_PATTERN <- c("CONC")
 
@@ -215,7 +215,7 @@ filter_data <- function(DATA, FILTER_VALUES, FILTER_TYPE, POSITIVE_CTRL, NEGATIV
   } else if (FILTER_TYPE %in% "DATE") {
     function(value, df) matches_any_pattern_vec(df$Date, value)
   } else {
-    stop("Invalid FILTER_TYPE. Must be either 'COHORT' or 'DAY'.")
+    stop("Invalid FILTER_TYPE. Must be either 'COHORT' or 'DATE'.")
   }
   
   # Generate lists for plates, dates, and stim_days based on the filter type
@@ -420,7 +420,11 @@ perform_statistical_analysis <- function(DATA, GROUP_BY_COLUMN) {
   annotations <- sapply(split(DATA, DATA[[GROUP_BY_COLUMN]]), pairwise_ttest)
   p_values    <- sapply(split(DATA, DATA[[GROUP_BY_COLUMN]]), function(DATA) pairwise_ttest(DATA, return_annotation = TRUE))
   
-  return(list(annotations = annotations, p_values = p_values))
+  filtered_annotations <- unlist(lapply(annotations, function(annotation) annotation[annotation != ""]))
+  filtered_p_values    <- unlist(lapply(p_values, function(p_value) p_value[p_value != ""]))
+  
+  # return(list(annotations = annotations, p_values = p_values))
+  return(list(annotations = filtered_annotations, p_values = filtered_p_values))
 }
 # Example usage
 # results <- perform_statistical_analysis(MEANS, "CL_NAME_ON_PLOT")
