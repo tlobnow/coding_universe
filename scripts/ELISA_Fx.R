@@ -149,7 +149,7 @@ ELISA_Fx <- function(Input_Directory, Output_Directory) {
 
       # Plotting Standard Curve
       p <- ggplot(data = Plate_Standards) +
-        geom_point(aes(x = MEASUREMENT_mean, y = CELL_LINE, col = MEASUREMENT_mean <= 1.5), size = 5) +
+        geom_point(aes(x = MEASUREMENT_mean, y = CELL_LINE, col = MEASUREMENT_mean), size = 5) +
         geom_line(aes(x = MEASUREMENT_mean, y = Fit_Test), linetype = "dashed") +
         annotate('text', x = 0.15, y = 700, label = paste0("R^2 = ", Rsquare), size = 10) +
         annotate('text',
@@ -158,7 +158,7 @@ ELISA_Fx <- function(Input_Directory, Output_Directory) {
         labs(x = "Measured Values",
              y = "IL-Concentration (pg/mL)") +
         ggtitle(label = paste0(basename(Input_plate)), subtitle = paste0("R^2 = ", Rsquare, "\n IL-Amount = ", signif(Fit$coefficients[1], digits = 4), " * Intensity")) +
-        scale_color_manual(values = c("#79d2a3", "salmon"), guide = FALSE) +
+        scale_color_gradientn(colors = c("#79d2a3", "salmon"), values = rescale(c(1.5, max(Plate_Standards$MEASUREMENT_mean)))) +
         theme_classic() +
         theme(axis.title = element_text(size = 30),
               axis.text  = element_text(size = 20)) +
