@@ -69,10 +69,11 @@ Run ELISA_Fx() to generate standard curves and calculate the IL-2 concentrations
 All_plates_data_raw <- ELISA_Fx(Input_Directory, Output_Directory)
 All_plates_data     <- left_join(All_plates_data_raw, NAME_KEY)
 All_plates_data     <- All_plates_data %>% filter(CELL_LINE != "NA")
+DF                  <- All_plates_data
 ```
 
 
-### Example #1
+### Example #1 IL-2 ELISA (normal Plate Check)
 
 In the first example data set, we are checking the **results of the ELISA assay**, so the entire **plate**. In order to process and plot this data, you need to provide some information. First of all, we need to know the Date you want to check. Supply the date as follows: "YYYY-MM-DD". Since we are looking at dates, the filter type must be set to "DATE" (Below you can also find a tutorial where the filter type differs to check for specific cell lines across several experiments).
 
@@ -175,3 +176,350 @@ if (save) {
   fwrite(STATISTICAL_RESULTS, file = paste0(folder_path, "/STATISTICAL_RESULTS.csv"), append = F, quote = F, row.names = F, col.names = T)
 }
 ```
+
+### Example #2 IL-6 ELISA (normal Plate Check)
+
+``` {r, echo = F, message = F, warning = F}
+FILTER_VALUES = c("2023-11-21")
+FILTER_TYPE = "DATE"
+save = T
+
+x_label     = ""
+y_label     = "relative  IL-6 secretion"
+plot_title  = "IL-6 secretion of mMPh wt vs. MyD88/IRAK4 dKO"
+subtitle    = paste0("Assay performed on ", FILTER_VALUES)
+
+POSITIVE_CTRL = 0
+NEGATIVE_CTRL = 0
+subtitle = paste0("Assay performed on ", FILTER_VALUES)
+SEED = 600
+plot_pval = T
+plot_faceted_by_date = F
+group_vars <- c("CELL_LINE", "CL_NAME_ON_PLOT", "CONDITION")
+extra_var <- "STIM_DAY" 
+formatted_date <- format(as.IDate(FILTER_VALUES), "%Y%m%d")
+
+filter_pattern_func <- if (FILTER_TYPE %in% "COHORT") {
+    print("plot_dose_response_ELISA_2() is currently optizimed for 'DATE' inputs only. Please adjust your input accordingly to use this function.")
+  } else if (FILTER_TYPE %in% "DATE") {
+    function(value, df) matches_any_pattern_vec(df$Date, value)
+  } else {
+    stop("Invalid FILTER_TYPE. Must be either 'COHORT' or 'DATE'.")
+  }
+
+plates_list <- lapply(FILTER_VALUES, function(value) {
+    DF %>%
+      filter(filter_pattern_func(value, DF)) %>%
+      distinct(Plate) %>%
+      pull(Plate)
+  })
+  
+dates_list <- lapply(FILTER_VALUES, function(value) {
+    DF %>%
+      filter(filter_pattern_func(value, DF)) %>%
+      distinct(Date) %>%
+      pull(Date)
+  })
+  
+stim_list <- lapply(FILTER_VALUES, function(value) {
+    DF %>%
+      filter(filter_pattern_func(value, DF)) %>%
+      distinct(STIM_DAY) %>%
+      pull(STIM_DAY)
+  })
+  
+condition_list <- lapply(FILTER_VALUES, function(value) {
+    DF %>%
+      filter(filter_pattern_func(value, DF)) %>%
+      distinct(CONDITION) %>%
+      pull(CONDITION)
+  })
+  
+# Adding names to the list elements
+names(plates_list)    <- FILTER_VALUES
+names(dates_list)     <- FILTER_VALUES
+names(stim_list)      <- FILTER_VALUES
+names(condition_list) <- FILTER_VALUES
+  
+# Create subset based on the lists
+subset_list <- lapply(names(plates_list), function(value) {
+    plates <- plates_list[[value]]
+    dates  <- dates_list[[value]]
+    stim   <- stim_list[[value]]
+    cond   <- condition_list[[value]]
+    
+    DF %>%
+      filter(Date %in% dates,
+             Plate %in% plates,
+             STIM_DAY %in% stim,
+             CONDITION %in% cond,
+             filter_pattern_func(c(POSITIVE_CTRL, NEGATIVE_CTRL, value), DF))
+})
+
+# Combine the subsets and return
+FILTERED_SUBSET <- bind_rows(subset_list)
+group_vars      <- c("Date", "STIM_DAY", "Plate")
+
+DATA_NORMALIZED <- FILTERED_SUBSET %>%
+    group_by(Date, Plate) %>%
+    filter(Date == FILTER_VALUES) %>%
+    mutate(baseline_control_value =  min(Concentration),
+           Concentration_REDUCED  = Concentration - baseline_control_value,
+           Concentration_REDUCED  = case_when(Concentration_REDUCED < 0 ~ 0, TRUE ~ Concentration_REDUCED)) %>%
+    ungroup() %>%
+    group_by(Plate) %>%
+    mutate(max_control_value = max(Concentration),
+           Concentration_REDUCED_NORMALIZED = Concentration_REDUCED/max_control_value)
+
+DATA_NORMALIZED <- DATA_NORMALIZED %>%
+  group_by(CELL_LINE, CONDITION, STIM_DAY) %>%
+  mutate(triplicate_mean_per_day = mean(Concentration_REDUCED_NORMALIZED),
+         triplicate_sd_per_day   = sd(Concentration_REDUCED_NORMALIZED))
+
+
+# Set the dodge width
+dodge_width  <- 0.9
+jitter_width <- 0.3
+
+
+plot1_CONDITION_Concentration_REDUCED_NORMALIZED <- ggplot(DATA_NORMALIZED, aes(x = CONDITION, y = Concentration_REDUCED_NORMALIZED, fill = CELL_LINE, group = CELL_LINE)) +
+  geom_col(position = position_dodge(width = dodge_width)) +
+  facet_wrap(~paste0(STIM_DAY, "h")+ DILUTION, nrow = 1) +
+  labs(x = x_label, y = y_label) +
+  ggtitle(label = plot_title, subtitle = subtitle) +
+  theme_cowplot() +
+  theme(legend.position = "bottom")
+
+plot1_CONDITION_Concentration_REDUCED_NORMALIZED
+
+
+plot2_STIM_DAY_triplicate_mean_per_day <- ggplot(DATA_NORMALIZED, aes(x = STIM_DAY, y = triplicate_mean_per_day, fill = CONDITION, group = CONDITION)) +
+  geom_col(position = position_dodge(width = 1)) +
+  facet_wrap(~CELL_LINE+CONDITION, nrow = 1) +
+  labs(x = x_label, y = y_label) +
+  ggtitle(label = plot_title, subtitle = subtitle) +
+  theme_cowplot() +
+  theme(legend.position = "bottom", 
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.line.x = element_blank())
+
+# plot2_STIM_DAY_triplicate_mean_per_day
+
+if (save) {
+  # Step 9: Create Output Folder
+  folder_path <- file.path(save_to, paste0("Plate_1_", formatted_date))
+  if (!dir.exists(folder_path)) {dir.create(folder_path, recursive = TRUE)}   # Check if the folder exists, and if not, create it
+  
+  # Step 10: Save Plots and Data
+  save_plots(folder_name = basename(folder_path), plots = list(plot1_CONDITION_Concentration_REDUCED_NORMALIZED, 
+                                                               plot2_STIM_DAY_triplicate_mean_per_day))
+  
+  fwrite(COMBINED_DATA,       file = paste0(folder_path, "/COMBINED_DATA.csv"),       append = F, quote = F, row.names = F, col.names = T)
+  fwrite(MEANS,               file = paste0(folder_path, "/MEANS.csv"),               append = F, quote = F, row.names = F, col.names = T)
+  fwrite(MOM_SUBSET,          file = paste0(folder_path, "/MOM_SUBSET.csv"),          append = F, quote = F, row.names = F, col.names = T)
+  fwrite(STATISTICAL_RESULTS, file = paste0(folder_path, "/STATISTICAL_RESULTS.csv"), append = F, quote = F, row.names = F, col.names = T)
+}
+```
+
+### Example #3 Dose Response ELISA
+
+``` {r, echo = F, message = F, warning = F}
+FILTER_VALUE = "2022-11-24"
+FILTER_TYPE  = "DATE"
+x_label    = "Stimulant Conc."
+y_label    = "Relative Response"
+plot_title = "Dose Response IL-2 ELISA"
+subtitle   = paste0("Assay performed on ", FILTER_VALUES)
+save       = T
+
+
+POSITIVE_CTRL = 0
+NEGATIVE_CTRL = 0
+subtitle = paste0("Assay performed on ", FILTER_VALUES)
+formatted_date <- format(as.IDate(FILTER_VALUE), "%Y%m%d")
+SEED = 600
+plot_pval = T
+plot_faceted_by_date = F
+group_vars <- c("CELL_LINE", "CL_NAME_ON_PLOT", "CONDITION")
+extra_var <- "STIM_DAY" 
+
+
+COHORT_DATA <- All_plates_data %>%
+  group_by(CELL_LINE, STIM_DAY, CONDITION, Date, Plate) %>%
+  filter(Date == FILTER_VALUE)
+    
+# Calculate baseline values (lowest value per plate)
+baseline <- COHORT_DATA %>%
+  group_by(Plate) %>%
+  filter(Date == as.IDate(FILTER_VALUE)) %>%
+  summarise(baseline_control_value = min(Concentration))
+    
+COHORT_DATA <- left_join(COHORT_DATA, baseline) %>%
+  mutate(Concentration_REDUCED = case_when(!is.na(baseline_control_value) ~ Concentration - baseline_control_value, TRUE ~ Concentration))
+
+# Baseline-corrected per cell line, per condition, per stimulation and retrieve the max values to normalize for day-to-day differences.
+control_mean_per_day <- COHORT_DATA %>%
+      group_by(CELL_LINE, CONDITION, Date, STIM_DAY, Plate) %>%
+      reframe(Concentration_REDUCED = Concentration_REDUCED) %>%
+      ungroup() %>%
+      group_by(STIM_DAY) %>%
+      reframe(control_MEASUREMENT = max(Concentration_REDUCED))
+    
+# Step 5: Normalize the baseline-corrected values by dividing each value by the max value per stimulation day.
+COHORT_DATA <- left_join(COHORT_DATA, control_mean_per_day) %>%
+      group_by(CELL_LINE, CONDITION, Date, STIM_DAY) %>%
+      mutate(Concentration_NORMALIZED = case_when(Concentration_REDUCED / control_MEASUREMENT < 0 ~ 0, TRUE ~ Concentration_REDUCED / control_MEASUREMENT),
+             triplicate_mean_per_day = mean(Concentration_NORMALIZED)) %>%
+      ungroup()
+    
+# Make sure that the conditions are now read as numbers for plotting!
+COHORT_DATA$CONDITION <- as.numeric(as.character(COHORT_DATA$CONDITION))
+  
+# Calculate the normalized means per grouped variables (group_vars + extra_vars)
+MEANS <- COHORT_DATA %>%
+      group_by_at(c(group_vars, extra_var)) %>%
+      distinct(triplicate_mean_per_day, STIM_DAY, .keep_all = TRUE) %>%
+      ungroup()
+
+# Create a data frame with unique CL_NAME_ON_PLOT and corresponding PLOTTING_COLOR
+color_mapping <- unique(MEANS[, c("CL_NAME_ON_PLOT", "PLOTTING_COLOR")])
+
+# Merge the MEANS data frame with the color_mapping data frame using dplyr
+MEANS_merged <- MEANS %>%
+  left_join(color_mapping) %>%
+  mutate(CL_NAME_ON_PLOT = factor(CL_NAME_ON_PLOT, levels = unique(MEANS$CL_NAME_ON_PLOT)))
+
+# Calculate the mean of means (MOM) per cell line and per condition.
+MOM_SUBSET <- COHORT_DATA %>%
+      group_by(CELL_LINE, CL_NAME_ON_PLOT, CONDITION, PLOTTING_COLOR) %>%
+      summarise(triplicate_sd_per_day = sd(triplicate_mean_per_day),
+                triplicate_mean_per_day = mean(triplicate_mean_per_day)) %>%
+      distinct(.keep_all = TRUE)
+
+# Deriving breaks from unique CONDITION values
+condition_breaks <- sort(unique(MOM_SUBSET$CONDITION))
+      
+PLOT <- ggplot(data = MOM_SUBSET, aes(x = CONDITION, y = triplicate_mean_per_day, group = CELL_LINE, col = CELL_LINE, fill = CELL_LINE)) +
+  geom_path(size = 1.5) +
+  geom_point(data = MEANS_merged, aes(x = CONDITION, y = triplicate_mean_per_day), size = 3, shape = 21) +
+  geom_errorbar(data = MOM_SUBSET, col = "black", linewidth = 0.4, width = 0.25,
+                aes(x = CONDITION, y = triplicate_mean_per_day, 
+                    ymin = triplicate_mean_per_day - triplicate_sd_per_day, 
+                    ymax = triplicate_mean_per_day + triplicate_sd_per_day)) +
+  labs(x = x_label, y = y_label) +
+  scale_fill_manual(name  = "CELL_LINE", values = setNames(unique(MEANS_merged$PLOTTING_COLOR), unique(MEANS_merged$CELL_LINE))) +
+  scale_color_manual(name = "CELL_LINE", values = setNames(unique(MEANS_merged$PLOTTING_COLOR), unique(MEANS_merged$CELL_LINE))) +
+  ggtitle(label = plot_title, subtitle = subtitle) +
+  theme_cowplot() +
+  scale_x_continuous(trans = "log10", breaks = condition_breaks)
+
+PLOT
+
+if (save) {
+  # Step 9: Create Output Folder
+  folder_path <- file.path(save_to, paste0("DR_Plate_1_", formatted_date))
+  if (!dir.exists(folder_path)) {dir.create(folder_path, recursive = TRUE)}   # Check if the folder exists, and if not, create it
+  
+  # Step 10: Save Plots and Data
+  save_plots(folder_name = basename(folder_path), plots = list(PLOT))
+  
+  fwrite(COMBINED_DATA,       file = paste0(folder_path, "/COMBINED_DATA.csv"),       append = F, quote = F, row.names = F, col.names = T)
+  fwrite(MEANS,               file = paste0(folder_path, "/MEANS.csv"),               append = F, quote = F, row.names = F, col.names = T)
+  fwrite(MOM_SUBSET,          file = paste0(folder_path, "/MOM_SUBSET.csv"),          append = F, quote = F, row.names = F, col.names = T)
+  fwrite(STATISTICAL_RESULTS, file = paste0(folder_path, "/STATISTICAL_RESULTS.csv"), append = F, quote = F, row.names = F, col.names = T)
+}
+
+```
+
+
+### Example #4 Check Cell Lines Across Assays
+
+``` {r, echo = F, message = F, warning = F}
+# What to adjust:
+FILTER_VALUES = "CHARMS-15xTA"
+FILTER_TYPE   = "COHORT"
+POSITIVE_CTRL = c("cl069")
+NEGATIVE_CTRL = c("tKO_EL4", "204_TRIPLE_KO")
+COLOR         = "cornflowerblue"
+x_label       = ""
+y_label       = "relative IL-2 conc."
+plot_title    = "IL-2 ELISA"
+subtitle      = paste0("Assay performed for ", FILTER_VALUES, ", based on filter type ", FILTER_TYPE)
+save          = T
+
+# Automatic settings
+DF = All_plates_data
+DF$CL_NAME_ON_PLOT = reorder(DF$CL_NAME_ON_PLOT, -DF$ORDER_NO)
+SEED = 600
+
+ALL_COHORT_DATA <- lapply(FILTER_VALUES, function(FILTER_VALUE) {
+    # Step 1: Filter & Subset the main data into lists
+    COHORT_DATA <- filter_data(All_plates_data, FILTER_VALUE, FILTER_TYPE, POSITIVE_CTRL, NEGATIVE_CTRL)
+    # Step 2 and Step 3
+    NORMALIZED_DATA <- calculate_baseline_and_control(COHORT_DATA, FILTER_TYPE, POSITIVE_CTRL, NEGATIVE_CTRL)
+    return(NORMALIZED_DATA)
+})
+  
+COMBINED_DATA <- bind_rows(ALL_COHORT_DATA)
+
+# Step 5: Calculate the means per cohort
+MEANS <- COMBINED_DATA %>%
+    group_by(CELL_LINE, CONDITION, Date) %>%
+    distinct(triplicate_mean_per_day, STIM_DAY, .keep_all = TRUE) %>%
+    ungroup()
+
+MEANS$STIM_DAY <- as.factor(MEANS$STIM_DAY)
+
+# Step 6: Calculate the mean of means (MOM) per cohort
+MOM_SUBSET <- MEANS %>%
+    group_by(CELL_LINE, CL_NAME_ON_PLOT, CONDITION, Date) %>%
+    summarise(triplicate_sd_per_day = sd(triplicate_mean_per_day),
+              triplicate_mean_per_day = mean(triplicate_mean_per_day)) %>%
+    distinct(.keep_all = TRUE)
+
+# Step 7: Perform statistics per cohort
+STATISTICAL_RESULTS <- perform_statistical_analysis(MEANS, "CL_NAME_ON_PLOT")
+
+# Step 8: Plot the results
+plot_cell_line_summary <- ggplot(MEANS, aes(x = CL_NAME_ON_PLOT)) +
+    geom_col(data = MOM_SUBSET, aes(y = triplicate_mean_per_day, fill = CONDITION), 
+             position = position_dodge(width = 1), alpha = 0.5) +
+    geom_point(data = MEANS, aes(y = triplicate_mean_per_day, group = CONDITION, shape = STIM_DAY),
+               position = position_jitterdodge(jitter.height = 0, jitter.width = 1.2, seed = SEED), col = "white", size = 4) +
+    geom_point(data = MEANS, aes(y = triplicate_mean_per_day, group = CONDITION, shape = STIM_DAY), 
+               position = position_jitterdodge(jitter.height = 0, jitter.width = 1.2, seed = SEED), col = "black", size = 3) +
+    geom_errorbar(data = MOM_SUBSET, aes(ymin = triplicate_mean_per_day - triplicate_sd_per_day, 
+                                         ymax = triplicate_mean_per_day + triplicate_sd_per_day, group = CONDITION), width = 0.25, position = position_dodge(width = 1)) +
+    labs(x = x_label, y = y_label) +
+  geom_text(data = data.frame(CL_NAME_ON_PLOT = names(STATISTICAL_RESULTS[["annotations"]]), 
+                              y = max(MEANS$triplicate_mean_per_day) + 0.1, label = STATISTICAL_RESULTS[["annotations"]]), 
+            aes(y = y, label = label), col = "gray40", size = 4) +
+  geom_text(data = data.frame(CL_NAME_ON_PLOT = names(STATISTICAL_RESULTS[["p_values"]]), 
+                              y = max(MEANS$triplicate_mean_per_day) + 0.2, label = STATISTICAL_RESULTS[["p_values"]]), 
+            aes(y = y, label = label), size = 7) +
+    scale_fill_manual(values = c("UNSTIM" = "gray50", "STIM" = COLOR)) +
+    ggtitle(plot_title) +
+    theme_cowplot() +
+    theme(legend.position = "bottom") +
+    theme(plot.title = element_text(hjust = 0.5))
+plot_cell_line_summary
+
+if (save) {
+  # Step 9: Create Output Folder
+  folder_path <- file.path(save_to, paste0("CL_SUMMARY_", FILTER_VALUES))
+  if (!dir.exists(folder_path)) {dir.create(folder_path, recursive = TRUE)}   # Check if the folder exists, and if not, create it
+  
+  # Step 10: Save Plots and Data
+  save_plots(folder_name = basename(folder_path), plots = list(plot_cell_line_summary))
+  
+  fwrite(COMBINED_DATA,       file = paste0(folder_path, "/COMBINED_DATA.csv"),       append = F, quote = F, row.names = F, col.names = T)
+  fwrite(MEANS,               file = paste0(folder_path, "/MEANS.csv"),               append = F, quote = F, row.names = F, col.names = T)
+  fwrite(MOM_SUBSET,          file = paste0(folder_path, "/MOM_SUBSET.csv"),          append = F, quote = F, row.names = F, col.names = T)
+  fwrite(STATISTICAL_RESULTS, file = paste0(folder_path, "/STATISTICAL_RESULTS.csv"), append = F, quote = F, row.names = F, col.names = T)
+}
+  
+                              
+```
+
+

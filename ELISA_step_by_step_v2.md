@@ -1,87 +1,139 @@
-ELISA_PREP
+Step by Step Analysis
 ================
 Taylor Lab
 (12 Feb 2024)
 
-- [Notes on Folder Organization](#notes-on-folder-organization)
-- [Notes on Excel Organization](#notes-on-excel-organization)
+- [Loading the necessary libraries and
+  packages](#loading-the-necessary-libraries-and-packages)
+- [Set paths to input and output](#set-paths-to-input-and-output)
+- [From raw measurements to estimated sample
+  concentrations](#from-raw-measurements-to-estimated-sample-concentrations)
+- [Example \#1](#example-1)
 
-### Notes on Folder Organization
+### Loading the necessary libraries and packages
 
-- You need to create a folder that holds all the raw data and
-  information per plate
-- Folder names should be formatted as **PLATE_n_YYYYMMDD** (see examples
-  below)
-  <img src="./ELISA_step_by_step_v2_files/FOLDER_ORGANIZATION.png"
-  style="width:40.0%" />
+``` r
+library(pacman)
+pacman::p_load(data.table, ggplot2, lubridate, stringr, ggpubr, dplyr, cowplot, readxl, scales, knitr)
+```
 
-### Notes on Excel Organization
+### Set paths to input and output
 
-- Each plate folder should contain an **Excel** file with multiple
-  sheets:
-- see */ELISA_step_by_step_v2_files/ELISA_TEMPLATE.xlsx*
-- please be aware that these excel sheets should not contain sheets
-  other than those intended for analysis
-- one plate per excel file
-- sheet names should match patterns that mark them uniquely
-- Please try to work with the *ELISA_TEMPLATE.xlsx* to ensure smooth
-  analysis
+1.  Where do you store your all of the **plate folders** containing the
+    excel files?
+2.  Output files will be stored in the same location!
+3.  Do you want to store the created **figures** here or somewhere else?
 
-![](./ELISA_step_by_step_v2_files/ELISA_TEMPLATE.png)
+``` r
+Input_Directory <- "./ALL/"
+save_to         <- Input_Directory
+```
 
-- **MEASUREMENTS** contains the **raw measured values** per plate
-  - each plate should contain at least two standard replicates, ideally
-    also a positive + negative control
-    ![](./ELISA_step_by_step_v2_files/MEASUREMENTS.png)
-- **CELL_LINES** contains the **cell line names**
-  - **standard curve concentrations**
-  - where is the **BLANK** located
-  - **important note:**
-  - We have a **[conversion
-    table](https://docs.google.com/spreadsheets/d/1gjQIDVPDwxKHS3WYQZIXaAH6z-ppvPbMBUVSXbEaZ5U/edit?usp=sharing)**
-    to replace the cryptic cell line numbers (e.g. *204*) with a more
-    understandable name such as *Triple KO control* in all the plots
-    (This will be further explained later in the script)!
-    ![](./ELISA_step_by_step_v2_files/CELL_LINES.png)
-- **STIM_DAYS** contains the **stimulation days** (numeric,
-  e.g. 1,2,3,..)
-  - standards and other (unused) wells can be left **blank** or as
-    **NA** ![](./ELISA_step_by_step_v2_files/STIM_DAYS.png)
-- **STIM_TIME** means how long you stimulated the cells
-  - Default Stimulation would be **24 hours**
-  - Individual experiments may vary though \<- here is the place to add
-    that information!
-  - **EXAMPLE 1:** Standard Protocol with **24 hour stimulation**
-    ![](./ELISA_step_by_step_v2_files/STIM_TIME_1.png)
-  - **EXAMPLE 2:** LPS-stimulated macrophages were checked **after 1 and
-    4 hours** ![](./ELISA_step_by_step_v2_files/STIM_TIME_2.png)
-- **STIM_CONCENTRATION** means how high was the stimulation
-  concentration with your stimulant (**IL-1ß**, **LPS**)?
-  - normal IL-1ß concentration is **5ng/mL**
-  - How is that calculated?
-    - we dilute 2µL IL-1ß in 10mL RPMI medium (essentially 20ng/mL)
-    - but since we add 50µL of this IL-1ß containing medium to 150µL
-      medium with settled cells, the final concentration is 5ng/mL
-  - For LPS stimulations, 100ng/mL were used
-  - **NOTE**: only the stimulated wells are marked, the unstimulated and
-    the standards can be left **blank** or as **NA**
-    ![](./ELISA_step_by_step_v2_files/STIM_CONCENTRATION.png)
-- **CONDITIONS** = which wells are stimulated, unstimulated, or used for
-  calibration?
-  - Stimulated wells –\> **STIM**
-  - Unstimulated wells –\> **UNSTIM**
-  - Wells that were used for calibration –\> **CALIBRATION**
-  - empty wells can be left **blank** or as **NA**
-    ![](./ELISA_step_by_step_v2_files/CONDITIONS.png)
-- **DILUTIONS** –\> Did you dilute the samples?
-  - The standard protocol suggests a **1:5 dilution** for all sample
-    wells (control and other cell lines)
-  - Adjust for other dilutions as needed
-  - Note for ELISA assay planning:
-    - dilute the **positive control 1:10** to allow all other samples
-      more developing time
-    - you need to stop the assay when the color reaches a high intensity
-    - Measured **values ≤ 1.3** are good, anything above should be
-      excluded from analysis or repeated
-    - in the provided example, only the positive control (EL4) is
-      diluted 1:10 ![](./ELISA_step_by_step_v2_files/DILUTIONS.png)
+4.  Add your cell line names for plots
+
+In the lab we all know that cl204 is our triple KO cell line that lacks
+MyD88/IRAK4/IRAK1. However, it is likely cryptic to other readers. In
+addition, many of us use slightly different names, but mean the same
+thing.. To make plots that can be published and unify all sorts of
+synonyms, you may want to rename your cell lines in a reproducible
+manner. For this purpose, take a look at the **ELISA_CL_KEY.csv** and
+add your names!
+
+- CELL_LINE contains the name used on the plates
+- CL_NUMBER specifies the cell line number in our system
+- CL_NAME_ON_PLOT is equivalent to what you want to print in figures
+- PURPOSE is optional and just designates whether the cell line is used
+  as a positive/negative/XYZ control or just a sample
+- INFO can be used to add additional information
+- PLOTTING_COLOR can be used to alter the color of your cell lines in
+  the figures (not necessary, but it can add a nice touch if you wish)
+- ORDER_NO is used to plot your cell lines in the correct order
+- The most important cell lines against which we compare (the positive
+  controls) are ranked highly (1 for WT, 2 for cl069, 3 for 3E10)
+- Negative controls follow (order number 4 and lower)
+- Samples come last - order them as you wish (I have continuously
+  numbered them - synonyms can carry the same number)
+
+``` r
+# adjust the names as needed!
+NAME_KEY <- fread("./ELISA_CL_KEY.csv", header = T) 
+head(NAME_KEY, n = 10)
+```
+
+<div class="kable-table">
+
+| CELL_LINE | CL_NUMBER | CL_NAME_ON_PLOT | PURPOSE | INFO | PLOTTING_COLOR | ORDER_NO |
+|:----------|:----------|:----------------|:--------|:-----|:---------------|---------:|
+| EL4       | cl011     | WT_EL4          | CONTROL | NA   | salmon         |        1 |
+| WT        | cl011     | WT_EL4          | CONTROL | NA   | salmon         |        1 |
+| WT_EL4    | cl011     | WT_EL4          | CONTROL | NA   | salmon         |        1 |
+| wt_Mph    | cl051     | WT_Mph          | CONTROL | NA   | salmon         |        1 |
+| 69        | cl069     | cl069           | CONTROL | NA   | salmon         |        2 |
+| cl069     | cl069     | cl069           | CONTROL | NA   | salmon         |        2 |
+| 3E 10     | cl028     | MyD88-GFP       | CONTROL | NA   | salmon         |        3 |
+| 3E10_GFP  | cl028     | MyD88-GFP       | CONTROL | NA   | salmon         |        3 |
+| MyD88-GFP | cl028     | MyD88-GFP       | CONTROL | NA   | salmon         |        3 |
+| cl204     | cl204     | tKO_EL4         | CONTROL | NA   | \#37aabd       |        4 |
+
+</div>
+
+5.  We will need several functions to analyze the data. You do not need
+    to change this.
+
+``` r
+source(file = ifelse(exists("https://raw.githubusercontent.com/tlobnow/coding_universe/main/scripts/ELISA_Fx.R"), 
+                     yes =  "https://raw.githubusercontent.com/tlobnow/coding_universe/main/scripts/ELISA_Fx.R",
+                     no  =  "./scripts/ELISA_Fx.R"))
+```
+
+### From raw measurements to estimated sample concentrations
+
+1.  Calculate the mean values per Standard Curve dilution step
+2.  Plot the Standard curve and fit a linear trend line
+3.  Save the plots
+
+We use the equation to estimate IL-2 conc. of our unknown samples
+
+Run ELISA_Fx() to generate standard curves and calculate the IL-2
+concentrations.
+
+    ## [1] "Plates exist!"
+    ## [1] "Secretion = slope*Intensity"
+    ## [1] "Secretion = 559.423714931026*Intensity"
+
+    ## [1] "Secretion = slope*Intensity"
+    ## [1] "Secretion = 1080.06019989381*Intensity"
+
+    ## [1] "Secretion = slope*Intensity"
+    ## [1] "Secretion = 1076.81100367551*Intensity"
+
+    ## [1] "Secretion = slope*Intensity"
+    ## [1] "Secretion = 659.569606790955*Intensity"
+
+    ## [1] "Secretion = slope*Intensity"
+    ## [1] "Secretion = 1015.10890429452*Intensity"
+
+    ## [1] "Secretion = slope*Intensity"
+    ## [1] "Secretion = 1076.81100367551*Intensity"
+
+    ## [1] "Secretion = slope*Intensity"
+    ## [1] "Secretion = 590.8221002662*Intensity"
+
+### Example \#1
+
+In the first example data set, we are checking the **results of the
+ELISA assay**, so the entire **plate**. In order to process and plot
+this data, you need to provide some information. First of all, we need
+to know the Date you want to check. Supply the date as follows:
+“YYYY-MM-DD”. Since we are looking at dates, the filter type must be set
+to “DATE” (Below you can also find a tutorial where the filter type
+differs to check for specific cell lines across several experiments).
+
+1.  We want to filter for our **date** of interest “2022-06-09”
+2.  Accordingly, we set the filter **type** to “DATE”
+3.  Supply the name of your **positive control**, here “WT_EL4” - you
+    can provide either plate names (CELL_LINE) or the plotting names
+    (CL_NAME_ON_PLOT)
+4.  Supply the name of your **negative control**, here “tKO_EL4”
+
+![](ELISA_step_by_step_v2_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
