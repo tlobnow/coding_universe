@@ -1,14 +1,20 @@
 Step by Step Analysis
 ================
 Taylor Lab
-(12 Feb 2024)
+(13 Feb 2024)
 
 - [Loading the necessary libraries and
   packages](#loading-the-necessary-libraries-and-packages)
 - [Set paths to input and output](#set-paths-to-input-and-output)
 - [From raw measurements to estimated sample
   concentrations](#from-raw-measurements-to-estimated-sample-concentrations)
-- [Example \#1](#example-1)
+- [Example \#1 IL-2 ELISA (normal Plate
+  Check)](#example-1-il-2-elisa-normal-plate-check)
+- [Example \#2 IL-6 ELISA (normal Plate
+  Check)](#example-2-il-6-elisa-normal-plate-check)
+- [Example \#3 Dose Response ELISA](#example-3-dose-response-elisa)
+- [Example \#4 Check Cell Lines Across
+  Assays](#example-4-check-cell-lines-across-assays)
 
 ### Loading the necessary libraries and packages
 
@@ -64,10 +70,10 @@ head(NAME_KEY, n = 10)
 
 | CELL_LINE | CL_NUMBER | CL_NAME_ON_PLOT | PURPOSE | INFO | PLOTTING_COLOR | ORDER_NO |
 |:----------|:----------|:----------------|:--------|:-----|:---------------|---------:|
-| EL4       | cl011     | WT_EL4          | CONTROL | NA   | salmon         |        1 |
-| WT        | cl011     | WT_EL4          | CONTROL | NA   | salmon         |        1 |
-| WT_EL4    | cl011     | WT_EL4          | CONTROL | NA   | salmon         |        1 |
-| wt_Mph    | cl051     | WT_Mph          | CONTROL | NA   | salmon         |        1 |
+| EL4       | cl011     | WT_EL4          | CONTROL | NA   | \#E00368       |        1 |
+| WT        | cl011     | WT_EL4          | CONTROL | NA   | \#E00368       |        1 |
+| WT_EL4    | cl011     | WT_EL4          | CONTROL | NA   | \#E00368       |        1 |
+| wt_Mph    | cl051     | WT_Mph          | CONTROL | NA   | \#E00368       |        1 |
 | 69        | cl069     | cl069           | CONTROL | NA   | salmon         |        2 |
 | cl069     | cl069     | cl069           | CONTROL | NA   | salmon         |        2 |
 | 3E 10     | cl028     | MyD88-GFP       | CONTROL | NA   | salmon         |        3 |
@@ -99,7 +105,31 @@ concentrations.
 
     ## [1] "Plates exist!"
     ## [1] "Secretion = slope*Intensity"
+    ## [1] "Secretion = 352.419126169057*Intensity"
+
+    ## [1] "Secretion = slope*Intensity"
+    ## [1] "Secretion = 320.070381583682*Intensity"
+
+    ## [1] "Secretion = slope*Intensity"
+    ## [1] "Secretion = 306.346853473382*Intensity"
+
+    ## [1] "Secretion = slope*Intensity"
+    ## [1] "Secretion = 358.251952014523*Intensity"
+
+    ## [1] "Secretion = slope*Intensity"
+    ## [1] "Secretion = 298.804571083167*Intensity"
+
+    ## [1] "Secretion = slope*Intensity"
+    ## [1] "Secretion = 347.167928535214*Intensity"
+
+    ## [1] "Secretion = slope*Intensity"
     ## [1] "Secretion = 559.423714931026*Intensity"
+
+    ## [1] "Secretion = slope*Intensity"
+    ## [1] "Secretion = 58.1684699766724*Intensity"
+
+    ## [1] "Secretion = slope*Intensity"
+    ## [1] "Secretion = 205.43426617438*Intensity"
 
     ## [1] "Secretion = slope*Intensity"
     ## [1] "Secretion = 1080.06019989381*Intensity"
@@ -119,7 +149,7 @@ concentrations.
     ## [1] "Secretion = slope*Intensity"
     ## [1] "Secretion = 590.8221002662*Intensity"
 
-### Example \#1
+### Example \#1 IL-2 ELISA (normal Plate Check)
 
 In the first example data set, we are checking the **results of the
 ELISA assay**, so the entire **plate**. In order to process and plot
@@ -137,3 +167,15 @@ differs to check for specific cell lines across several experiments).
 4.  Supply the name of your **negative control**, here “tKO_EL4”
 
 ![](ELISA_step_by_step_v2_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
+
+### Example \#2 IL-6 ELISA (normal Plate Check)
+
+![](ELISA_step_by_step_v2_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
+
+### Example \#3 Dose Response ELISA
+
+![](ELISA_step_by_step_v2_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
+
+### Example \#4 Check Cell Lines Across Assays
+
+![](ELISA_step_by_step_v2_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->

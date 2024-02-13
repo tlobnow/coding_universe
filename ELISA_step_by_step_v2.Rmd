@@ -3,8 +3,9 @@ title: "Step by Step Analysis"
 date: "(`r format(Sys.time(), '%d %b %Y')`)"
 author: "Taylor Lab"
 output: 
-  github_document:
+  html_document:
     toc: true
+    code_folding: "hide"
     df_print: kable
 ---
 
@@ -23,7 +24,7 @@ pacman::p_load(data.table, ggplot2, lubridate, stringr, ggpubr, dplyr, cowplot, 
 3. Do you want to store the created **figures** here or somewhere else?
 
 ``` {r}
-Input_Directory <- "./ALL/"
+Input_Directory <- "./ALL_PLATES/"
 save_to         <- Input_Directory
 ```
 
@@ -82,7 +83,7 @@ In the first example data set, we are checking the **results of the ELISA assay*
 3. Supply the name of your **positive control**, here "WT_EL4" - you can provide either plate names (CELL_LINE) or the plotting names (CL_NAME_ON_PLOT)
 4. Supply the name of your **negative control**, here "tKO_EL4"
 
-``` {r, echo = F, message = F, warning = F}
+``` {r, message = F, warning = F}
 # What to adjust:
 FILTER_VALUES = "2022-06-09"
 FILTER_TYPE   = "DATE" # or "COHORT"
@@ -94,7 +95,6 @@ y_label       = "relative IL-2 conc."
 plot_title    = "IL-2 ELISA"
 subtitle      = paste0("Assay performed for ", FILTER_VALUES, ", based on filter type ", FILTER_TYPE)
 save          = T
-
 
 # Automatic settings
 DF = All_plates_data
@@ -179,7 +179,7 @@ if (save) {
 
 ### Example #2 IL-6 ELISA (normal Plate Check)
 
-``` {r, echo = F, message = F, warning = F}
+``` {r, message = F, warning = F}
 FILTER_VALUES = c("2023-11-21")
 FILTER_TYPE = "DATE"
 save = T
@@ -324,7 +324,7 @@ if (save) {
 
 ### Example #3 Dose Response ELISA
 
-``` {r, echo = F, message = F, warning = F}
+``` {r, message = F, warning = F}
 FILTER_VALUE = "2022-11-24"
 FILTER_TYPE  = "DATE"
 x_label    = "Stimulant Conc."
@@ -435,7 +435,7 @@ if (save) {
 
 ### Example #4 Check Cell Lines Across Assays
 
-``` {r, echo = F, message = F, warning = F}
+``` {r, message = F, warning = F}
 # What to adjust:
 FILTER_VALUES = "CHARMS-15xTA"
 FILTER_TYPE   = "COHORT"
@@ -521,5 +521,4 @@ if (save) {
   
                               
 ```
-
 
