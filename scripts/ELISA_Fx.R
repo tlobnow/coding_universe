@@ -214,6 +214,8 @@ filter_data <- function(DATA, FILTER_VALUES, FILTER_TYPE, POSITIVE_CTRL, NEGATIV
     function(value, df) matches_any_pattern_vec(df$CELL_LINE, value) | matches_any_pattern_vec(df$CL_NAME_ON_PLOT, value)
   } else if (FILTER_TYPE %in% "DATE") {
     function(value, df) matches_any_pattern_vec(df$Date, value)
+  } else if (FILTER_TYPE %in% "CL_NUMBER") {
+    function(value, df) matches_any_pattern_vec(df$CL_NUMBER, value)
   } else {
     stop("Invalid FILTER_TYPE. Must be either 'COHORT' or 'DATE'.")
   }
@@ -280,7 +282,7 @@ filter_data <- function(DATA, FILTER_VALUES, FILTER_TYPE, POSITIVE_CTRL, NEGATIV
 # DATA = FILTERED_SUBSET
 calculate_baseline_and_control <- function(DATA, FILTER_TYPE, POSITIVE_CTRL, NEGATIVE_CTRL) {
   # Determine the group_by and filter parameters based on FILTER_TYPE
-  if (FILTER_TYPE == "COHORT") {
+  if (FILTER_TYPE %in% c("COHORT","CL_NUMBER")) {
     group_vars <- c("Date", "STIM_DAY")
   } else if (FILTER_TYPE == "DATE") {
     group_vars <- c("Date", "STIM_DAY", "Plate")
