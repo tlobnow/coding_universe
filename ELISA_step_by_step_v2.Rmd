@@ -11,46 +11,38 @@ output:
 
 ### Loading the necessary libraries and packages
 
-``` {r}
+```{r}
 library(pacman)
-pacman::p_load(data.table, ggplot2, lubridate, stringr, ggpubr, dplyr, cowplot, readxl, scales, knitr)
+pacman::p_load(data.table, ggplot2, lubridate, stringr, ggpubr, dplyr, cowplot, readxl, scales, knitr, tidyr)
 ```
-
 
 ### Set paths to input and output
 
-1. Where do you store your all of the **plate folders** containing the excel files?
-2. Output files will be stored in the same location!
-3. Do you want to store the created **figures** here or somewhere else?
+1.  Where do you store your all of the **plate folders** containing the excel files?
+2.  Output files will be stored in the same location!
+3.  Do you want to store the created **figures** here or somewhere else?
 
-``` {r}
+```{r}
 Input_Directory <- "./ALL_PLATES/"
 save_to         <- Input_Directory
 ```
 
-4. Add your cell line names for plots
+4.  Add your cell line names for plots
 
 In the lab we all know that cl204 is our triple KO cell line that lacks MyD88/IRAK4/IRAK1. However, it is likely cryptic to other readers. In addition, many of us use slightly different names, but mean the same thing.. To make plots that can be published and unify all sorts of synonyms, you may want to rename your cell lines in a reproducible manner. For this purpose, take a look at the **ELISA_CL_KEY.csv** and add your names!
-  
-- CELL_LINE contains the name used on the plates
-- CL_NUMBER specifies the cell line number in our system
-- CL_NAME_ON_PLOT is equivalent to what you want to print in figures
-- PURPOSE is optional and just designates whether the cell line is used as a positive/negative/XYZ control or just a sample
-- INFO can be used to add additional information
-- PLOTTING_COLOR can be used to alter the color of your cell lines in the figures (not necessary, but it can add a nice touch if you wish)
-- ORDER_NO is used to plot your cell lines in the correct order
-- The most important cell lines against which we compare (the positive controls) are ranked highly (1 for WT, 2 for cl069, 3 for 3E10)
-- Negative controls follow (order number 4 and lower)
-- Samples come last - order them as you wish (I have continuously numbered them - synonyms can carry the same number)
 
-``` {r}
+```{r}
 # adjust the names as needed!
-NAME_KEY <- fread("./ELISA_CL_KEY.csv", header = T) 
+NAME_KEY_DOC <- fread("./ELISA_CL_KEY_DOC.csv", header = T, sep = ",", quote = "")
+head(NAME_KEY_DOC, n = 10)
+
+NAME_KEY     <- fread("./ELISA_CL_KEY.csv", header = T) 
 head(NAME_KEY, n = 10)
 ```
 
-5. We will need several functions to analyze the data. You do not need to change this.
-``` {r}
+5.  We will need several functions to analyze the data. You do not need to change this.
+
+```{r}
 source(file = ifelse(exists("https://raw.githubusercontent.com/tlobnow/coding_universe/main/scripts/ELISA_Fx.R"), 
                      yes =  "https://raw.githubusercontent.com/tlobnow/coding_universe/main/scripts/ELISA_Fx.R",
                      no  =  "./scripts/ELISA_Fx.R"))
@@ -58,33 +50,31 @@ source(file = ifelse(exists("https://raw.githubusercontent.com/tlobnow/coding_un
 
 ### From raw measurements to estimated sample concentrations
 
-1. Calculate the mean values per Standard Curve dilution step
-2. Plot the Standard curve and fit a linear trend line
-3. Save the plots
+1.  Calculate the mean values per Standard Curve dilution step
+2.  Plot the Standard curve and fit a linear trend line
+3.  Save the plots
 
 We use the equation to estimate IL-2 conc. of our unknown samples
 
 Run ELISA_Fx() to generate standard curves and calculate the IL-2 concentrations.
 
-``` {r, echo = F, warning = F, message = F}
+```{r, echo = F, warning = F, message = F}
 All_plates_data_raw <- ELISA_Fx(Input_Directory, Output_Directory)
 All_plates_data     <- left_join(All_plates_data_raw, NAME_KEY)
 All_plates_data     <- All_plates_data %>% filter(CELL_LINE != "NA")
 DF                  <- All_plates_data
 ```
 
-
 ### Example #1 IL-2 ELISA (normal Plate Check)
 
 In the first example data set, we are checking the **results of the ELISA assay**, so the entire **plate**. In order to process and plot this data, you need to provide some information. First of all, we need to know the Date you want to check. Supply the date as follows: "YYYY-MM-DD". Since we are looking at dates, the filter type must be set to "DATE" (Below you can also find a tutorial where the filter type differs to check for specific cell lines across several experiments).
 
-1. We want to filter for our **date** of interest "2022-06-09"
-2. Accordingly, we set the filter **type** to "DATE"
-3. Supply the name of your **positive control**, here "WT_EL4" - you can provide either plate names (CELL_LINE) or the plotting names (CL_NAME_ON_PLOT)
-4. Supply the name of your **negative control**, here "tKO_EL4"
+1.  We want to filter for our **date** of interest "2022-06-09"
+2.  Accordingly, we set the filter **type** to "DATE"
+3.  Supply the name of your **positive control**, here "WT_EL4" - you can provide either plate names (CELL_LINE) or the plotting names (CL_NAME_ON_PLOT)
+4.  Supply the name of your **negative control**, here "tKO_EL4"
 
-``` {r, message = F, warning = F}
-# What to adjust:
+```{r, message = F, warning = F}
 FILTER_VALUES = "2022-06-09"
 FILTER_TYPE   = "DATE" # or "COHORT"
 POSITIVE_CTRL = c("WT_EL4")
@@ -179,7 +169,7 @@ if (save) {
 
 ### Example #2 IL-6 ELISA (normal Plate Check)
 
-``` {r, message = F, warning = F}
+```{r, message = F, warning = F}
 FILTER_VALUES = c("2023-11-21")
 FILTER_TYPE = "DATE"
 save = T
@@ -324,7 +314,7 @@ if (save) {
 
 ### Example #3 Dose Response ELISA
 
-``` {r, message = F, warning = F}
+```{r, message = F, warning = F}
 FILTER_VALUE = "2022-11-24"
 FILTER_TYPE  = "DATE"
 x_label    = "Stimulant Conc."
@@ -432,21 +422,21 @@ if (save) {
 
 ```
 
-
 ### Example #4 Check Cell Lines Across Assays
 
-``` {r, message = F, warning = F}
+```{r, message = F, warning = F}
 # What to adjust:
-FILTER_VALUES = "CHARMS-15xTA"
+FILTER_VALUES = "3E10_GFP"
+FILTER_VALUE  = "3E10_GFP"
 FILTER_TYPE   = "COHORT"
-POSITIVE_CTRL = c("cl069")
-NEGATIVE_CTRL = c("tKO_EL4", "204_TRIPLE_KO")
+POSITIVE_CTRL = "WT_EL4"
+NEGATIVE_CTRL = "tKO_EL4"
 COLOR         = "cornflowerblue"
 x_label       = ""
 y_label       = "relative IL-2 conc."
 plot_title    = "IL-2 ELISA"
 subtitle      = paste0("Assay performed for ", FILTER_VALUES, ", based on filter type ", FILTER_TYPE)
-save          = T
+save          = F
 
 # Automatic settings
 DF = All_plates_data
@@ -455,10 +445,11 @@ SEED = 600
 
 ALL_COHORT_DATA <- lapply(FILTER_VALUES, function(FILTER_VALUE) {
     # Step 1: Filter & Subset the main data into lists
-    COHORT_DATA <- filter_data(All_plates_data, FILTER_VALUE, FILTER_TYPE, POSITIVE_CTRL, NEGATIVE_CTRL)
+    COHORT_DATA <- filter_data(DF, FILTER_VALUE, FILTER_TYPE, POSITIVE_CTRL, NEGATIVE_CTRL)
+    
     # Step 2 and Step 3
-    NORMALIZED_DATA <- calculate_baseline_and_control(COHORT_DATA, FILTER_TYPE, POSITIVE_CTRL, NEGATIVE_CTRL)
-    return(NORMALIZED_DATA)
+  NORMALIZED_DATA <- calculate_baseline_and_control(COHORT_DATA, FILTER_TYPE, POSITIVE_CTRL, NEGATIVE_CTRL)
+  return(NORMALIZED_DATA)
 })
   
 COMBINED_DATA <- bind_rows(ALL_COHORT_DATA)
@@ -518,7 +509,106 @@ if (save) {
   fwrite(MOM_SUBSET,          file = paste0(folder_path, "/MOM_SUBSET.csv"),          append = F, quote = F, row.names = F, col.names = T)
   fwrite(STATISTICAL_RESULTS, file = paste0(folder_path, "/STATISTICAL_RESULTS.csv"), append = F, quote = F, row.names = F, col.names = T)
 }
-  
-                              
 ```
+
+### Other visualization options
+
+So far, we looked at relative secretion plots. This may not be the best data representation. Other options are plotting fold change or real values. The next two examples should show you how to achieve that. We will use the set from to Example #1.
+
+#### Plotting Fold Change
+
+``` {r, message = F, warning = F}
+
+# Step 1: Filter & Subset the main data into lists
+COHORT_DATA <- DF[!DF$Is_Dose_Response]
+COHORT_DATA <- COHORT_DATA[!grepl("mph", COHORT_DATA$CELL_LINE, ignore.case = TRUE)]
+
+# Step 2: Set negative values to 1 (NOT ZERO)
+COHORT_DATA$MEASUREMENT <- ifelse(COHORT_DATA$MEASUREMENT < 0, yes = 1, COHORT_DATA$MEASUREMENT)
+
+
+# Normalization for fold change from UNSTIM to STIM
+NORMALIZED_TO_CONTROL <- COHORT_DATA %>%
+  group_by(Date, STIM_DAY, CELL_LINE, CONDITION, CL_NAME_ON_PLOT) %>%
+  summarise(mean_per_day = mean(MEASUREMENT),
+            Concentration = mean(Concentration))
+      
+# First, calculate the mean for the UNSTIM condition separately.
+unstim_means <- COHORT_DATA %>%
+  filter(CONDITION == "UNSTIM") %>%
+  group_by(CELL_LINE) %>%
+  summarise(mean_unstim = mean(MEASUREMENT))
+      
+# Now, join this back to the main dataset.
+COHORT_SUBSET <- COHORT_DATA %>%
+  left_join(unstim_means, by = "CELL_LINE")
+      
+# Compute the fold change. 
+# The `case_when` logic ensures that the fold change is calculated only for the STIM condition.
+NORMALIZED_TO_CONTROL <- COHORT_SUBSET %>%
+  mutate(fold_change = case_when(CONDITION == "STIM" ~ MEASUREMENT / mean_unstim, TRUE ~ NA_real_ )) %>% # set NA for non-STIM conditions
+  ungroup() %>%
+  group_by(CELL_LINE, CONDITION) %>%
+  mutate(trip_mean = mean(fold_change),
+         fold_change_sd = sd(fold_change)) %>%
+  unique()
+      
+# Helper function to perform a t-test and return p-value and annotation
+perform_ttest <- function(data) {
+  ttest_result <- t.test(data$MEASUREMENT[data$CONDITION == "STIM"],
+                         data$MEASUREMENT[data$CONDITION == "UNSTIM"],
+                         paired = TRUE)  # or paired = FALSE if the data are independent
+  p_value <- ttest_result$p.value
+  annotation <- ifelse(p_value < 0.001, '***', 
+                       ifelse(p_value < 0.01, '**', 
+                              ifelse(p_value < 0.05, '*', 'ns')))
+  return(list(p_value = p_value, annotation = annotation))
+  }
+      
+      
+results <- COHORT_SUBSET %>%
+  group_by(CELL_LINE, CL_NAME_ON_PLOT, Date) %>%
+  do({
+    data <- .
+    fold_change_data <- data %>%
+      summarise(fold_change = mean(MEASUREMENT[CONDITION == "STIM"]) / mean(MEASUREMENT[CONDITION == "UNSTIM"]))
+    ttest_results <- perform_ttest(data)
+    cbind(fold_change_data, ttest_results)
+    }) %>%
+  ungroup()
+
+
+# Extract annotations for plotting
+annotations        <- results$annotation
+names(annotations) <- results$CELL_LINE
+
+# Reorder
+results$CELL_LINE = reorder(results$CELL_LINE, -results$fold_change)
+      
+Date <- as.IDate(unique(results$Date))
+# Plotting the fold changes
+plot <- ggplot(results, aes(x = CELL_LINE, y = fold_change)) +
+  geom_col(position = position_dodge(width = 0.8)) +
+  geom_text(aes(label = annotations), 
+            # vjust = -0.5) +
+            hjust = -0.8) +
+  theme_cowplot() +
+  theme(legend.position = "bottom") +
+  labs(x = "", y = "fold change") +
+  coord_flip() +
+  facet_wrap(~Date, scales = "free", ncol = 1)
+
+plot
+
+kable(results)
+
+```
+
+
+
+
+
+
+
+
 

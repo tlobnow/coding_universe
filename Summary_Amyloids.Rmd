@@ -969,3 +969,87 @@ if (save) {
 }
   
 ```
+#### Plotting Fold Change
+
+``` {r, message = F, warning = F}
+
+# Step 1: Filter & Subset the main data
+COHORT_DATA <- DF %>% filter(Date %in% as.IDate(c("2024-01-31", "2024-02-08", "2024-02-12")))
+
+# Step 2: Set negative values to 1 (NOT ZERO)
+COHORT_DATA$MEASUREMENT <- ifelse(COHORT_DATA$MEASUREMENT < 0, yes = 1, COHORT_DATA$MEASUREMENT)
+
+# Normalization for fold change from UNSTIM to STIM
+NORMALIZED_TO_CONTROL <- COHORT_DATA %>%
+  group_by(Date, STIM_DAY, CELL_LINE, CONDITION, CL_NAME_ON_PLOT) %>%
+  summarise(mean_per_day = mean(MEASUREMENT),
+            Concentration = mean(Concentration))
+      
+# First, calculate the mean for the UNSTIM condition separately.
+unstim_means <- COHORT_DATA %>%
+  filter(CONDITION == "UNSTIM") %>%
+  group_by(CELL_LINE) %>%
+  summarise(mean_unstim = mean(MEASUREMENT))
+      
+# Now, join this back to the main dataset.
+COHORT_SUBSET <- COHORT_DATA %>%
+  left_join(unstim_means, by = "CELL_LINE")
+      
+# Compute the fold change. 
+# The `case_when` logic ensures that the fold change is calculated only for the STIM condition.
+NORMALIZED_TO_CONTROL <- COHORT_SUBSET %>%
+  mutate(fold_change = case_when(CONDITION == "STIM" ~ MEASUREMENT / mean_unstim, TRUE ~ NA_real_ )) %>% # set NA for non-STIM conditions
+  ungroup() %>%
+  group_by(CELL_LINE, CONDITION) %>%
+  mutate(trip_mean = mean(fold_change),
+         fold_change_sd = sd(fold_change)) %>%
+  unique()
+      
+# Helper function to perform a t-test and return p-value and annotation
+perform_ttest <- function(data) {
+  ttest_result <- t.test(data$MEASUREMENT[data$CONDITION == "STIM"],
+                         data$MEASUREMENT[data$CONDITION == "UNSTIM"],
+                         paired = TRUE)  # or paired = FALSE if the data are independent
+  p_value <- ttest_result$p.value
+  annotation <- ifelse(p_value < 0.001, '***', 
+                       ifelse(p_value < 0.01, '**', 
+                              ifelse(p_value < 0.05, '*', 'ns')))
+  return(list(p_value = p_value, annotation = annotation))
+  }
+      
+      
+results <- COHORT_SUBSET %>%
+  group_by(CELL_LINE, CL_NAME_ON_PLOT, Date) %>%
+  do({
+    data <- .
+    fold_change_data <- data %>%
+      summarise(fold_change = mean(MEASUREMENT[CONDITION == "STIM"]) / mean(MEASUREMENT[CONDITION == "UNSTIM"]))
+    ttest_results <- perform_ttest(data)
+    cbind(fold_change_data, ttest_results)
+    }) %>%
+  ungroup()
+
+
+# Extract annotations for plotting
+annotations        <- results$annotation
+names(annotations) <- results$CELL_LINE
+
+# Reorder
+results$CELL_LINE = reorder(results$CELL_LINE, -results$fold_change)
+      
+# Plotting the fold changes
+plot <- ggplot(results, aes(x = CELL_LINE, y = fold_change)) +
+  geom_col(position = position_dodge(width = 0.8)) +
+  geom_text(aes(label = annotations), 
+            hjust = -0.8) +
+  theme_cowplot() +
+  theme(legend.position = "bottom") +
+  labs(x = "", y = "fold change") +
+  coord_flip() +
+  facet_wrap(~Date, scales = "free", ncol = 1)
+
+plot
+
+kable(results)
+
+```

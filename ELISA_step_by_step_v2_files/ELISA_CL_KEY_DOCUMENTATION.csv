@@ -1,0 +1,8 @@
+﻿COL_NAME,TYPE,CONTENT
+CELL_LINE,chr,name used on the plates (raw data)
+CL_NUMBER,chr,cell line number in our system
+CL_NAME_ON_PLOT,chr,equivalent to what you want to print in figures
+PURPOSE,chr,optional and just designates whether the cell line is used as a positive/negative/XYZ control or just a sample
+INFO,chr,additional information
+PLOTTING_COLOR,chr,color of your cell lines in the figures
+ORDER_NO,int,"plot your cell lines in the correct order \nThe most important cell lines against which we compare (the positive controls) are ranked highly (1 for WT, 2 for cl069, 3 for 3E10) \nNegative controls follow (order number 4 and lower) \nSamples come last - order them as you wish (I have continuously numbered them - synonyms can carry the same number)"
