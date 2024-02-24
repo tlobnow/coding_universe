@@ -1,0 +1,1733 @@
+---
+title: "LCI_Analysis"
+date: ", Last edited on `r format(Sys.time(), '%d %B %Y')`"
+author: "Finn Lobnow"
+output: 
+  github_document:
+    toc: true
+    df_print: kable
+---
+
+```{r setup, include=FALSE}
+library(pacman)
+
+pacman::p_load(ggplot2, ggdark, data.table, dplyr, ggfx, viridis, ggridges, RColorBrewer, ggpubr, knitr, lemon, cowplot, ggrepel, plotly, ggfortify, ggalt, ggbreak)
+# install_github("vqv/ggbiplot")
+filter <- dplyr::filter
+sem <- function(x) sd(x)/sqrt(length(x))
+
+knitr::opts_chunk$set(warning = FALSE, message = FALSE, echo = FALSE)
+options(stringsAsFactors = FALSE)
+theme_set(theme_cowplot())
+theme_update(panel.grid.minor = element_blank())
+```
+
+## FUNCTIONS
+
+```{r}
+# rescue_status <- function(COHORT) {
+#   case_when(grepl("BDLD_57H|BDLD_6H|DHF91-TIR-T6BD TRAF6|MyD88-T6BD TRAF6|MyD88 TRAF6", COHORT) ~ "RESCUE",
+#             grepl("3xA|BDLD_27H|BDLD_14H|BDLD_10H|BDLD_13H|BDLD_62H|BDLD_2H|BDLD_46H|BDLD_67H|BDLD_73H|BDLD_69H|BDLD_7H|MyD88-TIR-T6BD TRAF6|MyD88-TIR|DHF91-TIR-T6BD-3xA TRAF6", COHORT) ~ "NO RESCUE",
+#     TRUE ~ "UNKNOWN"
+#   )
+# }
+
+rescue_status <- function(FILE) {
+  # Check for conditions using case_when
+  dplyr::case_when(
+    # Specific cases
+    stringr::str_detect(FILE,"BDLD_2$|BDLD_2_|BDLD_2-") ~ "NO RESCUE",
+    stringr::str_detect(FILE,"BDLD_7$|BDLD_7_|BDLD_7-|NJM20757.1") ~ "NO RESCUE",
+    stringr::str_detect(FILE,"BDLD_6$|BDLD_6_|BDLD_6-|BDLD_6H|Calothrix_sp_NIES-2098") ~ "RESCUE",
+    stringr::str_detect(FILE,"BDLD_22|BDLD_23|BDLD_24|BDLD_11|BDLD_16|BDLD_38|BDLD_58|BDLD_74|BDLD_80|BDLD_82") ~ "UNKNOWN",
+    stringr::str_detect(FILE,"^MyD88$") ~ "RESCUE",
+    # General cases
+    stringr::str_detect(FILE,"3xA|^TIR|^MyD88-TIR$|MyD88-TIR-T6BM|DHF119|CNTRL") ~ "NO RESCUE",
+    stringr::str_detect(FILE,"BDLD_27|BDLD_14|BDLD_50|BDLD_13|Thiotrichaceae|BDLD_62|matsumotoense|WP_162271610.1|NJO29889.1|BDLD_46|WP_044290893.1|BDLD_67|BDLD_69|WP_130460897.1|BDLD_73|WP_143309823.1") ~ "NO RESCUE",
+    stringr::str_detect(FILE,"BDLD_57|MYD88_T6BM_x6|MyD88_T6BD_x6|MYD88_MOUSE_slim2_1-109_|DHF91|6I3N|3MOP|MYD88_MOUSE-DD|OUL35760.1__Nostoc_sp_106C_x6|MyD88-T6BM") ~ "RESCUE",
+    TRUE ~ "UNKNOWN"
+  )
+}
+# main %>% filter(ELISA_STATUS == "UNKNOWN") %>% distinct(COHORT)
+
+color_violin <-c("+ve" = "#e60049", "-ve" = "#00bfa0")
+```
+
+## PARAMETERS
+
+```{r}
+# data_tay <- "/Volumes/TAYLOR-LAB"
+# 
+#   # load tables
+# EssentialPaths <- c(
+# 
+#   # 1_069-1R_MyD88 TRAF6
+#   "/Volumes/TAYLOR-LAB/Synthetic Myddosome Paper/1_Image analysis/1_069-1R_MyD88 TRAF6/20230413 2.5nM_cl069_TRAF6_MyD88 001/Essential.csv.gz",
+#   "/Volumes/TAYLOR-LAB/Synthetic Myddosome Paper/1_Image analysis/1_069-1R_MyD88 TRAF6/20231102 2nM_cl069_TRAF6_MyD88 001/Essential.csv.gz",
+#   "/Volumes/TAYLOR-LAB/Synthetic Myddosome Paper/1_Image analysis/1_069-1R_MyD88 TRAF6/20231114 2nM_cl069_TRAF6_MyD88 001/Essential.csv.gz",
+# 
+#   # 2_232_MyD88-TRAF6-BD TRAF6
+#   "/Volumes/TAYLOR-LAB/Synthetic Myddosome Paper/1_Image analysis/2_232_MyD88-TRAF6-BD TRAF6/20220610 1.5nM_cl232_TRAF6_MyD88-TRAF6-BD-GFP 001/Essential.csv.gz",
+#   "/Volumes/TAYLOR-LAB/Synthetic Myddosome Paper/1_Image analysis/2_232_MyD88-TRAF6-BD TRAF6/20220615 1.5nM_cl232_TRAF6_MyD88-TRAF6-BD-GFP 002/Essential.csv.gz",
+#   "/Volumes/TAYLOR-LAB/Synthetic Myddosome Paper/1_Image analysis/2_232_MyD88-TRAF6-BD TRAF6/20231114 2nM_cl232_TRAF6_MyD88-TRAF6-BD-GFP 001/Essential.csv.gz",
+#   "/Volumes/TAYLOR-LAB/Synthetic Myddosome Paper/1_Image analysis/2_232_MyD88-TRAF6-BD TRAF6/20231114 2nM_cl232_TRAF6_MyD88-TRAF6-BD-GFP 002/Essential.csv.gz",
+# 
+#   # 3_240_MyD88-TIR-TRAF6-BD TRAF6
+#   "/Volumes/TAYLOR-LAB/Synthetic Myddosome Paper/1_Image analysis/3_240_MyD88-TIR-TRAF6-BD TRAF6/20220615 1.5nM_cl240_TRAF6_MyD88-TIR-TRAF6-BD-GFP 001/Essential.csv.gz",
+#   "/Volumes/TAYLOR-LAB/Synthetic Myddosome Paper/1_Image analysis/3_240_MyD88-TIR-TRAF6-BD TRAF6/20220615 1.5nM_cl240_TRAF6_MyD88-TIR-TRAF6-BD-GFP 007/Essential.csv.gz",
+#   "/Volumes/TAYLOR-LAB/Synthetic Myddosome Paper/1_Image analysis/3_240_MyD88-TIR-TRAF6-BD TRAF6/20230405 1.5nM_cl240_TRAF6_MyD88-TIR-TRAF6-BD-GFP 001/Essential.csv.gz",
+#   "/Volumes/TAYLOR-LAB/Synthetic Myddosome Paper/1_Image analysis/3_240_MyD88-TIR-TRAF6-BD TRAF6/20231114 2nM_cl240_TRAF6_MyD88-TIR-TRAF6-BD-GFP 001/Essential.csv.gz",
+#   "/Volumes/TAYLOR-LAB/Synthetic Myddosome Paper/1_Image analysis/3_240_MyD88-TIR-TRAF6-BD TRAF6/20231115 2nM_cl240_TRAF6_MyD88-TIR-TRAF6-BD-GFP 001/Essential.csv.gz",
+#   "/Volumes/TAYLOR-LAB/Synthetic Myddosome Paper/1_Image analysis/3_240_MyD88-TIR-TRAF6-BD TRAF6/20231121 2nM_cl240_TRAF6_MyD88-TIR-TRAF6-BD-GFP 001/Essential.csv.gz",
+# 
+#   # 4_294_MyD88-TIR-ID-TIR TRAF6
+#   "/Volumes/TAYLOR-LAB/Synthetic Myddosome Paper/1_Image analysis/4_294_MyD88-TIR-ID-TIR TRAF6/20231102 2nM_cl294_TRAF6_TIR-ID-TIR-T6BD 001/Essential.csv.gz",
+#   "/Volumes/TAYLOR-LAB/Synthetic Myddosome Paper/1_Image analysis/4_294_MyD88-TIR-ID-TIR TRAF6/20231114 2nM_cl294_TRAF6_TIR-ID-TIR-T6BD 001/Essential.csv.gz",
+#   "/Volumes/TAYLOR-LAB/Synthetic Myddosome Paper/1_Image analysis/4_294_MyD88-TIR-ID-TIR TRAF6/20231115 2nM_cl294_TRAF6_TIR-ID-TIR-T6BD 001/Essential.csv.gz",
+#   "/Volumes/TAYLOR-LAB/Synthetic Myddosome Paper/1_Image analysis/4_294_MyD88-TIR-ID-TIR TRAF6/20231121 2nM_cl294_TRAF6_TIR-ID-TIR-T6BD 001/Essential.csv.gz",
+# 
+#   # 5_236_MyD88-DHF91-TRAF6-BD TRAF6
+#   "/Volumes/TAYLOR-LAB/Synthetic Myddosome Paper/1_Image analysis/5_236_MyD88-DHF91-TRAF6-BD TRAF6/20220615 1.5nM_cl236_TRAF6_MyD88-DHF91-TRAF6-BD-GFP 001/Essential.csv.gz",
+#   "/Volumes/TAYLOR-LAB/Synthetic Myddosome Paper/1_Image analysis/5_236_MyD88-DHF91-TRAF6-BD TRAF6/20221207 4nM_cl236_TRAF6_MyD88-DHF91-TRAF6-BD-GFP 001/Essential.csv.gz",
+#   "/Volumes/TAYLOR-LAB/Synthetic Myddosome Paper/1_Image analysis/5_236_MyD88-DHF91-TRAF6-BD TRAF6/20230405 1.5nM_cl236_TRAF6_MyD88-DHF91-TRAF6-BD-GFP 003/Essential.csv.gz",
+#   "/Volumes/TAYLOR-LAB/Synthetic Myddosome Paper/1_Image analysis/5_236_MyD88-DHF91-TRAF6-BD TRAF6/20230413 2.5nM_cl236_TRAF6_MyD88-DHF91-TRAF6-BD-GFP 001/Essential.csv.gz",
+# 
+#   # 6_321_BDLD_57H-MyD88-TIR-TRAF6-BD-GFP TRAF6
+#   "/Volumes/TAYLOR-LAB/Synthetic Myddosome Paper/1_Image analysis/6_321_BDLD_57H-MyD88-TIR-TRAF6-BD-GFP TRAF6/20230616 3nM_cl321-BDLD57H_TRAF6_MyD88 001/Essential.csv.gz",
+#   "/Volumes/TAYLOR-LAB/Synthetic Myddosome Paper/1_Image analysis/6_321_BDLD_57H-MyD88-TIR-TRAF6-BD-GFP TRAF6/20230623 3nM_cl321-BDLD57H_TRAF6_MyD88 002/Essential.csv.gz",
+#   "/Volumes/TAYLOR-LAB/Synthetic Myddosome Paper/1_Image analysis/6_321_BDLD_57H-MyD88-TIR-TRAF6-BD-GFP TRAF6/20231102 2nM_cl321-BDLD57H_TRAF6_MyD88 001/Essential.csv.gz",
+# 
+#   # 7_234_MyD88-TRAF6-BD-3xA TRAF6
+#   "/Volumes/TAYLOR-LAB/Synthetic Myddosome Paper/1_Image analysis/7_234_MyD88-TRAF6-BD-3xA TRAF6/20231102 2nM_cl234_TRAF6_MyD88-TRAF6-BD-3xA-GFP 001/Essential.csv.gz",
+#   "/Volumes/TAYLOR-LAB/Synthetic Myddosome Paper/1_Image analysis/7_234_MyD88-TRAF6-BD-3xA TRAF6/20231108 2nM_cl234_TRAF6_MyD88-TRAF6-BD-3xA-GFP 001/Essential.csv.gz",
+#   "/Volumes/TAYLOR-LAB/Synthetic Myddosome Paper/1_Image analysis/7_234_MyD88-TRAF6-BD-3xA TRAF6/20231114 2nM_cl234_TRAF6_MyD88-TRAF6-BD-3xA-GFP 001/Essential.csv.gz",
+# 
+#   # 8_247_MyD88-GFP-synTRAF6-BD-1x TRAF6
+#   "/Volumes/TAYLOR-LAB/Synthetic Myddosome Paper/1_Image analysis/8_247_MyD88-GFP-synTRAF6-BD-1x TRAF6/20221129 4nM_cl247_TRAF6_MyD88-GFP-synTRAF6-BD-1x 001/Essential.csv.gz",
+#   "/Volumes/TAYLOR-LAB/Synthetic Myddosome Paper/1_Image analysis/8_247_MyD88-GFP-synTRAF6-BD-1x TRAF6/20221207 4nM_cl247_TRAF6_MyD88-GFP-synTRAF6-BD-1x 002/Essential.csv.gz",
+#   "/Volumes/TAYLOR-LAB/Synthetic Myddosome Paper/1_Image analysis/8_247_MyD88-GFP-synTRAF6-BD-1x TRAF6/20221207 4nM_cl247_TRAF6_MyD88-GFP-synTRAF6-BD-1x 006/Essential.csv.gz",
+#   "/Volumes/TAYLOR-LAB/Synthetic Myddosome Paper/1_Image analysis/8_247_MyD88-GFP-synTRAF6-BD-1x TRAF6/20230309 1.5nM_cl247_TRAF6_MyD88-GFP-synTRAF6-BD-1x 002/Essential.csv.gz",
+#   "/Volumes/TAYLOR-LAB/Synthetic Myddosome Paper/1_Image analysis/8_247_MyD88-GFP-synTRAF6-BD-1x TRAF6/20230317 1.5nM_cl247_TRAF6_MyD88-GFP-synTRAF6-BD-1x 001/Essential.csv.gz",
+# 
+#   # 9_255_MyD88-GFP-synTRAF6-BD-3x TRAF6
+#   "/Volumes/TAYLOR-LAB/Synthetic Myddosome Paper/1_Image analysis/9_255_MyD88-GFP-synTRAF6-BD-3x TRAF6/20221123 4nM_cl255_TRAF6_MyD88-GFP-synTRAF6-BD-3x 001/Essential.csv.gz",
+#   "/Volumes/TAYLOR-LAB/Synthetic Myddosome Paper/1_Image analysis/9_255_MyD88-GFP-synTRAF6-BD-3x TRAF6/20221207 4nM_cl255_TRAF6_MyD88-GFP-synTRAF6-BD-3x 001/Essential.csv.gz",
+#   "/Volumes/TAYLOR-LAB/Synthetic Myddosome Paper/1_Image analysis/9_255_MyD88-GFP-synTRAF6-BD-3x TRAF6/20230309 1.5nM_cl255_TRAF6_MyD88-GFP-synTRAF6-BD-3x 001/Essential.csv.gz",
+# 
+#   # 10_263_MyD88-GFP-synTRAF6-BD-5x TRAF6
+#   "/Volumes/TAYLOR-LAB/Synthetic Myddosome Paper/1_Image analysis/10_263_MyD88-GFP-synTRAF6-BD-5x TRAF6/20221123 4nM_cl263_TRAF6_MyD88-GFP-synTRAF6-BD-5x 001/Essential.csv.gz",
+#   "/Volumes/TAYLOR-LAB/Synthetic Myddosome Paper/1_Image analysis/10_263_MyD88-GFP-synTRAF6-BD-5x TRAF6/20221207 4nM_cl263_TRAF6_MyD88-GFP-synTRAF6-BD-5x 001/Essential.csv.gz",
+#   "/Volumes/TAYLOR-LAB/Synthetic Myddosome Paper/1_Image analysis/10_263_MyD88-GFP-synTRAF6-BD-5x TRAF6/20230309 1.5nM_cl263_TRAF6_MyD88-GFP-synTRAF6-BD-5x 003/Essential.csv.gz",
+#   "/Volumes/TAYLOR-LAB/Synthetic Myddosome Paper/1_Image analysis/10_263_MyD88-GFP-synTRAF6-BD-5x TRAF6/20230317 1.5nM_cl263_TRAF6_MyD88-GFP-synTRAF6-BD-5x 001/Essential.csv.gz",
+# 
+#   # 11_249_MyD88-GFP-synTRAF6-BD-1xA TRAF6
+#   "/Volumes/TAYLOR-LAB/Synthetic Myddosome Paper/1_Image analysis/11_249_MyD88-GFP-synTRAF6-BD-1xA TRAF6/20230317 1.5nM_cl249_TRAF6_MyD88-GFP-synTRAF6-BD-1xA 001/Essential.csv.gz",
+#   "/Volumes/TAYLOR-LAB/Synthetic Myddosome Paper/1_Image analysis/11_249_MyD88-GFP-synTRAF6-BD-1xA TRAF6/20231102 2nM_cl249_TRAF6_MyD88-GFP-synTRAF6-BD-1xA 001/Essential.csv.gz",
+#   "/Volumes/TAYLOR-LAB/Synthetic Myddosome Paper/1_Image analysis/11_249_MyD88-GFP-synTRAF6-BD-1xA TRAF6/20231108 2nM_cl249_TRAF6_MyD88-GFP-synTRAF6-BD-1xA 001/Essential.csv.gz",
+#   "/Volumes/TAYLOR-LAB/Synthetic Myddosome Paper/1_Image analysis/11_249_MyD88-GFP-synTRAF6-BD-1xA TRAF6/20231108 2nM_cl249_TRAF6_MyD88-GFP-synTRAF6-BD-1xA 002/Essential.csv.gz",
+# 
+#   # 12_257_MyD88-GFP-synTRAF6-BD-3xA TRAF6
+#   "/Volumes/TAYLOR-LAB/Synthetic Myddosome Paper/1_Image analysis/12_257_MyD88-GFP-synTRAF6-BD-3xA TRAF6/20230317 1.5nM_cl257_TRAF6_MyD88-GFP-synTRAF6-BD-3xA 001/Essential.csv.gz",
+#   "/Volumes/TAYLOR-LAB/Synthetic Myddosome Paper/1_Image analysis/12_257_MyD88-GFP-synTRAF6-BD-3xA TRAF6/20231102 2nM_cl257_TRAF6_MyD88-GFP-synTRAF6-BD-3xA 001/Essential.csv.gz",
+#   "/Volumes/TAYLOR-LAB/Synthetic Myddosome Paper/1_Image analysis/12_257_MyD88-GFP-synTRAF6-BD-3xA TRAF6/20231108 2nM_cl257_TRAF6_MyD88-GFP-synTRAF6-BD-3xA 001/Essential.csv.gz",
+# 
+#   # 13_265_MyD88-GFP-synTRAF6-BD-5xA TRAF6
+#   "/Volumes/TAYLOR-LAB/Synthetic Myddosome Paper/1_Image analysis/13_265_MyD88-GFP-synTRAF6-BD-5xA TRAF6/20230317 1.5nM_cl265_TRAF6_MyD88-GFP-synTRAF6-BD-5xA 001/Essential.csv.gz",
+#   "/Volumes/TAYLOR-LAB/Synthetic Myddosome Paper/1_Image analysis/13_265_MyD88-GFP-synTRAF6-BD-5xA TRAF6/20231102 2nM_cl265_TRAF6_MyD88-GFP-synTRAF6-BD-5xA 001/Essential.csv.gz",
+#   "/Volumes/TAYLOR-LAB/Synthetic Myddosome Paper/1_Image analysis/13_265_MyD88-GFP-synTRAF6-BD-5xA TRAF6/20231108 2nM_cl265_TRAF6_MyD88-GFP-synTRAF6-BD-5xA 001/Essential.csv.gz"
+#   #,
+# 
+# 
+#   # # BDLD CONTROL
+#   # "/Volumes/TAYLOR-LAB/Finn/new_pipeline/pending_processing/20230602_batch/Output/BDLD_10H-MyD88-TIR-TRAF6-BD-GFP TRAF6/20230602 6nM_cl320-BDLD10H_TRAF6_MyD88_001/Essential.csv.gz",
+#   #
+#   # # BDLD_2
+#   # "/Volumes/TAYLOR-LAB/Finn/new_pipeline/pending_processing/20230616_batch/Output/BDLD_2H-MyD88-TIR-TRAF6-BD-GFP TRAF6/20230616 3nM_cl322-BDLD2H_TRAF6_MyD88 001/Essential.csv.gz",
+#   #
+#   # # BDLD_6
+#   # "/Volumes/TAYLOR-LAB/Finn/new_pipeline/pending_processing/20230619_batch/Output/BDLD_6H-MyD88-TIR-TRAF6-BD-GFP TRAF6/20230619 3nM_cl328-BDLD6H_TRAF6_MyD88 001/Essential.csv.gz",
+#   # "/Volumes/TAYLOR-LAB/Finn/new_pipeline/pending_processing/20230623_batch/Output/BDLD_6H-MyD88-TIR-TRAF6-BD-GFP TRAF6/20230623 3nM_cl328-BDLD6H_TRAF6_MyD88 002/Essential.csv.gz",
+#   #
+#   # # BDLD_7
+#   # "/Volumes/TAYLOR-LAB/Finn/new_pipeline/pending_processing/20230619_batch/Output/BDLD_7H-MyD88-TIR-TRAF6-BD-GFP TRAF6/20230619 3nM_cl325-BDLD7H_TRAF6_MyD88 001/Essential.csv.gz",
+#   #
+#   # # BDLD_11
+#   # # "/Volumes/TAYLOR-LAB/Finn/new_pipeline/pending_processing/20231201_batch/Output/BDLD_11H-MyD88-TIR-TRAF6-BD-GFP TRAF6/20231201 3nM_cl332-BDLD11H_TRAF6_MyD88 003/Essential.csv.gz",
+#   # "/Volumes/TAYLOR-LAB/Finn/new_pipeline 2/Analysis/new_pipeline/pending_processing/20231201_batch_1/Output/BDLD_11H-MyD88-TIR-TRAF6-BD-GFP TRAF6/20231201 3nM_cl332-BDLD11H_TRAF6_MyD88 003/Essential.csv.gz",
+#   #
+#   # # BDLD_13
+#   # "/Volumes/TAYLOR-LAB/Finn/new_pipeline/pending_processing/20230602_batch/Output/BDLD_13H-MyD88-TIR-TRAF6-BD-GFP TRAF6/20230602 6nM_cl319-BDLD13H_TRAF6_MyD88_001/Essential.csv.gz",
+#   #
+#   # # BDLD_14
+#   # "/Volumes/TAYLOR-LAB/Finn/new_pipeline/pending_processing/20230519_batch/Output/BDLD_14H-MyD88-TIR-TRAF6-BD-GFP TRAF6/20230519 3nM_cl315-BDLD14H_TRAF6_MyD88 001/Essential.csv.gz",
+#   #
+#   # # BDLD_16
+#   # # "/Volumes/TAYLOR-LAB/Finn/new_pipeline/pending_processing/20231201_batch/Output/BDLD_16H-MyD88-TIR-TRAF6-BD-GFP TRAF6/20231201 3nM_cl335-BDLD16H_TRAF6_MyD88 001/Essential.csv.gz",
+#   # "/Volumes/TAYLOR-LAB/Finn/new_pipeline 2/Analysis/new_pipeline/pending_processing/20231201_batch_2/Output/BDLD_16H-MyD88-TIR-TRAF6-BD-GFP TRAF6/20231201 3nM_cl335-BDLD16H_TRAF6_MyD88 001/Essential.csv.gz",
+#   #
+#   #
+#   # # BDLD_22
+#   # "/Volumes/TAYLOR-LAB/Finn/new_pipeline/pending_processing/20230619_batch/Output/BDLD_22H-MyD88-TIR-TRAF6-BD-GFP TRAF6/20230619 3nM_cl329-BDLD22H_TRAF6_MyD88 001/Essential.csv.gz",
+#   #
+#   # # BDLD_23
+#   # "/Volumes/TAYLOR-LAB/Finn/new_pipeline/pending_processing/20230619_batch/Output/BDLD_23H-MyD88-TIR-TRAF6-BD-GFP TRAF6/20230619 3nM_cl330-BDLD23H_TRAF6_MyD88 001/Essential.csv.gz",
+#   #
+#   # # BDLD_24
+#   # "/Volumes/TAYLOR-LAB/Finn/new_pipeline/pending_processing/20230619_batch/Output/BDLD_24H-MyD88-TIR-TRAF6-BD-GFP TRAF6/20230619 3nM_cl331-BDLD24H_TRAF6_MyD88 001/Essential.csv.gz",
+#   #
+#   # # BDLD_27
+#   # "/Volumes/TAYLOR-LAB/Finn/new_pipeline/pending_processing/20230519_batch/Output/BDLD_27H-MyD88-TIR-TRAF6-BD-GFP TRAF6/20230519 3nM_cl311-BDLD27H_TRAF6_MyD88 001/Essential.csv.gz",
+#   #
+#   # # BDLD_38
+#   # # "/Volumes/TAYLOR-LAB/Finn/new_pipeline/pending_processing/20231201_batch/Output/BDLD_38H-MyD88-TIR-TRAF6-BD-GFP TRAF6/20231201 3nM_cl338-BDLD38H_TRAF6_MyD88 002/Essential.csv.gz",
+#   # "/Volumes/TAYLOR-LAB/Finn/new_pipeline 2/Analysis/new_pipeline/pending_processing/20231201_batch_2/Output/BDLD_38H-MyD88-TIR-TRAF6-BD-GFP TRAF6/20231201 3nM_cl338-BDLD38H_TRAF6_MyD88 002/Essential.csv.gz",
+#   #
+#   # # BDLD_46
+#   # "/Volumes/TAYLOR-LAB/Finn/new_pipeline/pending_processing/20230616_batch/Output/BDLD_46H-MyD88-TIR-TRAF6-BD-GFP TRAF6/20230616 3nM_cl324-BDLD46H_TRAF6_MyD88 001/Essential.csv.gz",
+#   #
+#   # # BDLD_57
+#   # # "/Volumes/TAYLOR-LAB/Finn/new_pipeline/pending_processing/20230602_batch/Output/BDLD_57H-MyD88-TIR-TRAF6-BD-GFP TRAF6/20230602 6nM_cl321-BDLD57H_TRAF6_MyD88_002/Essential.csv.gz",
+#   # # "/Volumes/TAYLOR-LAB/Finn/new_pipeline/pending_processing/20230616_batch/Output/BDLD_57H-MyD88-TIR-TRAF6-BD-GFP TRAF6/20230616 3nM_cl321-BDLD57H_TRAF6_MyD88 001/Essential.csv.gz",
+#   # # "/Volumes/TAYLOR-LAB/Finn/new_pipeline/pending_processing/20230623_batch/Output/BDLD_57H-MyD88-TIR-TRAF6-BD-GFP TRAF6/20230623 3nM_cl321-BDLD57H_TRAF6_MyD88 002/Essential.csv.gz",
+#   #
+#   # # BDLD_58
+#   # # "/Volumes/TAYLOR-LAB/Finn/new_pipeline/pending_processing/20231201_batch/Output/BDLD_58H-MyD88-TIR-TRAF6-BD-GFP TRAF6/20231201 3nM_cl333-BDLD58H_TRAF6_MyD88 001/Essential.csv.gz",
+#   # "/Volumes/TAYLOR-LAB/Finn/new_pipeline 2/Analysis/new_pipeline/pending_processing/20231201_batch_1/Output/BDLD_58H-MyD88-TIR-TRAF6-BD-GFP TRAF6/20231201 3nM_cl333-BDLD58H_TRAF6_MyD88 001/Essential.csv.gz",
+#   #
+#   # # BDLD_62
+#   # "/Volumes/TAYLOR-LAB/Finn/new_pipeline/pending_processing/20230602_batch/Output/BDLD_62H-MyD88-TIR-TRAF6-BD-GFP TRAF6/20230602 6nM_cl318-BDLD62H_TRAF6_MyD88_001/Essential.csv.gz",
+#   # "/Volumes/TAYLOR-LAB/Finn/new_pipeline/pending_processing/20230616_batch/Output/BDLD_62H-MyD88-TIR-TRAF6-BD-GFP TRAF6/20230616 3nM_cl318-BDLD62H_TRAF6_MyD88 002/Essential.csv.gz",
+#   #
+#   # # BDLD_67
+#   # "/Volumes/TAYLOR-LAB/Finn/new_pipeline/pending_processing/20230616_batch/Output/BDLD_67H-MyD88-TIR-TRAF6-BD-GFP TRAF6/20230616 3nM_cl327-BDLD67H_TRAF6_MyD88 001/Essential.csv.gz",
+#   # "/Volumes/TAYLOR-LAB/Finn/new_pipeline/pending_processing/20230619_batch/Output/BDLD_67H-MyD88-TIR-TRAF6-BD-GFP TRAF6/20230619 3nM_cl327-BDLD67H_TRAF6_MyD88 003/Essential.csv.gz",
+#   # "/Volumes/TAYLOR-LAB/Finn/new_pipeline/pending_processing/20230623_batch/Output/BDLD_67H-MyD88-TIR-TRAF6-BD-GFP TRAF6/20230623 3nM_cl327-BDLD67H_TRAF6_MyD88 002/Essential.csv.gz",
+#   #
+#   # # BDLD_69
+#   # "/Volumes/TAYLOR-LAB/Finn/new_pipeline/pending_processing/20230619_batch/Output/BDLD_69H-MyD88-TIR-TRAF6-BD-GFP TRAF6/20230619 3nM_cl326-BDLD69H_TRAF6_MyD88 001/Essential.csv.gz",
+#   #
+#   # # BDLD_73
+#   # "/Volumes/TAYLOR-LAB/Finn/new_pipeline/pending_processing/20230616_batch/Output/BDLD_73H-MyD88-TIR-TRAF6-BD-GFP TRAF6/20230616 3nM_cl323-BDLD73H_TRAF6_MyD88 001/Essential.csv.gz",
+#   # "/Volumes/TAYLOR-LAB/Finn/new_pipeline/pending_processing/20230619_batch/Output/BDLD_73H-MyD88-TIR-TRAF6-BD-GFP TRAF6/20230619 3nM_cl323-BDLD73H_TRAF6_MyD88 002/Essential.csv.gz",
+#   #
+#   # # BDLD_74
+#   # # "/Volumes/TAYLOR-LAB/Finn/new_pipeline/pending_processing/20231201_batch/Output/BDLD_74H-MyD88-TIR-TRAF6-BD-GFP TRAF6/20231201 3nM_cl337-BDLD74H_TRAF6_MyD88 001/Essential.csv.gz",
+#   # "/Volumes/TAYLOR-LAB/Finn/new_pipeline 2/Analysis/new_pipeline/pending_processing/20231201_batch_2/Output/BDLD_74H-MyD88-TIR-TRAF6-BD-GFP TRAF6/20231201 3nM_cl337-BDLD74H_TRAF6_MyD88 001/Essential.csv.gz",
+#   #
+#   # # BDLD_80
+#   # # pipeline didn't process this sample - the imaging software froze while imaging.. perhaps the metadata is messed up and therefore it's impossible to process..
+#   #
+#   # # BDLD_82
+#   # # "/Volumes/TAYLOR-LAB/Finn/new_pipeline/pending_processing/20231201_batch/Output/BDLD_82H-MyD88-TIR-TRAF6-BD-GFP TRAF6/20231201 3nM_cl334-BDLD82H_TRAF6_MyD88 001/Essential.csv.gz"
+#   # "/Volumes/TAYLOR-LAB/Finn/new_pipeline 2/Analysis/new_pipeline/pending_processing/20231201_batch_1/Output/BDLD_82H-MyD88-TIR-TRAF6-BD-GFP TRAF6/20231201 3nM_cl334-BDLD82H_TRAF6_MyD88 001/Essential.csv.gz"
+#   )
+# 
+# read_EssentialPaths <- lapply(EssentialPaths, fread)
+# essential_Table     <- rbindlist(read_EssentialPaths, fill=TRUE) #fill=TRUE since not all images are two color
+# 
+# # rename cohorts if necessary
+# # essential_Table$COHORT <- gsub("*-MyD88-TIR-TRAF6-BD-GFP TRAF6", replacement = "-TIR-T6BD TRAF6", x = essential_Table$COHORT)
+# # essential_Table$COHORT <- gsub("MyD88-DHF91", replacement = "DHF91-TIR", x = essential_Table$COHORT)
+# # essential_Table$COHORT <- gsub("*TRAF6-BD", replacement = "T6BD", x = essential_Table$COHORT)
+# 
+# # get all the different cohorts in Table
+# unique(essential_Table$COHORT)
+# unique(essential_Table$LIGAND_DENSITY_CAT)
+# 
+# fwrite(x = essential_Table,
+#        file = "~/Documents/Github/master_thesis/scripts/LCI_ANALYSIS_files/essential_Table.csv",
+#        quote = F,
+#        sep = ",")
+# system("gzip -f ~/Documents/Github/master_thesis/scripts/LCI_ANALYSIS_files/essential_Table.csv")
+```
+
+## PREPARE THE MAIN TABLE
+
+```{r}
+essential_Table <- fread("~/Documents/Github/master_thesis/scripts/LCI_ANALYSIS_files/essential_Table.csv.gz")
+main            <- essential_Table %>% mutate(ELISA_STATUS = rescue_status(COHORT))
+```
+
+### Plot the MyD88 intensity over TRAF6 intensity using geom_path
+
+```{r}
+TRAF6col <- main %>%
+  filter(PROTEIN=="MyD88") %>% 
+  mutate(COMPLEMENTARY_NORMALIZED_INTENSITY_1 = round(COMPLEMENTARY_NORMALIZED_INTENSITY_1)) %>% 
+  group_by(COHORT, COMPLEMENTARY_NORMALIZED_INTENSITY_1, ELISA_STATUS) %>% 
+  summarize(NORMALIZED_INTENSITY = mean(NORMALIZED_INTENSITY)) %>%
+  as.data.table()
+
+pattern <- "(BDLD_57H|BDLD_6H|MyD88-TIR|MyD88 TRAF6)"
+pattern <- "(BDLD_6|BDLD_11H|BDLD_57|BDLD_58|MyD88-TRAF6-BD)"
+
+ggplot(data = TRAF6col[grepl(pattern, TRAF6col$COHORT), ],
+       aes(x = NORMALIZED_INTENSITY,
+           y = COMPLEMENTARY_NORMALIZED_INTENSITY_1,
+           col = COHORT
+       )) +
+  geom_path() +
+  scale_x_continuous(limits = c(0, 1000)) +
+  scale_y_continuous(limits = c(0, 10)) +
+  labs(x = "Mean Normalized Intensity of MyD88",
+       y = "Normalized Intensity of TRAF6") + 
+  theme_bw() #+
+# facet_rep_wrap(~COHORT, scales = "free", ncol = 1)
+# theme(legend.position = "none")
+
+```
+
+```{r}
+ggplot(TRAF6col[grepl(pattern, TRAF6col$COHORT), ],
+       aes(x = NORMALIZED_INTENSITY,
+          y = COMPLEMENTARY_NORMALIZED_INTENSITY_1,
+          # col = ELISA_STATUS
+           col = COHORT
+           )) +
+  geom_path() +
+  geom_smooth(method = "lm") +
+  # scale_x_continuous(limits = c(0,800)) +
+  # scale_y_continuous(limits = c(0,100)) +
+  labs(x="Mean Normalized Intensity of MyD88",
+       y="Normalized Intensity of TRAF6") +
+   scale_x_continuous(limits = c(0, max(TRAF6col$NORMALIZED_INTENSITY)), expand = c(0, 0)) +
+  scale_y_continuous(limits = c(0, max(TRAF6col$COMPLEMENTARY_NORMALIZED_INTENSITY_1)), expand = c(0, 0)) +
+  theme_cowplot() 
+  # facet_rep_wrap(~COHORT, scales = "free") +
+  # theme(legend.position = "none")
+
+```
+
+```{r}
+# ggplot(TRAF6col,#[COHORT %in% c("BDLD_57H-TIR-T6BD TRAF6", "BDLD_6H-TIR-T6BD TRAF6", "MyD88-T6BD TRAF6", "DHF91-TIR-T6BD TRAF6", "MyD88-TIR-T6BD TRAF6", "MyD88-TIR", "MyD88 TRAF6") ],
+#        aes(x = NORMALIZED_INTENSITY,
+#            y = COMPLEMENTARY_NORMALIZED_INTENSITY_1,
+#            # col = ELISA_STATUS
+#            col = COHORT
+#        )) +
+#   geom_path() +
+#   # geom_smooth() +
+#   scale_x_continuous(limits = c(0,1000)) +
+#   scale_y_continuous(limits = c(0,20)) +
+#   labs(x="Mean Normalized Intensity of MyD88",
+#        y="Normalized Intensity of TRAF6") +
+#   theme_bw() +
+# facet_rep_wrap(~COHORT, scales = "free") +
+# theme(legend.position = "none")
+```
+
+## DWELL TIME
+
+```{r}
+#Get Table with Dwell frames & Dwell Time
+Dwell_table <- main %>%
+  filter(COMPLEMENTARY_NORMALIZED_INTENSITY_1 >= 0.75) %>% # remove noise -> creates gaps
+  group_by(UNIVERSAL_TRACK_ID) %>%
+  mutate(MAX_COMPLEMENTARY_NORMALIZED_INTENSITY_1 = max(COMPLEMENTARY_NORMALIZED_INTENSITY_1)) %>%
+  ungroup() %>%
+  filter(PROTEIN == "MyD88",
+         # MAX_NORMALIZED_INTENSITY >= 1) %>% 
+         MAX_NORMALIZED_INTENSITY >= 4.5) %>%  # measure stable myddosomes only
+  arrange(UNIVERSAL_SPOT_ID) %>% 
+  #threshold at which recruitment is counted
+  mutate(COLOCALIZATION = MAX_COMPLEMENTARY_NORMALIZED_INTENSITY_1 >= 2.5 ) %>%
+  # mutate(COLOCALIZATION = MAX_COMPLEMENTARY_NORMALIZED_INTENSITY_1 >= 3.3 ) %>% #@FAKUN
+  group_by( UNIVERSAL_TRACK_ID) %>%
+  #new column which creates a grouping variable for continuous frames which are above threshold
+  mutate(STREAK = cumsum(!COLOCALIZATION)) %>% 
+  #group continuous frames above threshold together
+  group_by(COHORT,IMAGE,UNIVERSAL_TRACK_ID,STREAK) %>% 
+  #number of frames that complementary protein is above threshold in a continuous stretch
+  summarise( DWELL_FRAMES = sum(COLOCALIZATION),
+             LIFETIME = max(TIME_ADJUSTED)) %>% 
+  #I want to look at transient recruitment events so even 1 frame is interesting for me, different cutoffs are prbly useful
+  # now at least 3 frames = 12 s == stable recruitment
+  filter(DWELL_FRAMES >= 1) %>%
+  # filter(DWELL_FRAMES >= 3) %>%
+  mutate(DWELL_TIME = DWELL_FRAMES*4,
+         ) %>% 
+  as.data.table()
+
+
+#create the stats variable to add mean etc. to plots
+DwellStats <- Dwell_table %>% group_by(COHORT) %>%
+  mutate(num = length(unique(IMAGE)),
+         SD_DWELL_FRAMES   = sd(DWELL_FRAMES),
+         SD_DWELL_TIME    = sd(DWELL_TIME),
+         MED_DWELL_FRAMES = mad(DWELL_FRAMES),
+         MED_DWELL_TIME   = mad(DWELL_TIME)) %>% 
+  summarize(MED_DWELL_FRAMES = median(DWELL_FRAMES),
+            MED_DWELL_TIME = median(DWELL_TIME),
+            DWELL_FRAMES = mean(DWELL_FRAMES),
+            DWELL_TIME = mean(DWELL_TIME),
+            SEM_DWELL_FRAMES = mean(SD_DWELL_FRAMES/sqrt(num)),
+            LIFETIME  = LIFETIME) %>%
+  mutate(ELISA_STATUS = rescue_status(COHORT)) %>%
+  as.data.table()
+
+
+DwellStats_condensed <- Dwell_table %>% group_by(COHORT) %>%
+  mutate(num = length(unique(IMAGE)),
+         SD_DWELL_FRAMES   = sd(DWELL_FRAMES),
+         SD_DWELL_TIME    = sd(DWELL_TIME),
+         MED_DWELL_FRAMES = mad(DWELL_FRAMES),
+         MED_DWELL_TIME   = mad(DWELL_TIME)) %>% 
+  summarize(MED_DWELL_FRAMES = median(DWELL_FRAMES),
+            MED_DWELL_TIME = median(DWELL_TIME),
+            DWELL_FRAMES = mean(DWELL_FRAMES),
+            DWELL_TIME = mean(DWELL_TIME),
+            SEM_DWELL_FRAMES = mean(SD_DWELL_FRAMES/sqrt(num))) %>%
+  mutate(ELISA_STATUS     = rescue_status(COHORT)) %>%
+  as.data.table() %>% arrange(desc(DWELL_TIME))
+
+write.csv(DwellStats_condensed, "~/Documents/Github/master_thesis/scripts/LCI_ANALYSIS_files/DwellStats.csv", row.names = F)
+
+DwellReplicates <- Dwell_table %>% 
+  group_by(IMAGE, COHORT) %>% 
+  summarize(MED_DWELL_FRAMES = median(DWELL_FRAMES),
+            MED_DWELL_TIME = median(DWELL_TIME),
+            DWELL_FRAMES = mean(DWELL_FRAMES),
+            DWELL_TIME = mean(DWELL_TIME)) %>% 
+  as.data.table()
+
+ggplot(data = Dwell_table[COHORT %in% c("BDLD_57H-TIR-T6BD TRAF6", "BDLD_6H-TIR-T6BD TRAF6", "MyD88-T6BD TRAF6", "DHF91-TIR-T6BD TRAF6", "MyD88-TIR-T6BD TRAF6", "MyD88-TIR", "MyD88 TRAF6")], 
+       aes(x = DWELL_TIME, # y=after_stat(ndensity),
+           fill = COHORT,
+           col = COHORT)) +
+  geom_histogram(data = Dwell_table[COHORT %in% c("BDLD_57H-TIR-T6BD TRAF6", "BDLD_6H-TIR-T6BD TRAF6", "MyD88-T6BD TRAF6", "DHF91-TIR-T6BD TRAF6", "MyD88-TIR-T6BD TRAF6", "MyD88-TIR", "MyD88 TRAF6")], 
+                 alpha = 0.5,
+                 # color = COHORT,
+                 binwidth = 4) +
+  scale_y_continuous(trans = "log2") +
+  facet_rep_wrap(~COHORT,
+                 repeat.tick.labels = TRUE,
+                 scales = "free_y",
+                 ncol = 1
+  ) +
+  scale_x_continuous(limits = c(0,400),
+                     breaks = seq(0,360, by = 60)) +
+  geom_vline(data = DwellStats[COHORT %in% c("BDLD_57H-TIR-T6BD TRAF6", "BDLD_6H-TIR-T6BD TRAF6", "MyD88-T6BD TRAF6", "DHF91-TIR-T6BD TRAF6", "MyD88-TIR-T6BD TRAF6", "MyD88-TIR", "MyD88 TRAF6")], 
+             aes(xintercept = DWELL_TIME),
+             color="black", linetype="dashed", linewidth=1) +
+  xlab("Dwell Time (s)") +
+  ylab("count (log2)") +
+  theme_cowplot() +
+  theme(legend.position = "none")
+```
+
+```{r}
+ggplot(data = Dwell_table,#[COHORT %in% c("BDLD_57H-TIR-T6BD TRAF6", "BDLD_6H-TIR-T6BD TRAF6", "MyD88-T6BD TRAF6", "DHF91-TIR-T6BD TRAF6", "MyD88-TIR-T6BD TRAF6", "MyD88-TIR", "MyD88 TRAF6")], 
+       aes(x = DWELL_TIME, # y=after_stat(ndensity),
+           coll = COHORT,
+           fill = COHORT)) +
+  geom_histogram(data = Dwell_table,#[COHORT %in% c("BDLD_57H-TIR-T6BD TRAF6", "BDLD_6H-TIR-T6BD TRAF6", "MyD88-T6BD TRAF6", "DHF91-TIR-T6BD TRAF6", "MyD88-TIR-T6BD TRAF6", "MyD88-TIR", "MyD88 TRAF6")], 
+                 alpha = 0.5,
+                 binwidth = 4) +
+  scale_y_continuous(trans = "log2") +
+  facet_rep_wrap(~COHORT,
+                 repeat.tick.labels = TRUE,
+                 scales = "free_y",
+                 # ncol = 1
+  ) +
+  scale_x_continuous(limits = c(0,400),
+                     breaks = seq(0,360, by = 60)) +
+  geom_vline(data = DwellStats,#[COHORT %in% c("BDLD_57H-TIR-T6BD TRAF6", "BDLD_6H-TIR-T6BD TRAF6", "MyD88-T6BD TRAF6", "DHF91-TIR-T6BD TRAF6", "MyD88-TIR-T6BD TRAF6", "MyD88-TIR", "MyD88 TRAF6")], 
+             aes(xintercept = DWELL_TIME), color="black", linetype="dashed", linewidth=1) +
+  geom_vline(data = DwellStats,#[COHORT %in% c("BDLD_57H-TIR-T6BD TRAF6", "BDLD_6H-TIR-T6BD TRAF6", "MyD88-T6BD TRAF6", "DHF91-TIR-T6BD TRAF6", "MyD88-TIR-T6BD TRAF6", "MyD88-TIR", "MyD88 TRAF6")], 
+             aes(xintercept = MED_DWELL_TIME), color="red", linetype="dashed", linewidth=1) +
+  xlab("Dwell Time (s)") +
+  ylab("count (log2)") +
+  theme_cowplot() +
+  theme(legend.position = "none")
+```
+
+```{r}
+# Cell Summary Table for the Dwell Time Calculation -----------------------
+c <-as.character(seq(from = 0, to = 104, by = 16))
+xlabels <- paste("<", c, sep = "")
+xlabels <- c(xlabels)
+
+#Table for the Dwell Time
+Cell_Summary <- main %>%
+  filter(PROTEIN == "MyD88",NORMALIZED_INTENSITY >= 1) %>% 
+  group_by(UNIVERSAL_TRACK_ID) %>%
+  #We order every group (ie every Track) by frames
+  arrange(FRAME, .by_group = TRUE) %>% 
+  #threshold at which recruitment is counted
+  #Here I create a new column (with mutate) that will have the value 1 (for TRUE),
+  #if the condition above is satisfied or 0 (for FALSE) if the condition is not satisfied
+  mutate(COLOCALIZATION = COMPLEMENTARY_NORMALIZED_INTENSITY_1 >= 1) %>% 
+  group_by(UNIVERSAL_TRACK_ID) %>%
+  #Here i create a new column were I calculate the cumulative sum for all the rows in the column COLOCALIZATION,
+  #But since TRUE==1 and FALSE==0 we have to add the ! before COLOCALIZATION
+  #This results in all the rows following each other with a continuous "TRUE" get the same "STREAK value"
+  mutate(STREAK = cumsum(!COLOCALIZATION)) %>% 
+  #group continuous frames above threshold together, since they have the same STREAK value
+  group_by(COHORT, IMAGE, CELL, UNIVERSAL_TRACK_ID, STREAK, COLOCALIZATION) %>%
+  #number of frames that complementary protein is above threshold in a continuous stretch
+  summarise(DWELL_FRAMES = sum(COLOCALIZATION), 
+            DWELL_TIME = (sum(COLOCALIZATION)-1)*4) %>%
+  #I want to look at transient recruitment events so even 1 frame is interesting for me, different cutoffs are prbly useful
+  filter(DWELL_FRAMES >= 1) %>%
+  mutate(CATEGORY_DWELL_TIME = fcase(DWELL_TIME == 0, "0 s",
+                                     DWELL_TIME <= 12 & DWELL_TIME != 0, "4-12 s",
+                                     DWELL_TIME > 12 & DWELL_TIME < 30 , "12-30 s",
+                                     DWELL_TIME > 30, ">30 s"),
+         ELISA_STATUS = rescue_status(COHORT)) %>% 
+  filter(!is.na(COHORT)) %>%
+  as.data.table()
+
+Cell_Summary_condensed <- Cell_Summary %>% 
+  filter(!is.na(COHORT)) %>%
+  group_by(COHORT) %>%
+  mutate(num = length(unique(IMAGE)),
+         SD_DWELL_FRAMES     = sd(DWELL_FRAMES),
+         SD_DWELL_TIME       = sd(DWELL_TIME),
+         MED_DWELL_FRAMES    = mad(DWELL_FRAMES),
+         MED_DWELL_TIME      = mad(DWELL_TIME)) %>% 
+  summarize(MED_DWELL_FRAMES = median(DWELL_FRAMES),
+            MED_DWELL_TIME   = median(DWELL_TIME),
+            DWELL_FRAMES     = mean(DWELL_FRAMES),
+            LT_TRAF6         = mean(DWELL_TIME),
+            SEM_LT_TRAF6     = sem(DWELL_TIME)) %>%
+  mutate(ELISA_STATUS        = rescue_status(COHORT)) %>%
+  as.data.table()
+
+write.csv(Cell_Summary_condensed, "~/Documents/Github/master_thesis/scripts/LCI_ANALYSIS_files/Cell_Summary_condensed.csv", row.names = F)
+
+
+Cell_Summary$CATEGORY_DWELL_TIME <- factor(Cell_Summary$CATEGORY_DWELL_TIME, levels = c("0 s", 
+                                                                                        "4-12 s",
+                                                                                        "12-30 s",
+                                                                                        ">30 s"))
+color_fill <- c(
+  "0 s"     = "#f0f0f0",
+  "4-12 s"  = "#bdbdbd",
+  "12-30 s" = "gray40",
+  ">30 s"   = "gray20")
+
+# Cell_Summary$CATEGORY_DWELL_TIME <- factor(Cell_Summary$CATEGORY_DWELL_TIME, levels = c(">30 s",
+#                                                                                         "12-30 s",
+#                                                                                         "4-12 s",
+#                                                                                         "0 s"))
+# color_fill <- c(
+#   ">30 s"   = "gray20",
+#   "12-30 s" = "#636363",
+#   "4-12 s"  = "#bdbdbd",
+#   "0 s"     = "#f0f0f0")
+  
+Mean_LT <- Cell_Summary %>% #[COHORT %in% c("BDLD_6H-TIR-T6BD TRAF6", "BDLD_57H-TIR-T6BD TRAF6", "MyD88 TRAF6", "MyD88-T6BD TRAF6")] %>%
+  filter(!is.na(COHORT)) %>%
+  group_by(COHORT) %>% 
+  summarise(LT_TRAF6 = mean(DWELL_TIME), 
+            SEM_LT_TRAF6 = sem(DWELL_TIME))
+
+Mean_Total <- 
+  Cell_Summary %>% #[COHORT %in% c("BDLD_6H-TIR-T6BD TRAF6", "BDLD_57H-TIR-T6BD TRAF6", "MyD88 TRAF6", "MyD88-T6BD TRAF6")] %>% 
+  group_by(COHORT, CATEGORY_DWELL_TIME) %>% 
+  count(CATEGORY_DWELL_TIME, #Values to count
+        COHORT,
+        name = "N_CATEGORY_DWELL_TIME", #Name of the Column with the counts
+        .drop = FALSE) %>% 
+  group_by(COHORT) %>% 
+  mutate(PCT_RECRUITMENT = N_CATEGORY_DWELL_TIME/sum(N_CATEGORY_DWELL_TIME)) %>% 
+  group_by(COHORT, CATEGORY_DWELL_TIME) %>% 
+  summarise(PCT_RECRUITMENT = mean(PCT_RECRUITMENT),
+            ELISA_STATUS = rescue_status(COHORT)) %>% 
+  as.data.table()
+
+# Mean_Total$COHORT <- gsub("H-TIR-T6BD TRAF6", "", Mean_Total$COHORT)
+Mean_Total$COHORT <- gsub("TRAF6", "", Mean_Total$COHORT)
+
+# Reorder the levels of COHORT based on decreasing PCT_RECRUITMENT
+Mean_Total$COHORT <- factor(Mean_Total$COHORT, levels = unique(Mean_Total$COHORT[order(-Mean_Total$PCT_RECRUITMENT)]))
+
+# Create the ggplot
+ggplot(data = Mean_Total,
+       aes(x = COHORT,
+           y = PCT_RECRUITMENT * 100,
+           fill = CATEGORY_DWELL_TIME)) +
+  geom_col(width = 0.7, size = 0.75) +
+  fill_palette(palette = color_fill) +
+  labs(y = "% of total recruitments") +
+  theme_classic(base_size = 20) +
+  theme(legend.position = "right",
+        axis.text = element_text(color = "black", lineheight = 13)) +
+  guides(color = "none", fill = guide_legend(title = "TRAF6 Lifetime")) +
+  coord_flip() +
+  theme(legend.position = "bottom")
+```
+
+### Mauriz Color Scheme
+
+```{r}
+# Cell Summary Table for the Dwell Time Calculation -----------------------
+
+#Table for the Dwell Time
+Cell_Summary<-
+  Table %>%
+  filter(
+    PROTEIN == "MyD88",
+    NORMALIZED_INTENSITY >= 4.5
+  ) %>% 
+  group_by(
+    UNIVERSAL_TRACK_ID
+  ) %>% 
+  arrange(
+    FRAME, 
+    .by_group = TRUE #We order every group (ie every Track) by frames
+  ) %>% 
+  mutate(
+    COLOCALIZATION = COMPLEMENTARY_NORMALIZED_INTENSITY_1 >= 1 #threshold at which recruitment is counted
+    #Here I create a new column (with mutate) that will have the value 1 (for TRUE), 
+    #if the condition above is satisfied or 0 (for FALSE) if the condition is not satisfied
+  ) %>% 
+  group_by(
+    UNIVERSAL_TRACK_ID
+  ) %>%
+  mutate(
+    STREAK = cumsum(!COLOCALIZATION), 
+    #Here i create a new column were I calculate the cumulative sum for all the rows in the column COLOCALIZATION,
+    #But since TRUE==1 and FALSE==0 we have to add the ! before COLOCALIZATION
+    #This results in all the rows following each other with a continuous "TRUE" get the same "STREAK value"
+  ) %>% 
+  group_by(
+    COHORT,
+    IMAGE,
+    CELL,
+    UNIVERSAL_TRACK_ID,
+    STREAK, #group continuous frames above threshold together, since they have the same STREAK value
+    COLOCALIZATION
+  ) %>%
+  summarise(
+    DWELL_FRAMES = sum(COLOCALIZATION), #number of frames that complementary protein is above threshold in a continuous stretch
+    DWELL_TIME = (sum(COLOCALIZATION)-1)*4
+  ) %>%
+  filter(
+    DWELL_FRAMES >= 1 #I want to look at transient recruitment events so even 1 frame is interesting for me, different cutoffs are prbly useful
+  ) %>%
+  mutate(
+    CATEGORY_DWELL_TIME = 
+      fcase(
+        DWELL_TIME == 0, "0 s",
+        DWELL_TIME <= 12 & DWELL_TIME != 0, "4-12 s",
+        DWELL_TIME > 12, ">12 s"
+      )
+  ) %>% 
+  as.data.table()
+
+Cell_Summary$CATEGORY_DWELL_TIME <- factor(
+  Cell_Summary$CATEGORY_DWELL_TIME, levels = c(
+    "0 s",
+    "4-12 s",
+    ">12 s"
+  )
+)
+
+LT_NO <- 
+  Cell_Summary %>% 
+  group_by(
+    COHORT,
+    CATEGORY_DWELL_TIME
+  ) %>% 
+  count(
+    CATEGORY_DWELL_TIME, #Values to count
+    COHORT,
+    name = "N_CATEGORY_DWELL_TIME", #Name of the Column with the counts
+    .drop = FALSE
+  ) %>% 
+  group_by(
+    COHORT
+  ) %>% 
+  mutate(
+    PCT_RECRUITMENT = N_CATEGORY_DWELL_TIME/sum(N_CATEGORY_DWELL_TIME),
+    TOTAL_EVENTS = N_CATEGORY_DWELL_TIME
+  ) %>% 
+  as.data.table()
+
+Mean_LT <-
+  Cell_Summary %>% 
+  group_by(
+    COHORT
+  ) %>% 
+  summarise(
+    LT_TRAF6 = mean(DWELL_TIME),
+    SEM_LT_TRAF6 = sem(DWELL_TIME)
+  )
+
+Mean_Total <- 
+  Cell_Summary %>% 
+  group_by(
+    COHORT,
+    DWELL_TIME
+  ) %>% 
+  count(
+    DWELL_TIME, #Values to count
+    COHORT,
+    name = "N_CATEGORY_DWELL_TIME", #Name of the Column with the counts
+    .drop = FALSE
+  ) %>% 
+  group_by(
+    COHORT
+  ) %>% 
+  mutate(
+    PCT_RECRUITMENT = N_CATEGORY_DWELL_TIME/sum(N_CATEGORY_DWELL_TIME),
+    TOTAL_EVENTS = N_CATEGORY_DWELL_TIME
+  ) %>% 
+  group_by(
+    COHORT,
+    DWELL_TIME
+  ) %>% 
+  summarise(
+    PCT_RECRUITMENT = mean(PCT_RECRUITMENT)
+  ) %>% 
+  as.data.table()
+
+ggplot(
+  data = Mean_Total,
+  aes(
+    y = COHORT,
+    x = PCT_RECRUITMENT*100,
+    fill = DWELL_TIME
+  )
+)+
+  geom_col(
+    width = 0.7
+  )+
+  binned_scale(aesthetics = "fill",
+               scale_name = "stepsn", 
+               palette = function(x) rev(viridis(5)),
+               breaks = c(0, 4, 8, 12, 40),
+               right = FALSE,
+               guide = "colorsteps",
+               labels = c(0, 4, 8, "12-40", "≥40")
+               
+  )+
+  labs(
+    x = "% of total recruitments",
+  )+
+  scale_y_discrete(
+    labels = c("chMyD88-DHF91", "chMyD88-bDLD", "chMyD88-TIR", "chMyD88", "WT")
+  )+
+  theme_classic(base_size = 9)+
+  theme(
+    legend.position = "top",
+    axis.text = element_text(color = "black",
+                             size = 7),
+    axis.title.y = element_blank(),
+    
+  ) +
+  guides(
+    color = "none",  # Remove legend for color aesthetic
+    fill = guide_legend(title = "TRAF6 LT (s)"  # Set legend title for fill aesthetic
+    )
+  )
+
+```
+
+## FRAP Analysis
+
+```{r}
+source("~/Documents/Github/master_thesis/scripts/frapAnalysis.R")
+
+data_ratio %>%
+  ggplot(aes(x = TIME, 
+             y = MAX_NORMALIZED_INTENSITY, 
+             group = Image,
+             col = Image,
+             fill = Image)) +
+  geom_line(aes(alpha = ifelse(Image == 1, 1, 0.9)), 
+            linewidth = 1.25) +
+  xlab("time [s]") +
+  ylab("Normalized Fluorescence Intensity") +
+  expand_limits(x=c(0,136), y=c(0,1)) +
+  scale_x_continuous(breaks = c(0, 30, 60, 90, 120), 
+                     labels = c("0", "30", "60", "90", "120")) +
+  scale_y_continuous(breaks = c(0, 0.5, 1), 
+                     labels = c("0", "0.5", "1")) +
+  theme_cowplot() +
+  theme(legend.position = "none", 
+        panel.grid.major.x = element_line(linewidth = 0.1),
+        panel.grid.major.y = element_line(linewidth = 0.1),
+        panel.grid.minor.y = element_line(linewidth = 0.05))# + facet_rep_wrap(~Image)
+```
+
+```{r}
+ggplot(data = Cell_Summary,
+  aes(x = DWELL_TIME,
+    #y = 1-..y.., #unhash to get the inverse cumulative frequency
+    group = COHORT,
+    color = COHORT)) +
+  # set pad = F so no data points get added to the sides
+  stat_ecdf(geom = "point", size = 2, pad = F) +
+  coord_cartesian(xlim = c(0,100), ylim = c(0,1)) +
+  scale_x_continuous(#limits = c(0,100),
+                     breaks = seq(from = 0, to = 104, by = 16),
+                     labels = xlabels) +
+  labs(x = "Lifetime of TRAF6 (s)",
+       y = "Cumulative Density") +
+  # facet_rep_wrap(ELISA_STATUS~COHORT) +
+  # scale_color_discrete(name = "Cell Line",
+  #                      type = color_violin,
+  #                      labels = c("1x", "3x", "5x")) +
+  theme_cowplot(font_size = 18, #base_size = 18
+    ) +
+  theme(#legend.position = "0",
+        #strip.text = element_blank(),
+        axis.text = element_text(color = "black"))
+```
+
+```{r}
+ggplot(data = Cell_Summary_original,
+  aes(x = DWELL_TIME,
+    #y = 1-..y.., #unhash to get the inverse cumulative frequency
+    group = COHORT,
+    color = COHORT)) +
+  # set pad = F so no data points get added to the sides
+  stat_ecdf(geom = "point", size = 2, pad = F) +
+  coord_cartesian(xlim = c(0,100), ylim = c(0,1)) +
+  scale_x_continuous(#limits = c(0,100),
+                     breaks = seq(from = 0, to = 104, by = 16),
+                     labels = xlabels) +
+  labs(x = "Lifetime of TRAF6 (s)",
+       y = "Cumulative Density") +
+  # facet_rep_wrap(ELISA_STATUS~COHORT) +
+  # scale_color_discrete(name = "Cell Line",
+  #                      type = color_violin,
+  #                      labels = c("1x", "3x", "5x")) +
+  theme_cowplot(font_size = 18, #base_size = 18
+    ) +
+  theme(#legend.position = "0",
+        #strip.text = element_blank(),
+        axis.text = element_text(color = "black"))
+```
+
+```{r}
+# start grouping and summarizing the data
+# Find out the percentage of spots recruiting TRAF6
+Colocalisation_List <- main %>% 
+  filter(PROTEIN == "MyD88") %>%
+  arrange(UNIVERSAL_SPOT_ID) %>%
+  #threshold at which recruitment is counted
+  mutate(COLOCALIZATION = COMPLEMENTARY_NORMALIZED_INTENSITY_1 >= 1) %>%
+  group_by(UNIVERSAL_TRACK_ID) %>%
+  #new column which creates a grouping variable for continuous frames which are above threshold
+  mutate(STREAK = cumsum(!COLOCALIZATION)) %>%
+  #group continuous frames above threshold together
+  group_by(COHORT, IMAGE, UNIVERSAL_TRACK_ID, STREAK) %>%
+  #number of frames that complementary protein is above threshold in a continuous stretch
+  summarise(DWELL_FRAMES = sum(COLOCALIZATION)) %>%
+  #only count 3 continuous frames as recruitment
+  filter(DWELL_FRAMES >= 3) %>%
+  # keep distinct track IDs
+  distinct(UNIVERSAL_TRACK_ID) %>%
+  as.data.table()
+
+fwrite(x = Colocalisation_List,
+       file = "~/Documents/Github/master_thesis/scripts/LCI_ANALYSIS_files/Colocalisation_List.csv",
+       quote = F,
+       sep = ",")
+
+Colocalisation_List <- fread("~/Documents/Github/master_thesis/scripts/LCI_ANALYSIS_files/Colocalisation_List.csv")
+
+Track_rec <- c(unique(Colocalisation_List$UNIVERSAL_TRACK_ID))
+
+# Filter and process data from the 'Table' dataset
+Puncta_Cell <- main %>%
+  filter(PROTEIN == "MyD88",
+         NORMALIZED_INTENSITY >= 1,
+         FRAMES_ADJUSTED      <= 100,  # Cluster time in frames up to 100 [400s ~ 6.67min]
+         FRAMES_SINCE_LANDING <= 200)) # up to 200 frames [800s ~ 13.33min] since the first spot in the cell appeared
+
+# Step 2: Group the data by UNIVERSAL_TRACK_ID
+# Calculate additional metrics within each group
+Puncta_Cell <- Puncta_Cell %>%
+  group_by(UNIVERSAL_TRACK_ID) %>%
+  mutate(LIFETIME                                 = max(TIME_ADJUSTED),
+         LIFETIME_FRAMES                          = max(FRAMES_ADJUSTED),
+         MAX_NORMALIZED_INTENSITY                 = max(NORMALIZED_INTENSITY),
+         MAX_COMPLEMENTARY_NORMALIZED_INTENSITY_1 = max(COMPLEMENTARY_NORMALIZED_INTENSITY_1),
+         RECRUITEMENT = case_when(UNIVERSAL_TRACK_ID %in% Track_rec ~ "+ve", TRUE ~ "-ve"))
+
+# Step 3: Filter the dataset again
+Puncta_Cell <- Puncta_Cell %>%
+  filter(LIFETIME_FRAMES >= 3,
+         FRAMES_ADJUSTED == 0)
+
+# Step 4: Group the data by COHORT, IMAGE, and CELL
+# Calculate the final summarized metrics within each group
+# - T6p: Ratio of the count of positive RECRUITEMENT to the total count of RECRUITEMENT values (positive and negative)
+# - T6n: Ratio of the count of negative RECRUITEMENT to the total count of RECRUITEMENT values (positive and negative)
+
+# MyD88 oligomer size = number of MyD88-GFP monomers is derived from the maximum intensity divided by the average intensity of GFP
+# MyD88 puncta that are positive (+ve) or negative (-ve) for TRAF6
+
+Puncta_Cell <- Puncta_Cell %>%
+  group_by(COHORT, IMAGE, CELL) %>%
+  summarize(T6p = sum(RECRUITEMENT == "+ve") / (sum(RECRUITEMENT == "+ve") + sum(RECRUITEMENT == "-ve")),
+            T6n = sum(RECRUITEMENT == "-ve") / (sum(RECRUITEMENT == "+ve") + sum(RECRUITEMENT == "-ve")))
+
+# Convert the result to a data table
+Puncta_Cell <- as.data.table(Puncta_Cell)
+
+fwrite(x = Puncta_Cell,
+       file = "~/Documents/Github/master_thesis/scripts/LCI_ANALYSIS_files/Puncta_Cell.csv",
+       quote = F,
+       sep = ",")
+
+Puncta_Cell <- fread("~/Documents/Github/master_thesis/scripts/LCI_ANALYSIS_files/Puncta_Cell.csv")
+
+# Calculate statistics using the median and median absolute deviation (MAD)
+
+# Step 1: Calculate the mean, standard error of the mean (SEM), median and median absolute deviation (MAD) for 'T6p' within each 'COHORT' group
+# Group the data by 'COHORT' and calculate the median and MAD for 'T6p' within each group
+Puncta_CellStats <- 
+  Puncta_CellStats<- 
+  Puncta_Cell %>%
+  group_by(COHORT) %>%
+  mutate(SD_T6p =sd(T6p)) %>%
+  summarize(T6p = mean(T6p),
+            T6p_med = median(T6p),
+            MAD_T6p = median(abs(T6p - median(T6p))),
+            SEM_T6p=mean(SD_T6p/sqrt(n()))) %>%
+  # Convert the result to a data table
+  as.data.table()
+
+# #Add stats for the images taken to clean up violin
+Puncta_CellReplicates <- Puncta_Cell %>%
+  group_by(IMAGE, COHORT) %>%
+  summarize(T6p     = mean(T6p),
+            T6p_med = median(T6p)) %>%
+  # Step 2: Convert the result to a data table
+  as.data.table()
+
+Puncta_Cell %>% 
+  ggplot(aes(x=COHORT, y=T6p*100)) +
+  geom_violin(alpha=0.75, 
+              aes(fill = COHORT),
+              # fill="gray", 
+              scale = "width") +
+  geom_jitter(data=Puncta_CellReplicates,
+              color="black") +
+  geom_errorbar(data = Puncta_CellStats, aes(x = COHORT, 
+                                  y= T6p*100, 
+                                  ymin = T6p-SEM_T6p,
+                                  ymax = T6p+SEM_T6p
+                                  # ymin = T6p*100-MAD_T6p,
+                                  # ymax = T6p*100+MAD_T6p
+  ),
+  color="black", 
+  width=0.4) +
+  stat_summary(data=Puncta_CellStats,
+               fun = "mean",
+               geom = "crossbar", 
+               width = 0.3,
+               linewidth = 0.4,
+               position= position_dodge(width = 1),
+               colour = "black")+
+  labs(x="Cell Lines", y="Percentage of Puncta recruiting TRAF6 per Cell") +
+  theme_bw() + theme(legend.position = "none") +
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank()) +
+  facet_rep_wrap(~COHORT, scales = "free_x") +
+  ggtitle("Percentage of Puncta recruiting TRAF6 per Cell per Cohort")
+
+Puncta_Cell[COHORT %in% c("BDLD_57H-TIR-T6BD TRAF6", "BDLD_6H-TIR-T6BD TRAF6", "MyD88-T6BD TRAF6", "DHF91-TIR-T6BD TRAF6", "MyD88-TIR-T6BD TRAF6", "MyD88-TIR", "MyD88 TRAF6")] %>% 
+  ggplot(aes(x=COHORT, y=T6p*100)) +
+  geom_violin(alpha=0.75, 
+              aes(fill = COHORT),
+              # fill="gray", 
+              scale = "width") +
+  geom_jitter(data=Puncta_CellReplicates[COHORT %in% c("BDLD_57H-TIR-T6BD TRAF6", "BDLD_6H-TIR-T6BD TRAF6", "MyD88-T6BD TRAF6", "DHF91-TIR-T6BD TRAF6", "MyD88-TIR-T6BD TRAF6", "MyD88-TIR", "MyD88 TRAF6")],
+              color="black") +
+  geom_errorbar(data = Puncta_CellStats[COHORT %in% c("BDLD_57H-TIR-T6BD TRAF6", "BDLD_6H-TIR-T6BD TRAF6", "MyD88-T6BD TRAF6", "DHF91-TIR-T6BD TRAF6", "MyD88-TIR-T6BD TRAF6", "MyD88-TIR", "MyD88 TRAF6")], 
+                aes(x = COHORT, 
+                                  y= T6p*100, 
+                                  ymin = T6p-SEM_T6p,
+                                  ymax = T6p+SEM_T6p
+                                  # ymin = T6p*100-MAD_T6p,
+                                  # ymax = T6p*100+MAD_T6p
+  ),
+  color="black", 
+  width=0.4) +
+  stat_summary(data=Puncta_CellStats[COHORT %in% c("BDLD_57H-TIR-T6BD TRAF6", "BDLD_6H-TIR-T6BD TRAF6", "MyD88-T6BD TRAF6", "DHF91-TIR-T6BD TRAF6", "MyD88-TIR-T6BD TRAF6", "MyD88-TIR", "MyD88 TRAF6")],
+               fun = "mean",
+               geom = "crossbar", 
+               width = 0.3,
+               linewidth = 0.4,
+               position= position_dodge(width = 1),
+               colour = "black")+
+  labs(x="Cell Lines", y="Percentage of Puncta recruiting TRAF6 per Cell") +
+  theme_bw() + theme(legend.position = "none") +
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank()) +
+  facet_rep_wrap(~COHORT, scales = "free_x", nrow = 1) +
+  ggtitle("Percentage of Puncta recruiting TRAF6 per Cell per Cohort")
+  
+```
+
+```{r}
+T6recruitement <- main %>% 
+  filter(PROTEIN=="MyD88",
+         NORMALIZED_INTENSITY >= 1,
+         FRAMES_ADJUSTED      <= 100,
+         FRAMES_SINCE_LANDING <= 200) %>% 
+  group_by(UNIVERSAL_TRACK_ID) %>% 
+  mutate(LIFETIME                                 = max(TIME_ADJUSTED),
+         LIFETIME_FRAMES                          = max(FRAMES_ADJUSTED),
+         MAX_NORMALIZED_INTENSITY                 = max(NORMALIZED_INTENSITY),
+         MAX_COMPLEMENTARY_NORMALIZED_INTENSITY_1 = max(COMPLEMENTARY_NORMALIZED_INTENSITY_1),
+    RECRUITEMENT=case_when(UNIVERSAL_TRACK_ID %in% Track_rec ~ "+ve", TRUE ~ "-ve")) %>% 
+  filter(LIFETIME_FRAMES >= 3,
+         FRAMES_ADJUSTED == 0) %>% 
+  as.data.table()
+
+#create the stats variable to add mean etc. to plots
+T6recruitementStats<-
+  T6recruitement %>% 
+  group_by(
+    COHORT,
+    PROTEIN,
+    RECRUITEMENT
+  ) %>%
+  mutate(
+    SD_LIFETIME=sd(LIFETIME),
+    SD_MAX_NORMALIZED_INTENSITY=sd(MAX_NORMALIZED_INTENSITY),
+  ) %>% 
+  summarize(
+    LIFETIME=mean(LIFETIME),
+    MAX_NORMALIZED_INTENSITY=mean(MAX_NORMALIZED_INTENSITY),
+    SEM_LIFETIME=mean(SD_LIFETIME/sqrt(n())),
+    SEM_MAX_NORMALIZED_INTENSITY=mean(SD_MAX_NORMALIZED_INTENSITY)/sqrt(n())
+  ) %>% 
+  as.data.table()
+
+#Add stats for the images taken to clean up violin
+T6recruitementReplicates<-
+  T6recruitement %>% 
+  group_by(
+    PROTEIN,
+    IMAGE,
+    COHORT,
+    RECRUITEMENT
+  ) %>% 
+  summarize(LIFETIME=mean(LIFETIME),
+            MAX_NORMALIZED_INTENSITY=mean(MAX_NORMALIZED_INTENSITY)
+  ) %>% 
+  as.data.table()
+
+#Set colors
+color_violin_rec<-c("+ve" = "#e60049", "-ve" = "#00bfa0")
+
+ggplot(data=T6recruitementReplicates[COHORT %in% c("BDLD_57H-TIR-T6BD TRAF6", "BDLD_6H-TIR-T6BD TRAF6", "MyD88-T6BD TRAF6", "DHF91-TIR-T6BD TRAF6", "MyD88-TIR-T6BD TRAF6", "MyD88-TIR", "MyD88 TRAF6")],
+       aes(x = COHORT, 
+           y = MAX_NORMALIZED_INTENSITY, 
+           fill = RECRUITEMENT)) +
+  geom_violin(data = T6recruitement[COHORT %in% c("BDLD_57H-TIR-T6BD TRAF6", "BDLD_6H-TIR-T6BD TRAF6", "MyD88-T6BD TRAF6", "DHF91-TIR-T6BD TRAF6", "MyD88-TIR-T6BD TRAF6", "MyD88-TIR", "MyD88 TRAF6")],
+              position = position_dodge(width = 1),
+              alpha=0.5) +
+  fill_palette(palette = color_violin_rec) +
+  geom_point(position = position_jitterdodge(seed = 1, dodge.width = 1), color="black") +
+  stat_summary(data = T6recruitementStats[COHORT %in% c("BDLD_57H-TIR-T6BD TRAF6", "BDLD_6H-TIR-T6BD TRAF6", "MyD88-T6BD TRAF6", "DHF91-TIR-T6BD TRAF6", "MyD88-TIR-T6BD TRAF6", "MyD88-TIR", "MyD88 TRAF6")],
+               fun = "mean", 
+               geom = "crossbar",
+               width = 0.3,
+               size = 0.4,
+               position = position_dodge(width = 1),
+               colour = "black") +
+  scale_y_continuous(limits = c(0,1000)) +
+  geom_errorbar(data = T6recruitementStats[COHORT %in% c("BDLD_57H-TIR-T6BD TRAF6", "BDLD_6H-TIR-T6BD TRAF6", "MyD88-T6BD TRAF6", "DHF91-TIR-T6BD TRAF6", "MyD88-TIR-T6BD TRAF6", "MyD88-TIR", "MyD88 TRAF6")],
+                aes(ymin = MAX_NORMALIZED_INTENSITY-SEM_MAX_NORMALIZED_INTENSITY,
+                    ymax = MAX_NORMALIZED_INTENSITY+SEM_MAX_NORMALIZED_INTENSITY),
+                width = 0.4,
+                position = position_dodge(width = 1),
+                color = "black")+
+  labs(x = "Cell line", y = "MyD88 Max Norm. Intensity (a.u.)") +
+  theme_bw() +
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        legend.position = "bottom") +
+  facet_rep_wrap(~COHORT, scales = "free", nrow = 1)
+
+####################################################################
+
+ggplot(data=T6recruitementReplicates,
+       aes(x = COHORT, 
+           y = MAX_NORMALIZED_INTENSITY, 
+           fill = RECRUITEMENT)) +
+  geom_violin(data = T6recruitement,
+              position = position_dodge(width = 1),
+              alpha=0.5) +
+  fill_palette(palette = color_violin_rec) +
+  geom_point(position = position_jitterdodge(seed = 1, dodge.width = 1), color="black") +
+  stat_summary(data = T6recruitementStats,
+               fun = "mean", 
+               geom = "crossbar",
+               width = 0.3,
+               size = 0.4,
+               position = position_dodge(width = 1),
+               colour = "black") +
+  geom_errorbar(data = T6recruitementStats, aes(ymin = MAX_NORMALIZED_INTENSITY-SEM_MAX_NORMALIZED_INTENSITY,
+                                                ymax = MAX_NORMALIZED_INTENSITY+SEM_MAX_NORMALIZED_INTENSITY),
+                width = 0.4,
+                position = position_dodge(width = 1),
+                color = "black")+
+  labs(x = "Cell line", y = "MyD88 Max Norm. Intensity (a.u.)") +
+  theme_bw() +
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        legend.position = "bottom") +
+  facet_rep_wrap(~COHORT, scales = "free")
+```
+
+```{r}
+#Density distribution of Max intensity of spots recruiting TRAF6
+ggplot(data = T6recruitement,
+       aes(x = MAX_NORMALIZED_INTENSITY,
+           fill = RECRUITEMENT)) +
+  geom_density(aes(x = MAX_NORMALIZED_INTENSITY), alpha=0.5) +
+  fill_palette(palette = color_violin_rec) +
+  scale_x_continuous(trans = "log10", limits = c(1,10000)) +
+  ggtitle("Density distribution of Max Norm. Intensity of MyD88 spots recruiting TRAF6") +
+  facet_wrap(~COHORT) +
+  theme_bw() +
+  theme(legend.position = "bottom")
+
+#Density distribution of Max intensity of spots recruiting TRAF6
+ggplot(data = T6recruitement[COHORT %in% c("BDLD_57H-TIR-T6BD TRAF6", "BDLD_6H-TIR-T6BD TRAF6", "MyD88-T6BD TRAF6", "DHF91-TIR-T6BD TRAF6", "MyD88-TIR-T6BD TRAF6", "MyD88-TIR", "MyD88 TRAF6")],
+       aes(x = MAX_NORMALIZED_INTENSITY,
+           fill = RECRUITEMENT)) +
+  geom_density(aes(x = MAX_NORMALIZED_INTENSITY), alpha=0.5) +
+  fill_palette(palette = color_violin_rec) +
+  scale_x_continuous(trans = "log10", limits = c(1,10000)) +
+  ggtitle("Density distribution of Max Norm. Intensity of MyD88 spots recruiting TRAF6") +
+  facet_wrap(~COHORT, nrow = 1) +
+  theme_bw() +
+  theme(legend.position = "bottom")
+
+```
+
+```{r}
+#start grouping and summarizing the data
+Tracks<-
+  main %>% 
+  filter(
+    NORMALIZED_INTENSITY>=1,
+    FRAMES_ADJUSTED<=100,
+    FRAMES_SINCE_LANDING<=200
+  ) %>% 
+  group_by(
+    UNIVERSAL_TRACK_ID
+  ) %>% 
+  mutate(
+    LIFETIME=max(TIME_ADJUSTED),
+    LIFETIME_FRAMES=max(FRAMES_ADJUSTED),
+    MAX_NORMALIZED_INTENSITY=max(NORMALIZED_INTENSITY)
+  ) %>% 
+  filter(
+    LIFETIME_FRAMES>=3,
+    FRAMES_ADJUSTED==0
+  ) %>% 
+  as.data.table()
+
+#Add stats for the images taken to clean up violin
+TracksReplicates<-
+  Tracks %>% 
+  group_by(
+    PROTEIN,
+    IMAGE,
+    COHORT
+  ) %>% 
+  summarize(LIFETIME=mean(LIFETIME),
+            MAX_NORMALIZED_INTENSITY=mean(MAX_NORMALIZED_INTENSITY),
+  ) %>% 
+  as.data.table()
+
+#create a stats table to add mean and sem of COHORT to the violin plots
+TracksStats<-
+  Tracks %>% 
+  group_by(
+    COHORT,
+    PROTEIN
+  ) %>%
+  mutate(
+    SD_LIFETIME=sd(LIFETIME),
+    SD_MAX_NORMALIZED_INTENSITY=sd(MAX_NORMALIZED_INTENSITY)
+  ) %>% 
+  summarize(
+    LIFETIME=mean(LIFETIME),
+    MAX_NORMALIZED_INTENSITY=mean(MAX_NORMALIZED_INTENSITY),
+    SEM_LIFETIME=mean(SD_LIFETIME/sqrt(n())),
+    SEM_MAX_NORMALIZED_INTENSITY=mean(SD_MAX_NORMALIZED_INTENSITY)/sqrt(n())
+  ) %>% 
+  as.data.table()
+
+#set a color palette for the plots
+color_violin<-c("MyD88" = "#6fcb9f", "TRAF6" = "#ff7373")
+
+#Plot Lifetimes as Violin
+#contain jitter in corresponding violin
+ggplot(data=TracksReplicates,#[COHORT %in% c("BDLD_57H-TIR-T6BD TRAF6", "BDLD_6H-TIR-T6BD TRAF6", "MyD88-T6BD TRAF6", "DHF91-TIR-T6BD TRAF6", "MyD88-TIR-T6BD TRAF6", "MyD88-TIR", "MyD88 TRAF6")],
+       aes(
+         x=COHORT,
+         y=LIFETIME,
+         fill=PROTEIN
+       )
+)+
+  geom_violin(
+    data=
+      Tracks,#[COHORT %in% c("BDLD_57H-TIR-T6BD TRAF6", "BDLD_6H-TIR-T6BD TRAF6", "MyD88-T6BD TRAF6", "DHF91-TIR-T6BD TRAF6", "MyD88-TIR-T6BD TRAF6", "MyD88-TIR", "MyD88 TRAF6")],
+    position = 
+      position_dodge(
+        width = 1
+      ),
+    alpha=0.5
+  )+
+  fill_palette(
+    palette = color_violin
+  )+
+  geom_point(
+    data=TracksReplicates,#[COHORT %in% c("BDLD_57H-TIR-T6BD TRAF6", "BDLD_6H-TIR-T6BD TRAF6", "MyD88-T6BD TRAF6", "DHF91-TIR-T6BD TRAF6", "MyD88-TIR-T6BD TRAF6", "MyD88-TIR", "MyD88 TRAF6")],
+    position = 
+      position_jitterdodge(
+        seed = 1, 
+        dodge.width = 1),
+    color="black"
+  )+
+  geom_errorbar(
+    data = TracksStats,#[COHORT %in% c("BDLD_57H-TIR-T6BD TRAF6", "BDLD_6H-TIR-T6BD TRAF6", "MyD88-T6BD TRAF6", "DHF91-TIR-T6BD TRAF6", "MyD88-TIR-T6BD TRAF6", "MyD88-TIR", "MyD88 TRAF6")],
+    aes(
+      x = COHORT,
+      y= LIFETIME,
+      ymin = LIFETIME-SEM_LIFETIME,
+      ymax = LIFETIME+SEM_LIFETIME),
+    color="black",
+    width=0.4,
+    position= position_dodge(
+      width = 1)
+  )+
+  stat_summary(
+    data=TracksStats,#[COHORT %in% c("BDLD_57H-TIR-T6BD TRAF6", "BDLD_6H-TIR-T6BD TRAF6", "MyD88-T6BD TRAF6", "DHF91-TIR-T6BD TRAF6", "MyD88-TIR-T6BD TRAF6", "MyD88-TIR", "MyD88 TRAF6")],
+    fun = "mean",
+    geom = "crossbar", 
+    width = 0.3,
+    size = 0.4,
+    position= position_dodge(
+      width = 1),
+    colour = "black"
+  )+
+  labs(
+    x="Cell Lines",
+    y="Lifetime of puncta (s)"
+  )+
+  # scale_y_continuous(limits=c(0, 200))+
+  facet_rep_wrap(~COHORT, scales = "free_x", nrow = 1) +
+  theme_bw() +
+  theme(legend.position = "bottom",
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.title = element_text(face = "bold")) +
+  ggtitle("Mean Lifetime per Protein per Cohort")
+
+#bargraph for Lifetime
+ggplot(data=TracksStats,aes(x = COHORT, y = LIFETIME, fill = PROTEIN)) +
+  fill_palette(palette = color_violin) +
+  geom_col(position = position_dodge(), #col = "black",
+           alpha = 0.6) +
+  ggtitle("Mean Lifetime per Protein per Cohort") +
+  # facet_rep_wrap(~COHORT, scales = "free_x", nrow = 1) +
+  theme_bw() +
+  theme(legend.position = "bottom",
+        axis.text.x = element_text(face = "bold"),
+        # axis.ticks.x = element_blank(),
+        axis.title = element_text(face = "bold"))
+
+```
+
+## Lifetime Violin Plots
+
+```{r}
+#Plot Lifetimes as Violin
+#contain jitter in corresponding violin
+ggplot(data=TracksReplicates[COHORT %in% c("BDLD_57H-TIR-T6BD TRAF6", "BDLD_6H-TIR-T6BD TRAF6", "MyD88-T6BD TRAF6", "DHF91-TIR-T6BD TRAF6", "MyD88-TIR-T6BD TRAF6", "MyD88-TIR", "MyD88 TRAF6")],
+       aes(
+         x=COHORT,
+         y=LIFETIME,
+         fill=PROTEIN
+       )
+)+
+  geom_violin(
+    data=
+      Tracks[COHORT %in% c("BDLD_57H-TIR-T6BD TRAF6", "BDLD_6H-TIR-T6BD TRAF6", "MyD88-T6BD TRAF6", "DHF91-TIR-T6BD TRAF6", "MyD88-TIR-T6BD TRAF6", "MyD88-TIR", "MyD88 TRAF6")],
+    position = 
+      position_dodge(
+        width = 1
+      ),
+    alpha=0.5
+  )+
+  fill_palette(
+    palette = color_violin
+  )+
+  geom_point(
+    data=TracksReplicates[COHORT %in% c("BDLD_57H-TIR-T6BD TRAF6", "BDLD_6H-TIR-T6BD TRAF6", "MyD88-T6BD TRAF6", "DHF91-TIR-T6BD TRAF6", "MyD88-TIR-T6BD TRAF6", "MyD88-TIR", "MyD88 TRAF6")],
+    position = 
+      position_jitterdodge(
+        seed = 1, 
+        dodge.width = 1),
+    color="black"
+  )+
+  geom_errorbar(
+    data = TracksStats[COHORT %in% c("BDLD_57H-TIR-T6BD TRAF6", "BDLD_6H-TIR-T6BD TRAF6", "MyD88-T6BD TRAF6", "DHF91-TIR-T6BD TRAF6", "MyD88-TIR-T6BD TRAF6", "MyD88-TIR", "MyD88 TRAF6")],
+    aes(
+      x = COHORT,
+      y= LIFETIME,
+      ymin = LIFETIME-SEM_LIFETIME,
+      ymax = LIFETIME+SEM_LIFETIME),
+    color="black",
+    width=0.4,
+    position= position_dodge(
+      width = 1)
+  )+
+  stat_summary(
+    data=TracksStats[COHORT %in% c("BDLD_57H-TIR-T6BD TRAF6", "BDLD_6H-TIR-T6BD TRAF6", "MyD88-T6BD TRAF6", "DHF91-TIR-T6BD TRAF6", "MyD88-TIR-T6BD TRAF6", "MyD88-TIR", "MyD88 TRAF6")],
+    fun = "mean",
+    geom = "crossbar", 
+    width = 0.3,
+    size = 0.4,
+    position= position_dodge(
+      width = 1),
+    colour = "black"
+  )+
+  labs(
+    x="Cell Lines",
+    y="Lifetime of puncta (s)"
+  )+
+  # scale_y_continuous(limits=c(0, 200))+
+  facet_rep_wrap(~COHORT, scales = "free_x", nrow = 1) +
+  theme_bw() +
+  theme(legend.position = "bottom",
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.title = element_text(face = "bold")) +
+  ggtitle("Mean Lifetime per Protein per Cohort")
+
+#bargraph for Lifetime  
+ggplot(data=TracksStats[COHORT %in% c("BDLD_57H-TIR-T6BD TRAF6", "BDLD_6H-TIR-T6BD TRAF6", "MyD88-T6BD TRAF6", "DHF91-TIR-T6BD TRAF6", "MyD88-TIR-T6BD TRAF6", "MyD88-TIR", "MyD88 TRAF6")],
+       aes(x = COHORT, y = LIFETIME, fill = PROTEIN)) +
+  fill_palette(palette = color_violin) +
+  geom_col(position = position_dodge(), #col = "black", 
+           alpha = 0.6) +
+  ggtitle("Mean Lifetime per Protein per Cohort") +
+  # facet_rep_wrap(~COHORT, scales = "free_x", nrow = 1) +
+  theme_bw() +
+  theme(legend.position = "bottom",
+        axis.text.x = element_text(face = "bold"),
+        # axis.ticks.x = element_blank(),
+        axis.title = element_text(face = "bold"))
+
+```
+
+## Plot Max Intensities
+
+```{r}
+#Plot max intensities
+ggplot(data=TracksReplicates,
+       aes(
+         x=COHORT,
+         y=MAX_NORMALIZED_INTENSITY,
+         fill=PROTEIN
+       )
+)+
+  fill_palette(
+    palette = color_violin
+  )+
+  geom_violin(
+    data = Tracks,
+    position = 
+      position_dodge(
+        width = 1
+      ),
+    alpha=0.5
+  ) +
+  geom_point(
+    position = 
+      position_jitterdodge(
+        seed = 1, 
+        dodge.width = 1),
+    color="black"
+  )+
+  scale_y_continuous(
+    # limits = c(1,100),
+    trans = "log10",
+    # breaks = c(1, 2, 4, 6, 8, 10, 20, 40, 70, 100)
+  )+
+  geom_errorbar(
+    data = TracksStats,
+    aes(
+      x = COHORT,
+      y = LIFETIME,
+      ymin = MAX_NORMALIZED_INTENSITY-SEM_MAX_NORMALIZED_INTENSITY,
+      ymax = MAX_NORMALIZED_INTENSITY+SEM_MAX_NORMALIZED_INTENSITY),
+    width=0.4,
+    position = position_dodge(
+      width = 1
+    ),
+    color="black"
+  )+
+  stat_summary(
+    data=TracksStats,
+    fun = "mean",
+    geom = "crossbar", 
+    width = 0.3,
+    size = 0.4,
+    position= position_dodge(
+      width = 1),
+    colour = "black"
+  )+
+  labs(
+    x="Cell line",
+    y="MyD88 Max Norm. Intensity per Cell (a.u.)"
+  )+
+  facet_rep_wrap(~COHORT, scales = "free_x") +
+  theme_cowplot() +
+  theme(legend.position = "bottom",
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.title = element_text(face = "bold")) +
+  ggtitle("Mean MyD88 Max Norm. Intensity per Cell per Protein per Cohort")
+
+#bargraph for Max intensities  
+ggplot(data=TracksStats,aes(x = COHORT, y = MAX_NORMALIZED_INTENSITY, fill = PROTEIN)) +
+  fill_palette(palette = color_violin) +
+  geom_col(position=position_dodge(), alpha = 0.6) +
+  # facet_grid(~COHORT, scales = "free_x") +
+  theme_cowplot() +
+  theme(legend.position = "bottom",
+        axis.text.x = element_text(face = "bold"),
+        # axis.ticks.x = element_blank(),
+        axis.title = element_text(face = "bold")) +
+  ggtitle("Mean MyD88 Max Norm. Intensity per Cell per Protein per Cohort")
+
+```
+
+## Plot Max Intensities
+
+```{r}
+#Plot max intensities
+ggplot(data=TracksReplicates[COHORT %in% c("BDLD_57H-TIR-T6BD TRAF6", "BDLD_6H-TIR-T6BD TRAF6", "MyD88-T6BD TRAF6", "DHF91-TIR-T6BD TRAF6", "MyD88-TIR-T6BD TRAF6", "MyD88-TIR", "MyD88 TRAF6")],
+       aes(
+         x=COHORT,
+         y=MAX_NORMALIZED_INTENSITY,
+         fill=PROTEIN
+       )
+)+
+  fill_palette(
+    palette = color_violin
+  )+
+  geom_violin(
+    data = Tracks[COHORT %in% c("BDLD_57H-TIR-T6BD TRAF6", "BDLD_6H-TIR-T6BD TRAF6", "MyD88-T6BD TRAF6", "DHF91-TIR-T6BD TRAF6", "MyD88-TIR-T6BD TRAF6", "MyD88-TIR", "MyD88 TRAF6")],
+    position = 
+      position_dodge(
+        width = 1
+      ),
+    alpha=0.5
+  ) +
+  geom_point(
+    position = 
+      position_jitterdodge(
+        seed = 1, 
+        dodge.width = 1),
+    color="black"
+  )+
+  scale_y_continuous(
+    # limits = c(1,100),
+    trans = "log10",
+    # breaks = c(1, 2, 4, 6, 8, 10, 20, 40, 70, 100)
+  )+
+  geom_errorbar(
+    data = TracksStats[COHORT %in% c("BDLD_57H-TIR-T6BD TRAF6", "BDLD_6H-TIR-T6BD TRAF6", "MyD88-T6BD TRAF6", "DHF91-TIR-T6BD TRAF6", "MyD88-TIR-T6BD TRAF6", "MyD88-TIR", "MyD88 TRAF6")],
+    aes(
+      x = COHORT,
+      y = LIFETIME,
+      ymin = MAX_NORMALIZED_INTENSITY-SEM_MAX_NORMALIZED_INTENSITY,
+      ymax = MAX_NORMALIZED_INTENSITY+SEM_MAX_NORMALIZED_INTENSITY),
+    width=0.4,
+    position = position_dodge(
+      width = 1
+    ),
+    color="black"
+  )+
+  stat_summary(
+    data=TracksStats[COHORT %in% c("BDLD_57H-TIR-T6BD TRAF6", "BDLD_6H-TIR-T6BD TRAF6", "MyD88-T6BD TRAF6", "DHF91-TIR-T6BD TRAF6", "MyD88-TIR-T6BD TRAF6", "MyD88-TIR", "MyD88 TRAF6")],
+    fun = "mean",
+    geom = "crossbar", 
+    width = 0.3,
+    size = 0.4,
+    position= position_dodge(
+      width = 1),
+    colour = "black"
+  )+
+  labs(
+    x="Cell line",
+    y="MyD88 Max Norm. Intensity per Cell (a.u.)"
+  )+
+  facet_rep_wrap(~COHORT, scales = "free_x", nrow = 1) +
+  theme_cowplot() +
+  theme(legend.position = "bottom",
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.title = element_text(face = "bold")) +
+  ggtitle("Mean MyD88 Max Norm. Intensity per Cell per Protein per Cohort")
+
+```
+
+## MyD88 Intensity
+
+```{r}
+#plot Lifetime over normalized max intensity
+MyD88Int<-
+  main %>% 
+  filter(
+    PROTEIN=="MyD88",
+    # NORMALIZED_INTENSITY>=1,
+    FRAMES_ADJUSTED<=100,
+    FRAMES_SINCE_LANDING<=200
+  ) %>% 
+  group_by(
+    UNIVERSAL_TRACK_ID
+  ) %>% 
+  mutate(
+    LIFETIME=max(TIME_ADJUSTED),
+    LIFETIME_FRAMES=max(FRAMES_ADJUSTED),
+    MAX_NORMALIZED_INTENSITY=max(NORMALIZED_INTENSITY)
+  ) %>% 
+  filter(
+    #LIFETIME_FRAMES>=3,
+    FRAMES_ADJUSTED==0
+  ) %>% 
+  as.data.table()
+
+#geom_hex
+ggplot(
+  data=
+    MyD88Int,
+  aes(
+    x=LIFETIME,
+    y=MAX_NORMALIZED_INTENSITY
+  )
+)+
+  geom_hex(
+    bins=15,
+    alpha=0.7
+  )+
+  geom_smooth(
+    method = "lm", 
+    se = FALSE
+  )+
+  stat_cor(
+    method="spearman",
+    color="red"
+  )+
+  scale_y_continuous(limits=c(0, 20)) +
+  scale_x_continuous(limits=c(0, 200)) +
+  scale_fill_viridis(trans = 'log10') +
+  labs(x = "Lifetime of MyD88 [s]",
+       y = "Max Norm. Intensity of MyD88 [a. u.]") + 
+  facet_wrap(~COHORT) +
+  theme_cowplot() +
+  ggtitle("MyD88 Lifetime over Max Norm. Intensity") +
+  theme(legend.position = "bottom")
+
+#geom_hex
+ggplot(
+  data=
+    MyD88Int[COHORT %in% c("BDLD_57H-TIR-T6BD TRAF6", "BDLD_6H-TIR-T6BD TRAF6", "MyD88-T6BD TRAF6", "DHF91-TIR-T6BD TRAF6", "MyD88-TIR-T6BD TRAF6", "MyD88-TIR", "MyD88 TRAF6")],
+  aes(
+    x=LIFETIME,
+    y=MAX_NORMALIZED_INTENSITY
+  )
+)+
+  geom_hex(
+    bins=15,
+    alpha=0.7
+  )+
+  geom_smooth(
+    method = "lm", 
+    se = FALSE
+  )+
+  stat_cor(
+    method="spearman",
+    color="red"
+  )+
+  scale_y_continuous(limits=c(0, 20)) +
+  scale_x_continuous(limits=c(0, 200)) +
+  scale_fill_viridis(trans = 'log10') +
+  labs(x = "Lifetime of MyD88 [s]",
+       y = "Max Norm. Intensity of MyD88 [a. u.]") + 
+  facet_wrap(~COHORT, nrow = 1) +
+  theme_cowplot() +
+  ggtitle("MyD88 Lifetime over Max Norm. Intensity") +
+  theme(legend.position = "bottom")
+
+```
+
+## TRAF6 Intensity
+
+```{r}
+#plot Lifetime over normalized max intensity
+TRAF6Int<-
+  main %>% 
+  filter(
+    PROTEIN=="TRAF6",
+    #NORMALIZED_INTENSITY>=1,
+    FRAMES_ADJUSTED<=100,
+    FRAMES_SINCE_LANDING<=200
+  ) %>% 
+  group_by(
+    UNIVERSAL_TRACK_ID
+  ) %>% 
+  mutate(
+    LIFETIME=max(TIME_ADJUSTED),
+    LIFETIME_FRAMES=max(FRAMES_ADJUSTED),
+    MAX_NORMALIZED_INTENSITY=max(NORMALIZED_INTENSITY)
+  ) %>% 
+  filter(
+    #LIFETIME_FRAMES>=3,
+    FRAMES_ADJUSTED==0
+  ) %>% 
+  as.data.table()
+
+
+
+#gemo_hex
+ggplot(
+  data=
+    TRAF6Int,
+  aes(
+    x=LIFETIME,
+    y=MAX_NORMALIZED_INTENSITY
+  )
+)+
+  geom_hex(
+    bins=15,
+    alpha=0.7
+  )+
+  scale_y_continuous(
+    limits=c(
+      0,16
+    )
+  )+
+  scale_x_continuous(
+    limits=c(
+      0, 200
+    )
+  )+
+  facet_wrap(
+    ~COHORT
+  )+
+  scale_fill_viridis(
+    trans = 'log10'
+  )+
+  geom_smooth(
+    method = "lm", 
+    se = FALSE
+  )+
+  stat_cor(
+    method="spearman",
+    color="red"
+  )+
+  labs(
+    x="Lifetime of TRAF6 puncta [s]",
+    y = "Max Norm. Intensity of TRAF6 [a. u.]") +
+  theme_cowplot() +
+  ggtitle("TRAF6 Lifetime over Max Norm. Intensity")
+
+#gemo_hex
+ggplot(
+  data=
+    TRAF6Int[COHORT %in% c("BDLD_57H-TIR-T6BD TRAF6", "BDLD_6H-TIR-T6BD TRAF6", "MyD88-T6BD TRAF6", "DHF91-TIR-T6BD TRAF6", "MyD88-TIR-T6BD TRAF6", "MyD88-TIR", "MyD88 TRAF6")],
+  aes(
+    x=LIFETIME,
+    y=MAX_NORMALIZED_INTENSITY
+  )
+)+
+  geom_hex(
+    bins=15,
+    alpha=0.7
+  )+
+  scale_y_continuous(
+    limits=c(
+      0,16
+    )
+  )+
+  scale_x_continuous(
+    limits=c(
+      0, 200
+    )
+  )+
+  facet_wrap(
+    ~COHORT, nrow=1
+  )+
+  scale_fill_viridis(
+    trans = 'log10'
+  )+
+  geom_smooth(
+    method = "lm",
+    se = FALSE
+  )+
+  stat_cor(
+    method="spearman",
+    color="red"
+  )+
+  labs(
+    x="Lifetime of TRAF6 puncta [s]",
+    y = "Max Norm. Intensity of TRAF6 [a. u.]") +
+  theme_cowplot() +
+  ggtitle("TRAF6 Lifetime over Max Norm. Intensity")
+```
+
+## Percentage of puncta at distinct size/ Lifetime to recruit TRAF6
+
+```{r}
+PCTTRAF6 <- main %>% 
+  filter(PROTEIN=="MyD88", 
+         NORMALIZED_INTENSITY >= 1,
+         FRAMES_ADJUSTED <= 100,
+         FRAMES_SINCE_LANDING <= 200) %>%
+  # COHORT!="chMyD88-DHF91-TRAF6-BD-GFP",
+  # COHORT!="DHF58v2mid_DHF58v.2",
+  # !COHORT %in% c("cl275-1E9_p62_MyD88", "cl273-2B5_TAX1BP1_MyD88")
+  #COHORT!="MyD88-TIR"
+  group_by(UNIVERSAL_TRACK_ID) %>% 
+  mutate(LIFETIME = max(TIME_ADJUSTED),
+         LIFETIME_FRAMES = max(FRAMES_ADJUSTED),
+         MAX_NORMALIZED_INTENSITY = max(NORMALIZED_INTENSITY),
+         MAX_COMPLEMENTARY_NORMALIZED_INTENSITY_1 = max(COMPLEMENTARY_NORMALIZED_INTENSITY_1),
+         RECRUITEMENT = case_when(UNIVERSAL_TRACK_ID %in% Track_rec ~ "+ve", TRUE ~ "-ve"),
+         MAX_NORMALIZED_INTENSITY=round(MAX_NORMALIZED_INTENSITY),
+         LIFETIME=round(LIFETIME)) %>% 
+  filter(LIFETIME_FRAMES >= 3, FRAMES_ADJUSTED == 0) %>% 
+  as.data.table()
+
+
+PCTTRAF6Stats <- PCTTRAF6 %>% 
+  group_by(COHORT) %>% 
+  summarise(median_MAX_NORMALIZED_INTENSITY          = median(MAX_NORMALIZED_INTENSITY),
+            MAX_NORMALIZED_INTENSITY                 = mean(MAX_NORMALIZED_INTENSITY),
+            MAX_COMPLEMENTARY_NORMALIZED_INTENSITY_1 = mean(MAX_COMPLEMENTARY_NORMALIZED_INTENSITY_1),
+            median_LIFETIME                          = median(LIFETIME),
+            LIFETIME                                 = mean(LIFETIME)) %>% 
+  as.data.table()
+
+PCTTRAF6Stats%>%
+  ggplot(aes(MAX_NORMALIZED_INTENSITY, LIFETIME, label = COHORT, col = COHORT)) +
+  geom_point() +
+  geom_label_repel() +theme(legend.position = "none") +
+  scale_y_continuous(limits=c(0,100))
+
+PCTTRAF6Stats[COHORT %in% c("BDLD_57H-TIR-T6BD TRAF6", "BDLD_6H-TIR-T6BD TRAF6", "MyD88-T6BD TRAF6", "DHF91-TIR-T6BD TRAF6", "MyD88-TIR-T6BD TRAF6", "MyD88-TIR", "MyD88 TRAF6")] %>%
+  ggplot(aes(MAX_NORMALIZED_INTENSITY, LIFETIME, label = COHORT, col = COHORT)) +
+  geom_point() +
+  geom_label_repel() +theme(legend.position = "none") +
+  scale_y_continuous(limits=c(0,100))
+```
