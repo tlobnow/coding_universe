@@ -36,7 +36,7 @@ In the lab we all know that cl204 is our triple KO cell line that lacks MyD88/IR
 NAME_KEY_DOC <- fread("./ELISA_CL_KEY_DOC.csv", header = T, sep = ",", quote = "")
 head(NAME_KEY_DOC, n = 10)
 
-NAME_KEY     <- fread("./ELISA_CL_KEY.csv", header = T) 
+NAME_KEY     <- fread("https://raw.githubusercontent.com/tlobnow/coding_universe/main/Synthetic_Myddosome_Manuscript/SCRIPTS/ELISA_CL_KEY.csv", header = T) 
 head(NAME_KEY, n = 10)
 ```
 
