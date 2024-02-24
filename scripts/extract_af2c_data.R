@@ -1,33 +1,97 @@
 # Load required libraries (if you don't have pacman installed yet, please unhash the installation line and run it)
 #install.packages("pacman")
-library(pacman); p_load(data.table)
+library(pacman); p_load(data.table, knitr, dplyr, fs)
 
 source(file = ifelse(exists("https://raw.githubusercontent.com/tlobnow/coding_universe/main/scripts/functions.R"), 
                      yes =  "https://raw.githubusercontent.com/tlobnow/coding_universe/main/scripts/functions.R",
                      no  =  "~/Documents/Github/coding_universe/scripts/functions.R"))
 
+OVERWRITE = T
+COPY_BEST_MODELS_TO_EXTRA_FOLDER = T
+
 # Provide the name of the folder where the run folders are located
-LOC = "my_run_files"
+# LOC = "my_run_files"
+# LOC = "CONTROLS"
+# LOC = "ADLD"
+# LOC = "MAJER"
+# LOC = "TEST"
+# LOC = "EDLD"
+# LOC = "MYD88"
+# LOC = "IRAK4"
+# LOC = "IRAK1"
+# LOC = "TUBULIN"
+# LOC = "project_2xTIR"
+LOC = "20240222"
+
 
 # Provide the path where this folder lies
-PATH = "~/Desktop"
+# PATH = "~/Documents/etc/PhD/2xTIR/"
+# PATH = "/Volumes/TAYLOR-LAB/Finn/CURATED_RESULTS/"
+# PATH = "~/Desktop/output/"
+# PATH = "/Volumes/TAYLOR-LAB/Finn/NiranjanThanksYou/"
+PATH = "~/Desktop/"
 
 # Provide the path to where summaries should be saved
-SUMMARY_FOLDER = "~/Desktop/SUMMARIES/"
+# SUMMARY_FOLDER = "~/Documents/etc/PhD/2xTIR/SUMMARIES/"
+# SUMMARY_FOLDER = "/Volumes/TAYLOR-LAB/Finn/CURATED_RESULTS/SUMMARIES/"
+SUMMARY_FOLDER = file.path(PATH, "SUMMARIES/")
+if (dir.exists(SUMMARY_FOLDER)) {print(paste0(basename(SUMMARY_FOLDER), " directory exists."))} else {dir.create(SUMMARY_FOLDER)}
+
+# Where to copy the best models to?
+base_path = file.path(PATH, "BOTB")
+if (dir.exists(base_path)) {print(paste0(basename(base_path), " directory exists."))} else {dir.create(base_path)}
 
 # Automatically generates the main folder variable
-MAIN    = file.path(PATH, LOC, "/")
+MAIN      = file.path(PATH, LOC, "/")
+
 
 # Extract all JSON files from the provided location automatically and store the results in two files (with/without recycles)
-run_extraction(LOC = LOC, MAIN = MAIN, SUMMARY_FOLDER = SUMMARY_FOLDER)
+if (file.exists(paste0(SUMMARY_FOLDER, LOC, ".csv")) & OVERWRITE == F) {
+  dataframe = fread(paste0(SUMMARY_FOLDER, LOC, ".csv"))
+  # dataframe_with_recycles = fread(paste0(SUMMARY_FOLDER, LOC, "_summaryWithRecycles.csv"))
+} else {
+  # run_extraction(LOC = LOC, MAIN = MAIN, SUMMARY_FOLDER = SUMMARY_FOLDER)
+  ### dataframe_with_recycles = fread(paste0(SUMMARY_FOLDER, LOC, "_summaryWithRecycles.csv"))
+  run_extraction_wrapper(LOC = LOC, MAIN = MAIN, SUMMARY_FOLDER = SUMMARY_FOLDER)
+  dataframe = fread(paste0(SUMMARY_FOLDER, LOC, ".csv"))  %>% filter(!is.na(pTM))
+}
 
-# Take a look at the generated data frames
-# dataframe_with_recycles = fread(paste0(SUMMARY_FOLDER, LOC, "_summaryWithRecycles.csv"))
-dataframe = fread(paste0(SUMMARY_FOLDER, LOC, ".csv"))
+dataframe <- dataframe %>%
+  mutate(FILE = str_replace_all(FILE, "IL1R_MOUSE-TIR_x1_|_IL1RAP_MOUSE-TIR_1|IL1RAP_MOUSE-TIR_x1_", ""))
 
-plot_alphafold_results(LOC = LOC, SUMMARY_FOLDER = SUMMARY_FOLDER)
-plot_alphafold_results(LOC = LOC, SUMMARY_FOLDER = SUMMARY_FOLDER, best_only = T)
-plot_alphafold_results(LOC = LOC, SUMMARY_FOLDER = SUMMARY_FOLDER, pattern = "_x", best_only = TRUE)
+
+if (COPY_BEST_MODELS_TO_EXTRA_FOLDER) {
+  copy_max_score_files(
+    dataframe = dataframe,
+    main_dir = MAIN,
+    base_path = base_path,
+    file_col = "FILE",       # column name for file identifier
+    origin_col = "ORIGIN",   # column name for origin identifier
+    recycle_col = "RECYCLE"  # column name for recycle identifier
+  )
+}
+
+max_iScores_df <- dataframe %>%
+  group_by(as.factor(FILE)) %>%
+  slice_max(order_by = iScore, n = 1) %>%
+  select(FILE, RECYCLE, iScore, piTM) %>% 
+  arrange(desc(iScore)) %>%
+  ungroup()
+
+top30 <- head(max_iScores_df[,2:5], 30)
+kable(top30)  
+
+plot_alphafold_results(LOC = LOC, SUMMARY_FOLDER = SUMMARY_FOLDER, plot_interactive = T)
+plot_alphafold_results(LOC = LOC, SUMMARY_FOLDER = SUMMARY_FOLDER, plot_interactive = T, best_only = T)
+plot_alphafold_results(LOC = LOC, SUMMARY_FOLDER = SUMMARY_FOLDER, 
+                       best_only = TRUE,
+                       # plot_interactive = T,
+                       # pattern = "MYD88_MOUSE-DD"
+                       # pattern = "DC7",
+                       #plot_labels = TRUE
+                       )
+plot_alphafold_results(LOC = LOC, SUMMARY_FOLDER = SUMMARY_FOLDER) 
+                       
 
 
 ################################################################################

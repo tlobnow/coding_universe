@@ -198,7 +198,6 @@ ELISA_Fx <- function(Input_Directory, Output_Directory) {
                Date  = as_date(str_extract(basename(input_plate_dir), "\\d{8}"))) %>% 
         arrange(CELL_LINE)
       
-      # linear model of the Standard curve. -1 omits the intercept
       # We will only use standard curve values of 1 and below (machine is optimized to measure absorptions between 0 and 1.1)
       Fit <- lm(CELL_LINE ~ MEASUREMENT_mean - 1, data = Plate_Standards[Plate_Standards$MEASUREMENT_mean <= 1.1, ])
       
@@ -223,7 +222,7 @@ ELISA_Fx <- function(Input_Directory, Output_Directory) {
                 subtitle = paste0("R^2 = ", Rsquare, "\n IL-Amount = ", signif(Fit$coefficients[1], digits = 4), " * Intensity")) +
         theme_classic() +
         theme(axis.title = element_text(size = 30),
-              axis.text = element_text(size = 20)) +
+              axis.text  = element_text(size = 20)) +
         theme(legend.position = "none")
       
       # Saving the plot
@@ -770,8 +769,7 @@ calculate_baseline_and_control <- function(DATA, FILTER_TYPE, POSITIVE_CTRL, NEG
     
     # Join the calculated values with the dataset
     data <- left_join(DATA, baseline, by = group_vars) %>%
-      mutate(Concentration_REDUCED = case_when(!is.na(baseline_control_value) ~ Concentration - baseline_control_value,
-                                                               TRUE ~ Concentration))
+      mutate(Concentration_REDUCED = case_when(!is.na(baseline_control_value) ~ Concentration - baseline_control_value, TRUE ~ Concentration))
   } else {
     # baseline <- DATA %>%
     #   group_by(!!!syms(group_vars)) %>%
@@ -910,7 +908,8 @@ create_plot <- function(FILTER_VALUES, FILTER_TYPE, MEANS, MOM_SUBSET, STATISTIC
 # NEGATIVE_CTRL = c("204_TRIPLE_KO", "tKO_EL4")
 
 plot_ELISA <- function(FILTER_VALUES, FILTER_TYPE, POSITIVE_CTRL = 0, NEGATIVE_CTRL = 0,
-                       COLOR = "salmon", SEED = 600, 
+                       COLOR = COLOR,#"salmon", 
+                       SEED = 600, 
                        plot_pval = TRUE,  plot_results = TRUE, 
                        run_anova = FALSE, plot_faceted_by_date = FALSE, 
                        x_label = "", y_label = "relative IL-2 conc.", plot_title = "IL-2 ELISA",
@@ -965,8 +964,76 @@ plot_ELISA <- function(FILTER_VALUES, FILTER_TYPE, POSITIVE_CTRL = 0, NEGATIVE_C
       PLOT
       
     } else {
-      PLOT <- create_plot(FILTER_VALUES, FILTER_TYPE, MEANS, MOM_SUBSET, STATISTICAL_RESULTS, COLOR = "salmon", SEED = 600,
-                          x_label = x_label, y_label = y_label, plot_title = plot_title, subtitle = subtitle)
+      PLOT <- create_plot(FILTER_VALUES, FILTER_TYPE, MEANS, MOM_SUBSET, STATISTICAL_RESULTS, COLOR = "salmon", 
+                          SEED = 600, x_label = x_label, y_label = y_label, plot_title = plot_title, subtitle = subtitle)
+    }
+    list(PLOT, COMBINED_DATA, MEANS, MOM_SUBSET, MEANS)
+  }
+}
+
+
+################################################################################################################################################################
+################################################################################################################################################################
+################################################################################################################################################################
+
+process_ELISA <- function(DF = All_plates_data,
+                          FILTER_VALUES, FILTER_TYPE, 
+                          POSITIVE_CTRL = 0, 
+                          NEGATIVE_CTRL = 0,
+                          COLOR = COLOR, 
+                          SEED = 600) {
+  
+  ALL_COHORT_DATA <- lapply(FILTER_VALUES, function(FILTER_VALUE) {
+    # Step 1: Filter & Subset the main data into lists
+    COHORT_DATA <- filter_data(DF, FILTER_VALUE, FILTER_TYPE, POSITIVE_CTRL, NEGATIVE_CTRL)
+    # Step 2 and Step 3
+    NORMALIZED_DATA <- calculate_baseline_and_control(COHORT_DATA, FILTER_TYPE, POSITIVE_CTRL, NEGATIVE_CTRL)
+    return(NORMALIZED_DATA)
+  })
+  
+  # Step 4: Combine the subset lists into one data frame
+  COMBINED_DATA <- bind_rows(ALL_COHORT_DATA)
+  # print(COMBINED_DATA)  # Debugging line
+  
+  # Step 5: Calculate the means per cohort
+  MEANS <- COMBINED_DATA %>%
+    group_by(CELL_LINE, CONDITION, Date) %>%
+    distinct(triplicate_mean_per_day, STIM_DAY, .keep_all = TRUE) %>%
+    ungroup()
+  # print(MEANS)  # Debugging line
+  
+  # Step 6: Calculate the mean of means (MOM) per cohort
+  MOM_SUBSET <- MEANS %>%
+    group_by(CELL_LINE, CL_NAME_ON_PLOT, CONDITION, Date) %>%
+    summarise(triplicate_sd_per_day = sd(triplicate_mean_per_day),
+              triplicate_mean_per_day = mean(triplicate_mean_per_day)) %>%
+    distinct(.keep_all = TRUE)
+  # print(MOM_SUBSET)  # Debugging line
+  
+  # Step 7: Perform statistics per cohort
+  STATISTICAL_RESULTS <- perform_statistical_analysis(MEANS, "CL_NAME_ON_PLOT")
+  # print(STATISTICAL_RESULTS)  # Debugging line
+  
+  # Step 8: Plot the results
+  if (plot_results) {
+    if (all(POSITIVE_CTRL == 0) & all(NEGATIVE_CTRL == 0)) {
+      PLOT <- ggplot(MEANS, aes(x = CL_NAME_ON_PLOT)) +
+        geom_col(     data = MOM_SUBSET,  aes(y = triplicate_mean_per_day, fill = CONDITION, group = CONDITION), position = position_dodge(width = 1), alpha = 0.5) +
+        labs(x = x_label,
+             y = y_label) +
+        scale_fill_manual(values = c("UNSTIM" = "gray50", "STIM" = COLOR)) +
+        labs(x = x_label, y = y_label) +
+        ggtitle(label = plot_title, subtitle = subtitle) +
+        theme_cowplot() +
+        theme(legend.position = "bottom") +
+        theme(plot.title = element_text(hjust = 0.5)) +
+        facet_wrap(~STIM_DAY)
+      
+      PLOT
+      
+    } else {
+      PLOT <- create_plot(FILTER_VALUES, FILTER_TYPE, MEANS, MOM_SUBSET, STATISTICAL_RESULTS, COLOR = COLOR,#"salmon", 
+                          SEED = 600, x_label = x_label, y_label = y_label, plot_title = plot_title, subtitle = subtitle)
     }
     list(PLOT, COMBINED_DATA, MEANS, MOM_SUBSET, MEANS)
   }
