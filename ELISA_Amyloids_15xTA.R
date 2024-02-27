@@ -11,7 +11,7 @@ figure <- "Figure X"
 
 # PREPROCESSING
 Input_Directory <- file.path("/Volumes/TAYLOR-LAB/Synthetic Myddosome Paper/6_Manuscript/Source files/", figure)
-NAME_KEY  <- fread("/Users/u_lobnow/Documents/Github/coding_universe/ELISA_CL_KEY.csv", header = T) 
+NAME_KEY  <- fread("https://raw.githubusercontent.com/tlobnow/coding_universe/main/ELISA_CL_KEY.csv", header = T) 
 
 # load functions
 source("~/Documents/Github/Analysis_Synthethic_Myddosome/FigureScripts/functions.R")
