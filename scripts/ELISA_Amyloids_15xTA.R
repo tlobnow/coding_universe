@@ -83,6 +83,11 @@ LABELS      <- c("+ IL-1", "- IL-1")
 SIZE = 25
 X_AXIS <- "Relative IL-2 secretion"
 
+FONT   <- "Helvetica"
+SIZE   <- 25
+POINTS <- 8
+TEXT   <- 8
+
 ################################################################################
 plotting_means$STIM_DAY <- as.factor(plotting_means$STIM_DAY)
 
@@ -94,9 +99,9 @@ figure_X_ELISA <- ggplot(data = plotting_stats, aes(x = Relative_Intensity_mean,
                                            xmax = Relative_Intensity_mean + Relative_Intensity_sem),
                 linewidth = .75, position = position_dodge(width = 0.5), width = 0.25) +
   geom_point(data = plotting_means, aes(x = Relative_Intensity_mean, y = CL_NAME_ON_PLOT), shape = 21, 
-             size = 4, 
+             size = POINTS, 
              position = position_jitterdodge(dodge.width = 0.5, jitter.width = 0.4, seed = 600), show.legend = FALSE) +
-  geom_text(data = plotting_stats, aes(x = max(Relative_Intensity_mean) + 0.05, y = CL_NAME_ON_PLOT, label = significance), hjust = .5, vjust = 1, size = 5, angle = 90) +
+  geom_text(data = plotting_stats, aes(x = max(Relative_Intensity_mean) + 0.05, y = CL_NAME_ON_PLOT, label = significance), hjust = .5, vjust = 1, size = TEXT, angle = 90) +
   scale_x_continuous(breaks = seq(from = 0, to = 1, by = 0.5), position = "bottom") +
   scale_y_discrete(expand = c(0, 0)) +
   scale_color_manual(values = COLOR_ELISA, labels = LABELS) +
@@ -106,7 +111,6 @@ figure_X_ELISA <- ggplot(data = plotting_stats, aes(x = Relative_Intensity_mean,
   theme_cowplot(font_size = SIZE) +
   theme(axis.text.x       = element_text(size = SIZE, angle = 0, vjust = 0.6),
         axis.title.y      = element_blank(),
-        # legend.position   = c(x = 0.4, y = 0.73),
         legend.title      = element_blank(),
         legend.text       = element_text(size = SIZE),
         legend.key.size   = unit(9, "mm"))
@@ -149,9 +153,9 @@ figure_X_ELISA_no_cl069 <- ggplot(data = plotting_stats, aes(x = Relative_Intens
                                            xmax = Relative_Intensity_mean + Relative_Intensity_sem),
                 linewidth = .75, position = position_dodge(width = 0.5), width = 0.25) +
   geom_point(data = plotting_means, aes(x = Relative_Intensity_mean, y = CL_NAME_ON_PLOT), shape = 21, 
-             size = 4, 
+             size = POINTS, 
              position = position_jitterdodge(dodge.width = 0.5, jitter.width = 0.4, seed = 600), show.legend = FALSE) +
-  geom_text(data = plotting_stats, aes(x = max(Relative_Intensity_mean) + 0.05, y = CL_NAME_ON_PLOT, label = significance), hjust = .5, vjust = 1, size = 5, angle = 90) +
+  geom_text(data = plotting_stats, aes(x = max(Relative_Intensity_mean) + 0.05, y = CL_NAME_ON_PLOT, label = significance), hjust = .5, vjust = 1, size = TEXT, angle = 90) +
   scale_x_continuous(breaks = seq(from = 0, to = 1, by = 0.01), position = "bottom") +
   scale_y_discrete(expand = c(0, 0)) +
   scale_color_manual(values = COLOR_ELISA, labels = LABELS) +
@@ -161,7 +165,6 @@ figure_X_ELISA_no_cl069 <- ggplot(data = plotting_stats, aes(x = Relative_Intens
   theme_cowplot(font_size = SIZE) +
   theme(axis.text.x       = element_text(size = SIZE, angle = 0, vjust = 0.6),
         axis.title.y      = element_blank(),
-        # legend.position   = c(x = 0.4, y = 0.73),
         legend.title      = element_blank(),
         legend.text       = element_text(size = SIZE),
         legend.key.size   = unit(9, "mm"))
