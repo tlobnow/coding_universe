@@ -32,7 +32,7 @@ AMYLOIDS            <- plate_data
 AMYLOIDS_normalized <- process_ELISA_data(DF = AMYLOIDS, NEGATIVE_CTRL = "tKO_EL4", POSITIVE_CTRL = "cl069")
 
 # subset data for CHARMS cell lines
-AMYLOIDS_data     <- AMYLOIDS_normalized %>% filter(CL_NAME_ON_PLOT %in% c("CHARMS-10xTA", "CHARMS-12xTA", "CHARMS-15xTA", "cl069"))
+AMYLOIDS_data     <- AMYLOIDS_normalized #%>% filter(CL_NAME_ON_PLOT %in% c("CHARMS-10xTA", "CHARMS-12xTA", "CHARMS-15xTA", "cl069"))
 
 # join data frames of interest
 plotting_data_main <- AMYLOIDS_data
@@ -219,3 +219,4 @@ if (save) {
   fwrite(plotting_stats, file.path(save_to, "plotting_stats.csv"))
   fwrite(stat_significance_dt, file.path(save_to, "stat_significance_dt.csv"))
 }
+
