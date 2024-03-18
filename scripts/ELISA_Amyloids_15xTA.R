@@ -1,5 +1,6 @@
 library(pacman)
-pacman::p_load(data.table, ggplot2, lubridate, stringr, ggpubr, dplyr, cowplot, readxl, scales, knitr, tidyr, ggforce, ggbreak, patchwork, lemon)
+pacman::p_load(data.table, ggplot2, lubridate, stringr, ggpubr, dplyr, cowplot, readxl, scales, knitr, tidyr, 
+               ggforce, ggbreak, patchwork, lemon)
 
 ################################################################################
 
@@ -87,6 +88,7 @@ FONT   <- "Helvetica"
 SIZE   <- 25
 POINTS <- 8
 TEXT   <- 8
+ZOOM_LOC_X = 0.05
 
 ################################################################################
 plotting_means$STIM_DAY <- as.factor(plotting_means$STIM_DAY)
@@ -117,6 +119,33 @@ figure_X_ELISA <- ggplot(data = plotting_stats, aes(x = Relative_Intensity_mean,
 
 figure_X_ELISA
 
+figure_X_ELISA_zoomed <- ggplot(data = plotting_stats, aes(x = Relative_Intensity_mean, y = CL_NAME_ON_PLOT, fill = CONDITION)) +
+  geom_col(position = position_dodge(width = 0.7), aes(color = CONDITION), width = 0.68, alpha = 0.3) +
+  geom_errorbar(data = plotting_stats, aes(y = CL_NAME_ON_PLOT,
+                                           xmin = Relative_Intensity_mean - Relative_Intensity_sem,
+                                           xmax = Relative_Intensity_mean + Relative_Intensity_sem),
+                linewidth = .75, position = position_dodge(width = 0.5), width = 0.25) +
+  geom_point(data = plotting_means, aes(x = Relative_Intensity_mean, y = CL_NAME_ON_PLOT), shape = 21, 
+             size = POINTS, 
+             position = position_jitterdodge(dodge.width = 0.5, jitter.width = 0.4, seed = 750), show.legend = FALSE) +
+  geom_text(data = plotting_stats, aes(x = max(Relative_Intensity_mean) + 0.05, y = CL_NAME_ON_PLOT, label = significance), hjust = .5, vjust = 1, size = TEXT, angle = 90) +
+  scale_x_continuous(breaks = seq(from = 0, to = 1, by = 0.1), position = "bottom") +
+  scale_y_discrete(expand = c(0, 0)) +
+  scale_color_manual(values = COLOR_ELISA, labels = LABELS) +
+  scale_fill_manual(values  = COLOR_ELISA, labels = LABELS) +
+  labs(x = X_AXIS, y = "") +
+  guides(color = "none", fill = guide_legend(reverse = TRUE, nrow = 2)) +
+  theme_cowplot(font_size = SIZE) +
+  theme(axis.text.x       = element_text(size = SIZE, angle = 0, vjust = 0.6),
+        axis.title.y      = element_blank(),
+        legend.title      = element_blank(),
+        legend.text       = element_text(size = SIZE),
+        legend.key.size   = unit(9, "mm")) +
+  facet_zoom(xlim = c(0, ZOOM_LOC_X), zoom.data = ifelse(a <= ZOOM_LOC_X, NA, FALSE))
+  
+
+figure_X_ELISA_zoomed
+
 if (save) {
   
   save_to_data_tay <- file.path("/Volumes/TAYLOR-LAB/Synthetic Myddosome Paper/6_Manuscript/Source files/", figure)
@@ -126,8 +155,9 @@ if (save) {
   if (dir.exists(save_to)) {print(paste0("Files will be saved to ", save_to))} else {dir.create(save_to, recursive = T); print(paste0("Files will be saved to ", save_to))}
   
   # save figure
-  ggsave(file.path(save_to, "figure_X_ELISA.svg"), plot = last_plot(), device = "svg", width = 12, height = 7)
-  
+  ggsave(file.path(save_to, "figure_X_ELISA.svg"), plot = figure_X_ELISA, device = "svg", width = 12, height = 7)
+  ggsave(file.path(save_to, "figure_X_ELISA_zoomed.svg"), plot = figure_X_ELISA_zoomed, device = "svg", width = 12, height = 10)
+
   # save tables
   fwrite(plate_data,     file.path(save_to, "plate_data.csv"))
   fwrite(plotting_data,  file.path(save_to, "plotting_data.csv"))
@@ -180,7 +210,7 @@ if (save) {
   if (dir.exists(save_to)) {print(paste0("Files will be saved to ", save_to))} else {dir.create(save_to, recursive = T); print(paste0("Files will be saved to ", save_to))}
   
   # save figure
-  ggsave(file.path(save_to, "figure_X_ELISA_no_cl069.svg"), plot = last_plot(), device = "svg", width = 12, height = 7)
+  ggsave(file.path(save_to, "figure_X_ELISA_no_cl069.svg"), plot = figure_X_ELISA_no_cl069, device = "svg", width = 12, height = 7)
   
   # save tables
   fwrite(plate_data,     file.path(save_to, "plate_data.csv"))
