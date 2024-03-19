@@ -20,7 +20,7 @@ Twozerofour,cl204,tKO_EL4,CONTROL,,Mus musculus,#37aabd,4
 170_MYD88_KO,cl170,MYD88_KO,CONTROL,,Mus musculus,#37aabd,4
 dKO_Mph,cl421,2xKO,CONTROL,,Mus musculus,#37aabd,4
 DKO,cl421,2xKO,CONTROL,differentiated from cl355,Mus musculus,#37aabd,4
-590_L,cl232,CHARMS,SAMPLE,,Mus musculus,#009E73,5
+590_L,cl232,CHARMS,SAMPLE,,Mus musculus,#E69F00,5
 614_H,cl237,CHARMS-DHF91 (H),SAMPLE,,synthetic,#009E73,6
 614_L,cl236,CHARMS-DHF91 (L),SAMPLE,,synthetic,#009E73,7
 T6BD_H,cl245,CHARMS-TIR (H),SAMPLE,,Mus musculus,#009E73,8
@@ -54,8 +54,8 @@ BASS1_66307,cl410,CHARMS-BASS1_66307,SAMPLE,BELL-motif,Streptomyces coelicolor A
 Amy_1,cl405,CHARMS-BASS1_66307 (38-139),SAMPLE,any GFP expression,Streptomyces coelicolor A3(2),#009E73,28
 BDLD_2_H,cl322,CHARMS-BDLD_2,SAMPLE,high expression,Gemmata sp. SH-PL17,#009E73,29
 BDLD_6,cl328,CHARMS-BDLD_6,SAMPLE,high expression,Calothrix sp. NIES-2098,#009E73,30
-BDLD_7,cl325,CHARMS-BDLD_7,SAMPLE,high expression,Candidatus Entotheonella factor,#009E73,31
-BDLD_10_H,cl319,CHARMS-RANDOM,SAMPLE,high expression,Candidatus Entotheonella gemina,#009E73,32
+BDLD_7,cl325,CHARMS-BDLD_7,SAMPLE,high expression,Candidatus Entotheonella factor,#EEDD88,31
+BDLD_10_H,cl319,CHARMS-RANDOM,SAMPLE,high expression,Candidatus Entotheonella gemina,#EEDD88,32
 BDLD_11,cl332,CHARMS-BDLD_11,SAMPLE,high expression,Tolypothrix sp. NIES-4075,#009E73,33
 BDLD_13_H,cl320,CHARMS-BDLD_13,SAMPLE,high expression,Thiotrichaceae bacterium,#009E73,34
 BDLD_14_E,cl314,CHARMS-BDLD_14 (E),SAMPLE,endogenous expression,Thiotrichaceae bacterium,#009E73,35
@@ -63,17 +63,17 @@ BDLD_14_H,cl315,CHARMS-BDLD_14,SAMPLE,high expression,Thiotrichaceae bacterium,#
 BDLD_16,cl335,CHARMS-BDLD_16,SAMPLE,high expression,Symploca sp. SIO1C2,#009E73,37
 BDLD_27_E,cl310,CHARMS-BDLD_27 (E),SAMPLE,endogenous expression,Richelia sp. SL_2_1,#009E73,38
 BDLD_27_H,cl311,CHARMS-BDLD_27,SAMPLE,high expression,Richelia sp. SL_2_1,#009E73,39
-BDLD_38,cl338,CHARMS-BDLD_38,SAMPLE,high expression,Actinomadura madurae,#009E73,40
+BDLD_38,cl338,CHARMS-BDLD_38,SAMPLE,high expression,Actinomadura madurae,#FFAABB,40
 BDLD_46,cl324,CHARMS-BDLD_46,SAMPLE,high expression,Rivularia sp. PCC 7116,#009E73,41
 BDLD_50_E,cl312,CHARMS-BDLD_50 (E),SAMPLE,endogenous expression,[Scytonema hofmanni] UTEX 2349,#009E73,42
 BDLD_50_H,cl313,CHARMS-BDLD_50,SAMPLE,high expression,[Scytonema hofmanni] UTEX 2349,#009E73,43
 BDLD_57,cl321,CHARMS-BDLD_57,SAMPLE,high expression,Nostoc sp. 106C,#009E73,44
 BDLD_57_H,cl321,CHARMS-BDLD_57,SAMPLE,high expression,Nostoc sp. 106C,#009E73,45
 BDLD_58,cl333,CHARMS-BDLD_58,SAMPLE,high expression,Nostoc sp. RF31YmG,#009E73,46
-BDLD_62_H,cl318,CHARMS-BDLD_62,SAMPLE,high expression,Micromonospora matsumotoense,#009E73,47
-BDLD_67,cl327,CHARMS-BDLD_67,SAMPLE,high expression,Micromonospora chalcea,#009E73,48
-BDLD_69,cl326,CHARMS-BDLD_69,SAMPLE,high expression,Plantactinospora sp. CNZ321,#009E73,49
-BDLD_73,cl323,CHARMS-BDLD_73,SAMPLE,high expression,Candidatus Entotheonella palauensis,#009E73,50
+BDLD_62_H,cl318,CHARMS-BDLD_62,SAMPLE,high expression,Micromonospora matsumotoense,#FFAABB,47
+BDLD_67,cl327,CHARMS-BDLD_67,SAMPLE,high expression,Micromonospora chalcea,#FFAABB,48
+BDLD_69,cl326,CHARMS-BDLD_69,SAMPLE,high expression,Plantactinospora sp. CNZ321,#FFAABB,49
+BDLD_73,cl323,CHARMS-BDLD_73,SAMPLE,high expression,Candidatus Entotheonella palauensis,#EEDD88,50
 EDLD_1,cl375,CHARMS-EDLD_1,SAMPLE,endogenous expression,Homo_sapiens,#009E73,51
 EDLD_2,cl376,CHARMS-EDLD_2,SAMPLE,endogenous expression,Gallus_gallus,#009E73,52
 EDLD_3,cl377,CHARMS-EDLD_3,SAMPLE,endogenous expression,Danio_rerio,#009E73,53
