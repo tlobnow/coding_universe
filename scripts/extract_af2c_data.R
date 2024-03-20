@@ -21,7 +21,8 @@ COPY_BEST_MODELS_TO_EXTRA_FOLDER = T
 # LOC = "IRAK1"
 # LOC = "TUBULIN"
 # LOC = "project_2xTIR"
-LOC = "20240222"
+# LOC = "20240222"
+LOC = "Amyloids_Project"
 
 
 # Provide the path where this folder lies
@@ -88,7 +89,7 @@ plot_alphafold_results(LOC = LOC, SUMMARY_FOLDER = SUMMARY_FOLDER,
                        # plot_interactive = T,
                        # pattern = "MYD88_MOUSE-DD"
                        # pattern = "DC7",
-                       #plot_labels = TRUE
+                       plot_labels = TRUE
                        )
 plot_alphafold_results(LOC = LOC, SUMMARY_FOLDER = SUMMARY_FOLDER) 
                        
