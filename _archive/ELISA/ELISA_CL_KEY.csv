@@ -1,0 +1,122 @@
+CELL_LINE,CL_NUMBER,CL_NAME_ON_PLOT,PURPOSE,INFO,ORIGIN,PLOTTING_COLOR,ORDER_NO
+EL4,cl011,WT_EL4,CONTROL,,Mus musculus,#E69F00,1
+WT,cl011,WT_EL4,CONTROL,,Mus musculus,#E69F00,1
+WT_EL4,cl011,WT_EL4,CONTROL,,Mus musculus,#E69F00,1
+wt_Mph,cl420,MΦ-WT,CONTROL,,Mus musculus,#E69F00,1
+wt,cl420,MΦ-WT,CONTROL,differentiated from cl354,Mus musculus,#E69F00,1
+69.0,cl069,cl069,CONTROL,,Mus musculus,#E69F00,2
+69,cl069,cl069,CONTROL,,Mus musculus,#E69F00,2
+cl069,cl069,cl069,CONTROL,,Mus musculus,#E69F00,2
+Cl69,cl069,cl069,CONTROL,,Mus musculus,#E69F00,2
+3E_10,cl028,3E+10,CONTROL,,Mus musculus,#E69F00,3
+3E 10,cl028,3E+10,CONTROL,,Mus musculus,#E69F00,3
+3E10_GFP,cl028,3E+10,CONTROL,,Mus musculus,#E69F00,3
+MyD88-GFP,cl028,3E+10,CONTROL,,Mus musculus,#E69F00,3
+cl204,cl204,tKO_EL4,CONTROL,,Mus musculus,#37aabd,4
+Cl204,cl204,tKO_EL4,CONTROL,,Mus musculus,#37aabd,4
+204,cl204,tKO_EL4,CONTROL,,Mus musculus,#37aabd,4
+204_TRIPLE_KO,cl204,tKO_EL4,CONTROL,,Mus musculus,#37aabd,4
+Twozerofour,cl204,tKO_EL4,CONTROL,,Mus musculus,#37aabd,4
+170_MYD88_KO,cl170,MYD88_KO,CONTROL,,Mus musculus,#37aabd,4
+dKO_Mph,cl421,2xKO,CONTROL,,Mus musculus,#37aabd,4
+DKO,cl421,2xKO,CONTROL,differentiated from cl355,Mus musculus,#37aabd,4
+590_L,cl232,CHARMS,SAMPLE,,Mus musculus,#E69F00,5
+614_H,cl237,CHARMS-DHF91 (H),SAMPLE,,synthetic,#009E73,6
+614_L,cl236,CHARMS-DHF91 (L),SAMPLE,,synthetic,#009E73,7
+T6BD_H,cl245,CHARMS-TIR (H),SAMPLE,,Mus musculus,#009E73,8
+T6BD_L,cl244,CHARMS-TIR (L),SAMPLE,,Mus musculus,#009E73,9
+591_L,cl234,CHARMS-3xA,SAMPLE,,Mus musculus,#009E73,10
+632_H,cl239,CHARMS-DHF91-3xA,SAMPLE,,synthetic,#009E73,11
+631_H,cl243,CHARMS-TIR-3xA,SAMPLE,,Mus musculus,#009E73,12
+290,cl290,CHARMS-DHF119 (L),SAMPLE,,synthetic,#009E73,13
+294_2xTIR,cl294,CHARMS-2xTIR,SAMPLE,,Mus musculus,#009E73,14
+294,cl294,CHARMS-2xTIR,SAMPLE,,Mus musculus,#009E73,14
+TwoNinetyfour,cl294,CHARMS-2xTIR,SAMPLE,,Mus musculus,#009E73,14
+298,cl298,CHARMS-short_linker,SAMPLE,,Mus musculus,#009E73,15
+302,cl302,CHARMS-HA13,SAMPLE,,,#009E73,16
+MyD88-GFP-synTRAF6-BD-1x,cl246,CHARMS-sT6BM-1x,SAMPLE,endogenous expression,synthetic,#009E73,17
+MyD88-GFP-synTRAF6-BD-1x,cl247,CHARMS-sT6BM-1x,SAMPLE,high expression,synthetic,#009E73,17
+MyD88-GFP-synTRAF6-BD-3x,cl254,CHARMS-sT6BM-3x,SAMPLE,endogenous expression,synthetic,#009E73,18
+MyD88-GFP-synTRAF6-BD-3x,cl255,CHARMS-sT6BM-3x,SAMPLE,high expression,synthetic,#009E73,18
+MyD88-GFP-synTRAF6-BD-5x,cl262,CHARMS-sT6BM-5x,SAMPLE,endogenous expression,synthetic,#009E73,19
+MyD88-GFP-synTRAF6-BD-5x,cl263,CHARMS-sT6BM-5x,SAMPLE,high expression,synthetic,#009E73,19
+MyD88-GFP-synTRAF6-BD-1xA,cl248 cl249,CHARMS-sT6BM-1xA,SAMPLE,,synthetic,#009E73,20
+MyD88-GFP-synTRAF6-BD-3xA,cl256 cl257,CHARMS-sT6BM-3xA,SAMPLE,,synthetic,#009E73,21
+MyD88-GFP-synTRAF6-BD-5xA,cl264 cl265,CHARMS-sT6BM-5xA,SAMPLE,,synthetic,#009E73,22
+10xTA_ALL,cl408,CHARMS-10xTA,SAMPLE,any GFP expression,synthetic,#009E73,23
+10xTA,cl408,CHARMS-10xTA (dSV40 High),SAMPLE,high expression,synthetic,#009E73,23
+12xTA_ALL,cl406,CHARMS-12xTA,SAMPLE,any GFP expression,synthetic,#009E73,24
+12xTA,cl425,CHARMS-12xTA (dSV40 High),SAMPLE,high expression,synthetic,#009E73,24
+15xTA_ALL,cl407,CHARMS-15xTA,SAMPLE,any GFP expression,synthetic,#009E73,25
+15xTA,cl426,CHARMS-15xTA (dSV40 High),SAMPLE,high expression,synthetic,#009E73,25
+cl446,cl446,CHARMS-17xTA (SFFV Endo),SAMPLE,endogenous expression,synthetic,#009E73,26
+cl447,cl447,CHARMS-17xTA (SFFV High),SAMPLE,high expression,synthetic,#009E73,27
+cl448,cl448,CHARMS-20xTA (SFFV Endo),SAMPLE,endogenous expression,synthetic,#009E73,28
+cl449,cl449,CHARMS-20xTA (SFFV High),SAMPLE,high expression,synthetic,#009E73,29
+BASS1_66306,cl409,CHARMS-BASS1_66306,SAMPLE,NLR-motif,Streptomyces coelicolor A3(2),#009E73,30
+BASS1_66307,cl410,CHARMS-BASS1_66307,SAMPLE,BELL-motif,Streptomyces coelicolor A3(2),#009E73,31
+Amy_1,cl405,CHARMS-BASS1_66307 (38-139),SAMPLE,any GFP expression,Streptomyces coelicolor A3(2),#009E73,32
+BDLD_2_H,cl322,CHARMS-BDLD_2,SAMPLE,high expression,Gemmata sp. SH-PL17,#009E73,33
+BDLD_6,cl328,CHARMS-BDLD_6,SAMPLE,high expression,Calothrix sp. NIES-2098,#009E73,34
+BDLD_7,cl325,CHARMS-BDLD_7,SAMPLE,high expression,Candidatus Entotheonella factor,#009E73,35
+BDLD_10_H,cl319,CHARMS-RANDOM,SAMPLE,high expression,Candidatus Entotheonella gemina,#009E73,36
+BDLD_11,cl332,CHARMS-BDLD_11,SAMPLE,high expression,Tolypothrix sp. NIES-4075,#009E73,37
+BDLD_13_H,cl320,CHARMS-BDLD_13,SAMPLE,high expression,Thiotrichaceae bacterium,#009E73,38
+BDLD_14_E,cl314,CHARMS-BDLD_14 (E),SAMPLE,endogenous expression,Thiotrichaceae bacterium,#009E73,39
+BDLD_14_H,cl315,CHARMS-BDLD_14,SAMPLE,high expression,Thiotrichaceae bacterium,#009E73,40
+BDLD_16,cl335,CHARMS-BDLD_16,SAMPLE,high expression,Symploca sp. SIO1C2,#009E73,41
+BDLD_27_E,cl310,CHARMS-BDLD_27 (E),SAMPLE,endogenous expression,Richelia sp. SL_2_1,#009E73,42
+BDLD_27_H,cl311,CHARMS-BDLD_27,SAMPLE,high expression,Richelia sp. SL_2_1,#009E73,43
+BDLD_38,cl338,CHARMS-BDLD_38,SAMPLE,high expression,Actinomadura madurae,#009E73,44
+BDLD_46,cl324,CHARMS-BDLD_46,SAMPLE,high expression,Rivularia sp. PCC 7116,#009E73,45
+BDLD_50_E,cl312,CHARMS-BDLD_50 (E),SAMPLE,endogenous expression,[Scytonema hofmanni] UTEX 2349,#009E73,46
+BDLD_50_H,cl313,CHARMS-BDLD_50,SAMPLE,high expression,[Scytonema hofmanni] UTEX 2349,#009E73,47
+BDLD_57,cl321,CHARMS-BDLD_57,SAMPLE,high expression,Nostoc sp. 106C,#009E73,48
+BDLD_57_H,cl321,CHARMS-BDLD_57,SAMPLE,high expression,Nostoc sp. 106C,#009E73,49
+BDLD_58,cl333,CHARMS-BDLD_58,SAMPLE,high expression,Nostoc sp. RF31YmG,#009E73,50
+BDLD_62_H,cl318,CHARMS-BDLD_62,SAMPLE,high expression,Micromonospora matsumotoense,#009E73,51
+BDLD_67,cl327,CHARMS-BDLD_67,SAMPLE,high expression,Micromonospora chalcea,#009E73,52
+BDLD_69,cl326,CHARMS-BDLD_69,SAMPLE,high expression,Plantactinospora sp. CNZ321,#009E73,53
+BDLD_73,cl323,CHARMS-BDLD_73,SAMPLE,high expression,Candidatus Entotheonella palauensis,#009E73,54
+EDLD_1,cl375,CHARMS-EDLD_1,SAMPLE,endogenous expression,Homo_sapiens,#009E73,55
+EDLD_2,cl376,CHARMS-EDLD_2,SAMPLE,endogenous expression,Gallus_gallus,#009E73,56
+EDLD_3,cl377,CHARMS-EDLD_3,SAMPLE,endogenous expression,Danio_rerio,#009E73,57
+EDLD_4,cl378,CHARMS-EDLD_4,SAMPLE,endogenous expression,Xenopus_laevis,#009E73,58
+EDLD_5,cl379,CHARMS-EDLD_5,SAMPLE,endogenous expression,Anolis_carolinensis,#009E73,59
+EDLD_6,cl380,CHARMS-EDLD_6,SAMPLE,endogenous expression,Drosophila_melanogaster,#009E73,60
+EDLD_7,cl381,CHARMS-EDLD_7,SAMPLE,endogenous expression,Gongylonema_pulchrum,#009E73,61
+EDLD_8,cl382,CHARMS-EDLD_8,SAMPLE,endogenous expression,Caenorhabditis_elegans,#009E73,62
+EDLD_9,cl383,CHARMS-EDLD_9,SAMPLE,endogenous expression,Darwinula_stevensoni,#009E73,63
+EDLD_10,cl384,CHARMS-EDLD_10,SAMPLE,endogenous expression,Pocillopora_damicornis,#009E73,64
+EDLD_11,cl385,CHARMS-EDLD_11,SAMPLE,endogenous expression,Anneissia_japonica,#009E73,65
+EDLD_12,cl386,CHARMS-EDLD_12,SAMPLE,endogenous expression,Lottia_gigantea,#009E73,66
+EDLD_13,cl387,CHARMS-EDLD_13,SAMPLE,endogenous expression,Strongylocentrotus_purpuratus,#009E73,67
+EDLD_14,cl388,CHARMS-EDLD_14,SAMPLE,endogenous expression,Hydra_vulgaris,#009E73,68
+EDLD_15,cl389,CHARMS-EDLD_15,SAMPLE,endogenous expression,Branchiostoma_floridae,#009E73,69
+EDLD_16,cl390,CHARMS-EDLD_16,SAMPLE,endogenous expression,Amphimedon_queenslandica,#009E73,70
+EDLD_17,cl391,CHARMS-EDLD_17,SAMPLE,endogenous expression,Strigamia_maritima,#009E73,71
+EDLD_18,cl392,CHARMS-EDLD_18,SAMPLE,endogenous expression,Geodia_cydonium,#009E73,72
+EDLD_19,cl393,CHARMS-EDLD_19,SAMPLE,endogenous expression,Arion_vulgaris,#009E73,73
+EDLD_20,cl394,CHARMS-EDLD_20,SAMPLE,endogenous expression,Octopus_bimaculoides,#009E73,74
+EDLD_21,cl395,CHARMS-EDLD_21,SAMPLE,endogenous expression,Crassostrea_virginica,#009E73,75
+EDLD_22,cl396,CHARMS-EDLD_22,SAMPLE,endogenous expression,Trichoplax_adhaerens,#009E73,76
+EDLD_23,cl397,CHARMS-EDLD_23,SAMPLE,endogenous expression,Desmodus_rotundus,#009E73,77
+FKBP+eth,,FKBP+eth,SAMPLE,,,#009E73,78
+FKBP + 0.5,,FKBP + 0.5,SAMPLE,,,#009E73,79
+FKBP+5,,FKBP+5,SAMPLE,,,#009E73,80
+FKBP+50,,FKBP+50,SAMPLE,,,#009E73,81
+FKBP+500,,FKBP+500,SAMPLE,,,#009E73,82
+370,cl422,Mϕ-CHARMS-MyD88,SAMPLE,differentiated from cl370,,#009E73,83
+371,cl423,Mϕ-CHARMS-MyD88-3xAla,SAMPLE,differentiated from cl371,,#009E73,84
+ECOL6,cl427,ECOL6,SAMPLE,endogenous expression,Escherichia coli O6:H1 (strain CFT073 / ATCC 700928 / UPEC),#009E73,85
+THEAD,cl428,THEAD,SAMPLE,endogenous expression,T. archaeon,#009E73,86
+MYTGAL_2,cl429,MYTGAL_2,SAMPLE,endogenous expression,Mytilus galloprovincialis,#009E73,87
+MIZYES_7,cl430,MIZYES_7,SAMPLE,endogenous expression,Mizuhopecten yessoensis,#009E73,88
+SARM1,cl431,SARM1,SAMPLE,endogenous expression,Mus musculus,#009E73,89
+SARM1_H,cl432,SARM1_H,SAMPLE,high expression,Mus musculus,#009E73,90
+EDLD_25,cl455,EDLD_25,SAMPLE,endogenous expression,Homo_sapiens,#009E73,91
+EDLD_25,cl456,EDLD_25,SAMPLE,high expression,Homo_sapiens,#009E73,92
+EDLD_26,cl457,EDLD_26,SAMPLE,endogenous expression,Gallus_gallus,#009E73,93
+EDLD_26,cl458,EDLD_26,SAMPLE,high expression,Gallus_gallus,#009E73,94
+EDLD_27,cl459,EDLD_27,SAMPLE,endogenous expression,Danio_rerio,#009E73,95
+EDLD_27,cl460,EDLD_27,SAMPLE,high expression,Danio_rerio,#009E73,96

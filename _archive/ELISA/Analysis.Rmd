@@ -1,0 +1,663 @@
+---
+title: "Analysis 2024-03-04 ELISA"
+date: "`r format(Sys.time(), '%d %b %Y')`"
+author: "Taylor Lab"
+output: 
+  html_document:
+    toc: true
+    code_folding: "hide"
+    df_print: kable
+    knitr:
+      fig.width: 8
+      fig.height: 6
+---
+
+### Load necessary libraries and packages
+```{r, echo = F, warning = F, message = F}
+library(pacman)
+pacman::p_load(data.table, ggplot2, lubridate, stringr, ggpubr, dplyr, cowplot, readxl, scales, knitr, tidyr, ggforce, ggbreak, patchwork, lemon)
+```
+
+### Source Data & Functions
+```{r, echo = T, warning = F, message = F}
+Input_Directory <- file.path("/Users/u_lobnow/Desktop/ELISA")
+NAME_KEY  <- fread(file.path(Input_Directory, "/ELISA_CL_KEY2.csv"), header = T) 
+
+# load functions
+source("~/Documents/Github/Analysis_Synthethic_Myddosome/FigureScripts/functions.R")
+
+process_data_for_plot <- function(data) {
+  # Reorder cell lines for plotting
+  data$CL_NAME_ON_PLOT <- reorder(data$CL_NAME_ON_PLOT, -data$ORDER_NO)
+
+  # Reformat condition for legend text
+  data$CONDITION <- factor(data$CONDITION, levels = c("UNSTIM", "STIM"))
+  data$PLOTTING_COLOR[data$CONDITION == "UNSTIM"] <- "#BEBDBD"
+
+  return(data)
+}
+
+prepare_plotting_means <- function(data) {
+  # Group and summarize data for plotting_means
+  plotting_means <- data %>%
+    group_by(CELL_LINE, CONDITION, STIM_DAY, CL_NAME_ON_PLOT, PATHWAY, STIMULANT, STIM_CONCENTRATION, PLOTTING_COLOR, ORDER_NO) %>%
+    summarise(IL2_concentration_Dilution_Factor_mean = mean(Concentration),
+              Relative_Intensity_mean = mean(Concentration_NORMALIZED)) %>%
+    as.data.table()
+
+  # Round Relative_Intensity_mean
+  plotting_means$Relative_Intensity_mean <- round(plotting_means$Relative_Intensity_mean, 3)
+
+  # Reorder CL_NAME_ON_PLOT
+  plotting_means$CL_NAME_ON_PLOT <- reorder(plotting_means$CL_NAME_ON_PLOT, -plotting_means$ORDER_NO)
+
+  return(plotting_means)
+}
+
+process_statistical_analysis <- function(data, group_var, value_var) {
+  # Perform statistical analysis
+  statistical_significance <- perform_statistical_analysis(data, group_var, value_var)
+
+  # Turn statistical_significance list into data.table
+  stat_significance_dt <- data.table(
+    CL_NAME_ON_PLOT = names(statistical_significance$annotations),
+    p_value = statistical_significance$annotations,
+    significance = statistical_significance$p_values
+  )
+
+  return(stat_significance_dt)
+}
+
+prepare_plotting_stats <- function(data, stat_significance_dt) {
+  # Group and summarize data for plotting_stats
+  plotting_stats_main <- data %>%
+    group_by(CELL_LINE, CONDITION, CL_NAME_ON_PLOT, PATHWAY, STIMULANT, STIM_CONCENTRATION, PLOTTING_COLOR, ORDER_NO) %>%
+    summarise(
+      IL2_concentration_Dilution_Factor_mean = mean(Concentration),
+      IL2_concentration_Dilution_Factor_sem = sem(Concentration),
+      Relative_Intensity_mean = mean(triplicate_mean_per_day),
+      Relative_Intensity_sem = sem(triplicate_mean_per_day)
+    ) %>%
+    as.data.table() %>%
+    left_join(stat_significance_dt)
+
+  plotting_stats_main$CONDITION <- factor(plotting_stats_main$CONDITION, levels = c("UNSTIM", "STIM"))
+  plotting_stats_main$CL_NAME_ON_PLOT <- reorder(plotting_stats_main$CL_NAME_ON_PLOT, -plotting_stats_main$ORDER_NO)
+  plotting_stats_main$PLOTTING_COLOR[plotting_stats_main$CONDITION == "UNSTIM"] <- "#BEBDBD"
+
+  return(plotting_stats_main)
+}
+
+
+```
+
+### Read Plates
+```{r, echo = T, warning = F, message = F}
+
+plate_data_raw <- ELISA_Fx(Input_Directory, Output_Directory)
+plate_data     <- left_join(plate_data_raw, NAME_KEY)
+plate_data     <- plate_data %>% filter(CELL_LINE != "NA") %>% unique()
+plate_data$CONDITION <- as.factor(plate_data$CONDITION)
+
+```
+
+
+### Manipulate Data & Plot
+```{r, echo = T, warning = F, message = F, fig.width=10, fig.height=12}
+
+# Data Subset
+Plate_1_and_2      <- plate_data %>% filter(Plate %in% c(1,2) & Date == "2024-03-04")
+Plate_1_and_2_data <- process_ELISA_data(DF = Plate_1_and_2, NEGATIVE_CTRL = "cl204", POSITIVE_CTRL = "WT_EL4")
+
+DATA <- Plate_1_and_2_data
+
+# Data Processing
+plotting_data_main   <- process_data_for_plot(DATA)
+plotting_means       <- prepare_plotting_means(data = plotting_data_main)
+stat_significance_dt <- process_statistical_analysis(plotting_means, "CL_NAME_ON_PLOT", "Relative_Intensity_mean")
+plotting_stats       <- prepare_plotting_stats(DATA, stat_significance_dt)
+
+kable(stat_significance_dt)
+
+# Data Plotting
+X_AXIS <- "Relative IL-2 secretion"
+FONT   <- "Helvetica"
+SIZE   <- 25
+POINTS <- 5
+TEXT   <- 8
+save   <- TRUE
+ZOOM_LOC_X <- 0.2
+
+
+
+rel_sec_plot <- ggplot(data = plotting_stats, aes(x = Relative_Intensity_mean, y = CL_NAME_ON_PLOT, fill = PLOTTING_COLOR, group = rev(CONDITION))) +
+    geom_col(position = position_dodge(width = 0.7), aes(color = PLOTTING_COLOR), width = 0.68, alpha = 0.3) +
+    geom_errorbar(data = plotting_stats, aes(y = CL_NAME_ON_PLOT,
+                                             xmin = Relative_Intensity_mean - Relative_Intensity_sem,
+                                             xmax = Relative_Intensity_mean + Relative_Intensity_sem),
+                  linewidth = .75, position = position_dodge(width = 0.5), width = 0.25) +
+    geom_point(data = plotting_means, aes(x = Relative_Intensity_mean, y = CL_NAME_ON_PLOT), 
+               shape = 21, size = POINTS, position = position_jitterdodge(dodge.width = 0.5, jitter.width = 0.4, seed = 750), 
+               show.legend = FALSE) +
+    geom_text(data = plotting_stats, aes(x = max(Relative_Intensity_mean) + 0.11, y = CL_NAME_ON_PLOT, label = significance), 
+              hjust = .5, vjust = 1, angle = 90) +
+    scale_fill_manual(name  = "CL_NAME_ON_PLOT", values = plotting_stats$PLOTTING_COLOR, breaks = plotting_stats$PLOTTING_COLOR, 
+                      labels = ifelse(plotting_stats$CONDITION == "UNSTIM", 
+                                      paste0("- ", plotting_stats$STIMULANT), 
+                                      paste0("+ ", plotting_stats$STIMULANT))) +
+    scale_color_manual(name = "CL_NAME_ON_PLOT", values = plotting_stats$PLOTTING_COLOR, breaks = plotting_stats$PLOTTING_COLOR, 
+                       labels = ifelse(plotting_stats$CONDITION == "UNSTIM", 
+                                       paste0("- ", plotting_stats$STIMULANT), 
+                                       paste0("+ ", plotting_stats$STIMULANT))) +
+    labs(x = X_AXIS, y = "") +
+    guides(color = "none", fill = guide_legend(reverse = TRUE, ncol = 1)) +
+    theme_cowplot(font_size = SIZE, font_family = FONT) +
+    theme(axis.text.x       = element_text(size = SIZE, angle = 0, vjust = 0.6),
+          axis.title.y      = element_blank(),
+          legend.position   = "right",
+          legend.title      = element_blank(),
+          legend.text       = element_text(size = SIZE),
+          legend.key.size   = unit(9, "mm"),
+          panel.spacing.x   = unit(-5, "cm"),
+          strip.text        = element_text(hjust = 0, face = "bold")) +
+  facet_zoom(xlim = c(0, ZOOM_LOC_X), zoom.data = ifelse(a <= ZOOM_LOC_X, NA, FALSE))
+
+rel_sec_plot
+
+```
+
+```{r, echo = T, warning = F, message = F, fig.width=10, fig.height=12}
+
+# Data Subset
+Plate_3      <- plate_data %>% filter(Plate == 3 & Date == "2024-03-04")
+Plate_3_data <- process_ELISA_data(DF = Plate_3, NEGATIVE_CTRL = "cl204", POSITIVE_CTRL = "cl069")
+
+DATA <- Plate_3_data
+
+# Data Processing
+plotting_data_main   <- process_data_for_plot(DATA)
+plotting_means       <- prepare_plotting_means(data = plotting_data_main)
+stat_significance_dt <- process_statistical_analysis(plotting_means, "CL_NAME_ON_PLOT", "Relative_Intensity_mean")
+plotting_stats       <- prepare_plotting_stats(DATA, stat_significance_dt)
+
+kable(stat_significance_dt)
+
+# Data Plotting
+X_AXIS <- "Relative IL-2 secretion"
+FONT   <- "Helvetica"
+SIZE   <- 25
+POINTS <- 5
+TEXT   <- 8
+save   <- TRUE
+ZOOM_LOC_X <- 0.2
+
+rel_sec_plot_zoom <- ggplot(data = plotting_stats, aes(x = Relative_Intensity_mean, y = CL_NAME_ON_PLOT, fill = PLOTTING_COLOR, group = rev(CONDITION))) +
+    geom_col(position = position_dodge(width = 0.7), aes(color = PLOTTING_COLOR), width = 0.68, alpha = 0.3) +
+    geom_errorbar(data = plotting_stats, aes(y = CL_NAME_ON_PLOT,
+                                             xmin = Relative_Intensity_mean - Relative_Intensity_sem,
+                                             xmax = Relative_Intensity_mean + Relative_Intensity_sem),
+                  linewidth = .75, position = position_dodge(width = 0.5), width = 0.25) +
+    geom_point(data = plotting_means, aes(x = Relative_Intensity_mean, y = CL_NAME_ON_PLOT), 
+               shape = 21, size = POINTS, position = position_jitterdodge(dodge.width = 0.5, jitter.width = 0.4, seed = 750), 
+               show.legend = FALSE) +
+    geom_text(data = plotting_stats, aes(x = max(Relative_Intensity_mean) + 0.11, y = CL_NAME_ON_PLOT, label = significance), 
+              hjust = .5, vjust = 1, angle = 90) +
+    scale_fill_manual(name  = "CL_NAME_ON_PLOT", values = plotting_stats$PLOTTING_COLOR, breaks = plotting_stats$PLOTTING_COLOR, 
+                      labels = ifelse(plotting_stats$CONDITION == "UNSTIM", 
+                                      paste0("- ", plotting_stats$STIMULANT), 
+                                      paste0("+ ", plotting_stats$STIMULANT))) +
+    scale_color_manual(name = "CL_NAME_ON_PLOT", values = plotting_stats$PLOTTING_COLOR, breaks = plotting_stats$PLOTTING_COLOR, 
+                       labels = ifelse(plotting_stats$CONDITION == "UNSTIM", 
+                                       paste0("- ", plotting_stats$STIMULANT), 
+                                       paste0("+ ", plotting_stats$STIMULANT))) +
+    labs(x = X_AXIS, y = "") +
+    guides(color = "none", fill = guide_legend(reverse = TRUE, ncol = 1)) +
+    theme_cowplot(font_size = SIZE, font_family = FONT) +
+    theme(axis.text.x       = element_text(size = SIZE, angle = 0, vjust = 0.6),
+          axis.title.y      = element_blank(),
+          legend.position   = "right",
+          legend.title      = element_blank(),
+          legend.text       = element_text(size = SIZE),
+          legend.key.size   = unit(9, "mm"),
+          panel.spacing.x   = unit(-5, "cm"),
+          strip.text        = element_text(hjust = 0, face = "bold")) +
+  facet_zoom(xlim = c(0, ZOOM_LOC_X), zoom.data = ifelse(a <= ZOOM_LOC_X, NA, FALSE))
+
+rel_sec_plot_zoom
+
+```
+
+
+```{r, echo = F, warning = F, message = F}
+library(pacman)
+pacman::p_load(data.table, ggplot2, lubridate, stringr, ggpubr, dplyr, cowplot, readxl, scales, knitr, tidyr)
+
+################################################################################
+
+# SETTINGS
+save   <- F
+figure <- "Figure 4/4F/"
+
+################################################################################
+
+# PREPROCESSING
+Input_Directory <- file.path("/Volumes/TAYLOR-LAB/Synthetic Myddosome Paper/6_Manuscript/Source files/", figure)
+NAME_KEY        <- fread("~/Documents/Github/Analysis_Synthethic_Myddosome/FigureScripts/Figure 4 & S6/Figure_4_ELISA_CL_KEY.csv", header = T) 
+
+# load functions
+source("~/Documents/Github/Analysis_Synthethic_Myddosome/FigureScripts/functions.R")
+
+# process ELISA
+plate_data_raw <- ELISA_Fx(Input_Directory, Output_Directory)
+plate_data     <- left_join(plate_data_raw, NAME_KEY)
+plate_data     <- plate_data %>% filter(CELL_LINE != "NA") %>% unique()
+
+# ensure correct column type assignment
+plate_data$CONDITION <- as.factor(plate_data$CONDITION)
+
+################################################################################
+# subset and normalize the Dose Response Data
+
+plotting_data <- plate_data %>% group_by(CELL_LINE, CL_NAME_ON_PLOT, STIM_DAY, CONDITION, STIM_CONCENTRATION, Date, Plate)
+
+baseline <- plotting_data %>%
+  group_by(Plate) %>%
+  summarise(baseline_control_value = min(Concentration))
+
+plotting_data <- left_join(plotting_data, baseline) %>%
+  mutate(Concentration_REDUCED = case_when(!is.na(baseline_control_value) ~ Concentration - baseline_control_value, TRUE ~ Concentration))
+
+# Baseline-corrected per cell line, per condition, per stimulation and retrieve the max values to normalize for day-to-day differences.
+control_mean_per_day <- plotting_data %>%
+  group_by(CELL_LINE, CL_NAME_ON_PLOT, CONDITION, STIM_CONCENTRATION, Date, STIM_DAY, Plate) %>%
+  reframe(Concentration_REDUCED = Concentration_REDUCED) %>%
+  ungroup() %>%
+  group_by(STIM_DAY) %>%
+  reframe(control_MEASUREMENT = max(Concentration_REDUCED))
+
+# Normalize the baseline-corrected values by dividing each value by the max value per stimulation day.
+plotting_data <- left_join(plotting_data, control_mean_per_day) %>%
+  group_by(CELL_LINE, CL_NAME_ON_PLOT, CONDITION, STIM_CONCENTRATION, Date, STIM_DAY) %>%
+  mutate(Concentration_NORMALIZED = case_when(Concentration_REDUCED / control_MEASUREMENT < 0 ~ 0, TRUE ~ Concentration_REDUCED / control_MEASUREMENT),
+         Relative_Intensity_mean = mean(Concentration_NORMALIZED)) %>%
+  ungroup()
+
+# Calculate the normalized means per grouped variables
+plotting_means <- plotting_data %>%
+  group_by(CELL_LINE, CL_NAME_ON_PLOT, 
+           STIM_CONCENTRATION,
+           CONDITION,
+           Date, STIM_DAY, Plate,
+           PLOTTING_COLOR) %>%
+  distinct(Relative_Intensity_mean, STIM_DAY, .keep_all = TRUE) %>%
+  ungroup()
+
+
+# Perform a t-test to compare the means per cell line per concentration
+concentration_values <- unique(plotting_means$STIM_CONCENTRATION)
+stat.test_list       <- list()
+
+for (concentration_val in concentration_values) {
+  concentration_data <- plotting_means %>% filter(STIM_CONCENTRATION == concentration_val)
+  stat_test_result   <- ggpubr::compare_means(Relative_Intensity_mean ~ CL_NAME_ON_PLOT, data = concentration_data, method = "t.test") %>% mutate(STIM_CONCENTRATION = concentration_val)
+  stat.test_list[[as.character(concentration_val)]] <- stat_test_result
+}
+stat.test <- do.call(rbind, stat.test_list)
+
+# Convert the STIM_CONCENTRATION column to numeric
+stat.test$STIM_CONCENTRATION <- as.numeric(as.character(stat.test$STIM_CONCENTRATION))
+
+# Order the dataframe based on the STIM_CONCENTRATION column
+stat.test <- stat.test[order(-stat.test$STIM_CONCENTRATION), ]
+
+# Create a data frame with unique CL_NAME_ON_PLOT and corresponding PLOTTING_COLOR
+color_mapping <- unique(plotting_means[, c("CL_NAME_ON_PLOT", "PLOTTING_COLOR")])
+
+# Merge the plotting_means data frame with the color_mapping data frame
+plotting_means_merged <- plotting_means %>%
+  left_join(color_mapping) %>%
+  mutate(CL_NAME_ON_PLOT = factor(CL_NAME_ON_PLOT, levels = unique(plotting_means$CL_NAME_ON_PLOT)))
+
+# Calculate the mean of means and standard error of the mean per cell line and per condition
+plotting_stats <- plotting_data %>%
+  group_by(CELL_LINE, CL_NAME_ON_PLOT, STIM_CONCENTRATION, PLOTTING_COLOR) %>%
+  summarise(Relative_Intensity_sem  = sem(Relative_Intensity_mean),
+            Relative_Intensity_mean = mean(Relative_Intensity_mean)) %>%
+  distinct(.keep_all = TRUE)
+
+################################################################################
+
+# Deriving breaks from unique STIM_CONCENTRATION values
+concentration_breaks <- sort(unique(plotting_stats$STIM_CONCENTRATION))
+```
+
+
+```{r, echo = F, warning = F, message = F}
+# Plot
+figure_4F_Dose_Response_ELISA <- 
+  ggplot(data = plotting_stats, aes(x = STIM_CONCENTRATION, y = Relative_Intensity_mean, group = CL_NAME_ON_PLOT, fill = CL_NAME_ON_PLOT)) +
+  geom_ribbon(aes(x = STIM_CONCENTRATION, 
+                  ymin = Relative_Intensity_mean - Relative_Intensity_sem,
+                  ymax = Relative_Intensity_mean + Relative_Intensity_sem,
+                  fill = CL_NAME_ON_PLOT),
+              alpha = 0.4, show.legend = F) +
+  geom_path(size = 0.75, aes(col = CL_NAME_ON_PLOT)) +
+  geom_text(data = subset(plotting_stats, STIM_CONCENTRATION == max(STIM_CONCENTRATION)), 
+            aes(label    = gsub("CHARMS-sT6BM-", "", CL_NAME_ON_PLOT), 
+                x        = max(STIM_CONCENTRATION), 
+                y        = Relative_Intensity_mean,
+                fontface = "bold"),
+            color = setNames(unique(plotting_means_merged$PLOTTING_COLOR), unique(plotting_means_merged$CL_NAME_ON_PLOT)),
+            hjust = -0.1, vjust = 0.5, size = 12) +
+  labs(x = "IL-1 Conc. [ng/mL]", 
+       y = "Relative Response") +
+  scale_fill_manual(name  = "CL_NAME_ON_PLOT", values = setNames(unique(plotting_means_merged$PLOTTING_COLOR), unique(plotting_means_merged$CL_NAME_ON_PLOT))) +
+  scale_color_manual(name = "CL_NAME_ON_PLOT", values = setNames(unique(plotting_means_merged$PLOTTING_COLOR), unique(plotting_means_merged$CL_NAME_ON_PLOT))) +
+  guides(color = "none", fill = guide_legend(reverse = TRUE, ncol = 1)) +
+  theme_cowplot(font_family = "Helvetica") + 
+  theme(legend.position = c(0.05,0.9),
+        legend.title = element_blank(),
+        plot.margin = unit(c(20,20,20,20), 'mm')) +
+  scale_x_log10(breaks = concentration_breaks, labels = concentration_breaks)
+
+figure_4F_Dose_Response_ELISA
+```
+
+
+#### STATISTICS
+
+##### Checking for Normal distrbution with QQ-Plots
+
+QQ plot draws the correlation between a given data and the normal distribution.
+Normal QQ plots are preferred because at larger sample sizes the Shapiro-Wilk test becomes very sensitive even to a minor deviation from normality.
+
+```{r, echo = F, warning = F, message = F, fig.dim=c(8,2)}
+pacman::p_load(tidyverse, ggpubr, rstatix)
+
+# subset the means data
+data <- plotting_means[, c("CL_NAME_ON_PLOT", "Relative_Intensity_mean", "STIM_CONCENTRATION", "PLOTTING_COLOR")]
+data$CL_NAME_ON_PLOT <- gsub("CHARMS-sT6BM-", "", x = data$CL_NAME_ON_PLOT)
+
+data$CL_NAME_ON_PLOT <- as.factor(data$CL_NAME_ON_PLOT)
+
+concentration_values <- unique(data$STIM_CONCENTRATION)
+
+# Create a list to store ggplot objects
+qq_plots <- list()
+
+for (concentration_val in concentration_values) {
+  concentration_data <- plotting_means %>% filter(STIM_CONCENTRATION == concentration_val)
+  res_aov <- aov(Relative_Intensity_mean ~ CL_NAME_ON_PLOT, data = concentration_data)
+  qq_plot <- ggqqplot(res_aov$residuals, id = FALSE) +
+    ggtitle(paste0("conc = ", concentration_val)) +
+    theme_cowplot()
+  
+  qq_plots[[as.character(concentration_val)]] <- qq_plot
+}
+
+# Combine all plots into one using facet_wrap
+combined_plot <- wrap_plots(qq_plots, ncol = length(concentration_values))
+
+# Print the combined plot
+print(combined_plot)
+
+```
+
+##### Checking for Normal distrbution with a Shapiro-Wilk Test
+
+Check normality assumption by groups. Computing Shapiro-Wilk test for each group level. If the data is normally distributed, the p-value should be greater than 0.05.
+
+```{r, echo = F, warning = F, message = F}
+
+shapiro.test_list <- list()
+
+for (concentration_val in concentration_values) {
+  
+  concentration_data <- plotting_means %>% filter(STIM_CONCENTRATION == concentration_val)
+  
+  res_aov <- aov(Relative_Intensity_mean ~ CL_NAME_ON_PLOT, data = concentration_data)
+  
+  # do we have normally distributed values?
+  # here we assume normal distribution, so p-values > 0.05 are GOOD!
+  
+  shapiro_test_result <- shapiro.test(res_aov$residuals)[["p.value"]]
+  shapiro.test_list[[as.character(concentration_val)]] <- shapiro_test_result
+}
+
+shapiro.test <- as.table(unlist(shapiro.test_list)) %>%
+  as.data.frame() %>%
+  setnames(old = c("Var1", "Freq"), new = c("STIM_CONCENTRATION", "p")) %>%
+  mutate(normally_distributed = case_when(p > 0.05 ~ T, T ~ F))
+
+shapiro.test
+
+```
+
+
+##### Checking for Homogneity of variance assumption with Levene
+
+We will use the Levene’s test to check the homogeneity of variances.
+p-value is > 0.05, which is not significant. This means that, there is not significant difference between variances across groups. Therefore, we can assume the homogeneity of variances in the different treatment groups.
+
+```{r, echo = F, warning = F, message = F}
+
+levene.test_list <- list()
+
+for (concentration_val in concentration_values) {
+  
+  concentration_data <- plotting_means %>% filter(STIM_CONCENTRATION == concentration_val)
+  
+  levene <- concentration_data %>% 
+    levene_test(Relative_Intensity_mean ~ CL_NAME_ON_PLOT) %>%
+    mutate(STIM_CONCENTRATION = concentration_val)
+  
+  levene.test_list[[as.character(concentration_val)]] <- levene$p
+}
+
+levene.test <- as.table(unlist(levene.test_list)) %>%
+  as.data.frame() %>%
+  setnames(old = c("Var1", "Freq"), new = c("STIM_CONCENTRATION", "p")) %>%
+  mutate(equal_variances = case_when(p > 0.05 ~ T, T ~ F))
+
+levene.test
+```
+
+
+- 'Dn' and 'DFd' indicate the degrees of freedom in the numerator and the denominator respectively
+- 'F' indicates that we are comparing to an F-distribution (F-test) and F is the obtained F-statistic value
+- 'p' specifies the p-value
+- 'ges' is the generalized effect size (generalized eta squared)
+
+'ges' measures the proportion of the variability in the outcome variable (here Relative_Intensity_mean) that can be explained in terms of the predictor (here, CL_NAME_ON_PLOT). An effect size of 0.356 means that 35.6% of the change in the weight can be accounted for the treatment conditions. High concentrations have effect sizes of up to 0.968. 
+
+Since several concentrations have significant p-values below 0.05, there are indeed significant differences between groups.
+
+
+##### One-Way ANOVA & Tukey
+
+###### ANOVA
+
+Since our values show homogenous variances, we can safely continue to perform a normal ANOVA test.
+
+
+```{r, echo = F, warning = F, message = F}
+
+anova_test_results <- data %>%
+  group_by(STIM_CONCENTRATION) %>%
+  anova_test(Relative_Intensity_mean ~ CL_NAME_ON_PLOT)
+
+# anova_test_results
+subset(anova_test_results, p < 0.05)
+
+```
+
+###### Tukey post-hoc
+
+A significant one-way ANOVA is generally followed up by Tukey post-hoc tests to perform multiple pairwise comparisons between groups. Key R function: tukey_hsd() [rstatix].
+
+- estimate: estimate of the difference between means of the two groups
+- conf.low, conf.high: the lower and the upper end point of the confidence interval at 95% (default)
+- p.adj: p-value after adjustment for the multiple comparisons.
+
+```{r, echo = F, warning = F, message = F}
+
+pwc_tukey_hsd <- data %>% 
+  group_by(STIM_CONCENTRATION) %>%
+  tukey_hsd(Relative_Intensity_mean ~ CL_NAME_ON_PLOT)
+
+# pwc_tukey_hsd[,c("STIM_CONCENTRATION", "p.adj", "p.adj.signif", "group1", "group2")]
+
+subset(pwc_tukey_hsd[,c("STIM_CONCENTRATION", "p.adj", "p.adj.signif", "group1", "group2")], p.adj < 0.05)
+
+
+```
+
+##### Welch-ANOVA & Games-Howell
+
+###### Welch ANOVA
+
+In a situation where the homogeneity of variance assumption is not met, we can compute the Welch one-way ANOVA test using the function welch_anova_test()[rstatix package]. This test does not require the assumption of equal variances. It should be performed if the Levene test was significant.
+
+```{r, echo = F, warning = F, message = F}
+
+welch_anova_test_results <- data %>% 
+  group_by(STIM_CONCENTRATION) %>%
+  welch_anova_test(Relative_Intensity_mean ~ CL_NAME_ON_PLOT)
+
+# welch_anova_test_results
+
+subset(welch_anova_test_results, p < 0.05)
+
+```
+
+
+###### Games-Howell
+
+Following the Welch test, the Games-Howell post hoc test or pairwise t-tests (with no assumption of equal variances) can be used to compare all possible combinations of group differences.
+
+```{r, echo = F, warning = F, message = F}
+pwc_games_howell <- data %>% 
+  group_by(STIM_CONCENTRATION) %>%
+  games_howell_test(Relative_Intensity_mean ~ CL_NAME_ON_PLOT)
+
+subset(pwc_games_howell[,c("STIM_CONCENTRATION", "p.adj", "p.adj.signif", "group1", "group2")], p.adj < 0.05)
+
+```
+```{r, echo = F, warning = F, message = F}
+
+pwc_games_howell <- pwc_games_howell %>% add_xy_position(x = "CL_NAME_ON_PLOT") %>% left_join(data)
+
+ggboxplot(data, x = "CL_NAME_ON_PLOT", y = "Relative_Intensity_mean", 
+          fill = "PLOTTING_COLOR") +
+  stat_pvalue_manual(pwc_games_howell, hide.ns = T) +
+  labs(caption = get_pwc_label(pwc_games_howell)) +
+  facet_wrap(~STIM_CONCENTRATION, nrow = 1) +
+  scale_fill_identity()
+
+```
+
+```{r, echo = F, warning = F, message = F}
+
+pwc_pairwise_t_test <- data %>% 
+  group_by(STIM_CONCENTRATION) %>%
+  pairwise_t_test(
+    Relative_Intensity_mean ~ CL_NAME_ON_PLOT, 
+    pool.sd = FALSE)
+
+# pwc_pairwise_t_test[,c("STIM_CONCENTRATION", "p.adj", "p.adj.signif", "group1", "group2")]
+
+subset(pwc_pairwise_t_test[,c("STIM_CONCENTRATION", "p.adj", "p.adj.signif", "group1", "group2")], p.adj < 0.05)
+
+```
+
+```{r, echo = F, warning = F, message = F}
+
+pwc_pairwise_t_test <- pwc_pairwise_t_test %>% add_xy_position(x = "CL_NAME_ON_PLOT") %>% left_join(data)
+
+ggboxplot(data, x = "CL_NAME_ON_PLOT", y = "Relative_Intensity_mean", 
+          fill = "PLOTTING_COLOR") +
+  stat_pvalue_manual(pwc_pairwise_t_test, hide.ns = T) +
+  labs(caption = get_pwc_label(pwc_pairwise_t_test)) +
+  facet_wrap(~STIM_CONCENTRATION, nrow = 1) +
+  scale_fill_identity()
+
+```
+
+
+
+##### Kruskal-Wallis
+
+Kruskal-Wallis test is a non-parametric alternative to the one-way ANOVA test. It extends the two-samples Wilcoxon test in the situation where there are more than two groups to compare. It’s recommended when the assumptions of one-way ANOVA test are not met.
+
+```{r, echo = F, warning = F, message = F}
+kruskal_test_results <- data %>%
+  group_by(STIM_CONCENTRATION) %>%
+  kruskal_test(Relative_Intensity_mean ~ CL_NAME_ON_PLOT) %>%
+  mutate(p.adj.signif = case_when(p < 0.05 ~ "*", T ~ ""))
+
+kruskal_test_results
+```
+
+From the output of the Kruskal-Wallis test, we know that there are significant differences between groups, but we don’t know which pairs of groups are different.
+
+A significant Kruskal-Wallis test is generally followed up by Dunn’s test to identify which groups are different. It’s also possible to use the Wilcoxon’s test to calculate pairwise comparisons between group levels with corrections for multiple testing.
+
+Compared to the Wilcoxon’s test, the Dunn’s test takes into account the rankings used by the Kruskal-Wallis test. It also does ties adjustments.
+
+```{r, echo = F, warning = F, message = F}
+pwc_dunn <- data %>% 
+  group_by(STIM_CONCENTRATION) %>%
+  dunn_test(Relative_Intensity_mean ~ CL_NAME_ON_PLOT) %>%
+  filter(p.adj < 0.05)
+
+pwc_dunn[,c("STIM_CONCENTRATION", "p.adj", "p.adj.signif", "group1", "group2")]
+```
+
+```{r, echo = F, warning = F, message = F}
+
+pwc_dunn <- pwc_dunn %>% add_xy_position(x = "CL_NAME_ON_PLOT") %>% left_join(data)
+
+
+ggboxplot(data, x = "CL_NAME_ON_PLOT", y = "Relative_Intensity_mean", 
+          fill = "PLOTTING_COLOR") +
+  stat_pvalue_manual(pwc_dunn, hide.ns = TRUE) +
+  labs(caption = get_pwc_label(pwc_dunn)) +
+  facet_wrap(~STIM_CONCENTRATION, nrow = 1) +
+  scale_fill_identity()
+
+```
+
+Pairwise comparisons using Wilcoxon’s test:
+
+```{r, echo = F, warning = F, message = F}
+pwc_wilcox <- data %>% 
+  group_by(STIM_CONCENTRATION) %>%
+  wilcox_test(Relative_Intensity_mean ~ CL_NAME_ON_PLOT)
+
+pwc_wilcox[,c("STIM_CONCENTRATION", "p.adj", "p.adj.signif", "group1", "group2")]
+```
+
+```{r, echo = F, warning = F, message = F}
+
+pwc_wilcox <- pwc_wilcox %>% add_xy_position(x = "CL_NAME_ON_PLOT") %>% left_join(data)
+
+ggboxplot(data, x = "CL_NAME_ON_PLOT", y = "Relative_Intensity_mean", 
+          fill = "PLOTTING_COLOR") +
+  stat_pvalue_manual(pwc_wilcox, hide.ns = T) +
+  labs(caption = get_pwc_label(pwc_wilcox)) +
+  facet_wrap(~STIM_CONCENTRATION, nrow = 1) +
+  scale_fill_identity()
+
+```
+
+
+
+
+
+
+
+
+
+
+
+

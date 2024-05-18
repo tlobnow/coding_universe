@@ -1,0 +1,107 @@
+ID,INFO,col,use,construct,pMJTL_no,cell line no,Conc. [ng/µL],Conc. [µg/µL],Volume needed (need 6.3 total µg plasmid DNA + 2.1 µg Plasmid),NOTE,260/280,HEK Transfection,EL-4 cl204 Transduction,FACS Date,Expression,FACS Yield,UNSORTED FROZEN DATE,FROZEN DATE,TIRF LCI DATE #1,TIRF LCI DATE #2,TIRF LCI DATE #3,ELISA STIM #1,ELISA STIM #2,ELISA STIM #3,ELISA ASSAY DATE,STATUS,NAME_2,UNIPROT_ID,Organism
+Amyloid_1,"Amyloid_1, Actinobacteria",A,,pHRdSV_BASS1_66307 (38-139)_MyD88_IRAK1_t6bd_GFP,-,-,589.6,0.5896,,Seq okay,1.89,,,,,,,,,,,,,,,,Amyloid_1,Q9RDG0,Streptomyces_coelicolor_(strain_ATCC_BAA-471_/_A3(2)_/_M145)
+Amyloid_1,"Amyloid_1, Actinobacteria",B,x,pHRdSV_BASS1_66307 (38-139)_MyD88_IRAK1_t6bd_GFP,pMJTL778,cl405,628.5,0.6285,3.34,Seq okay,1.89,20240109,20240112,20240117,,170.000,,20240122,,,,20240125,,,,,Amyloid_1,Q9RDG0,Streptomyces_coelicolor_(strain_ATCC_BAA-471_/_A3(2)_/_M145)
+Amyloid_1,"Amyloid_1, Actinobacteria",C,,pHRdSV_BASS1_66307 (38-139)_MyD88_IRAK1_t6bd_GFP,-,-,571.7,0.5717,,Seq okay,1.75,,,,,,,,,,,,,,,,Amyloid_1,Q9RDG0,Streptomyces_coelicolor_(strain_ATCC_BAA-471_/_A3(2)_/_M145)
+Amyloid_1,"Amyloid_1, Actinobacteria",D,,pHRdSV_BASS1_66307 (38-139)_MyD88_IRAK1_t6bd_GFP,-,-,571.1,0.5711,,Seq okay,1.80,,,,,,,,,,,,,,,,Amyloid_1,Q9RDG0,Streptomyces_coelicolor_(strain_ATCC_BAA-471_/_A3(2)_/_M145)
+Amyloid_1,"Amyloid_1, Actinobacteria",E,,pHRdSV_BASS1_66307 (38-139)_MyD88_IRAK1_t6bd_GFP,-,-,737.2,0.7372,,Seq okay,1.89,,,,,,,,,,,,,,,,Amyloid_1,Q9RDG0,Streptomyces_coelicolor_(strain_ATCC_BAA-471_/_A3(2)_/_M145)
+EDLD_1,Human,A,x,pHRdSV_EDLD_1_TIR_IRAK1_t6bd_GFP,pMJTL790,cl375,451.4,0.4514,4.65,Seq okay,1.82,20240106,20240108,20240117,,,,20240122,,,,20240125,,,,,EDLD_1,MYD88_HUMAN,Homo_sapiens
+EDLD_2,Chicken,A,,pHRdSV_EDLD_2_TIR_IRAK1_t6bd_GFP,-,-,603.0,0.603,3.48,Seq okay,1.83,,,,,,,,,,,,,,,,EDLD_2,MYD88_CHICK,Gallus_gallus
+EDLD_2,Chicken,B,x,pHRdSV_EDLD_2_TIR_IRAK1_t6bd_GFP,pMJTL749,cl376,747.4,0.7474,2.81,Seq okay,1.90,,,,,,,,,,,,,,,,EDLD_2,MYD88_CHICK,Gallus_gallus
+EDLD_2,Chicken,C,,pHRdSV_EDLD_2_TIR_IRAK1_t6bd_GFP,-,-,578.6,0.5786,3.63,Seq okay,1.77,,,,,,,,,,,,,,,,EDLD_2,MYD88_CHICK,Gallus_gallus
+EDLD_2,Chicken,D,,pHRdSV_EDLD_2_TIR_IRAK1_t6bd_GFP,-,-,686.3,0.6863,3.06,Seq okay,1.92,,,,,,,,,,,,,,,,EDLD_2,MYD88_CHICK,Gallus_gallus
+EDLD_2,Chicken,E,,pHRdSV_EDLD_2_TIR_IRAK1_t6bd_GFP,-,-,633.1,0.6331,3.32,Seq okay,1.91,,,,,,,,,,,,,,,,EDLD_2,MYD88_CHICK,Gallus_gallus
+EDLD_3,Zebrafish,A,x,pHRdSV_EDLD_3_TIR_IRAK1_t6bd_GFP,pMJTL750,cl377,603.6,0.6036,3.48,Seq okay,1.89,20240106,20240108,20240117,,,,20240126,,,,,,,,,EDLD_3,MYD88_DANRE,Danio_rerio
+EDLD_4,African Clawed Frog,A,x,pHRdSV_EDLD_4_TIR_IRAK1_t6bd_GFP,pMJTL751,cl378,455.8,0.4558,4.61,Seq okay,1.83,,,,,,,,,,,,,,,,EDLD_4,MYD88_XENTR,Xenopus_laevis
+EDLD_5,Green Anole,A,,pHRdSV_EDLD_5_TIR_IRAK1_t6bd_GFP,-,-,530.4,0.5304,,,,,,,,,,,,,,,,,,,EDLD_5,R4GCS1_ANOCA,Anolis_carolinensis
+EDLD_5,Green Anole,B,x,pHRdSV_EDLD_5_TIR_IRAK1_t6bd_GFP,pMJTL752,cl379,557.2,0.5572,3.77,Seq okay,,,,,,,,,,,,,,,,,EDLD_5,R4GCS1_ANOCA,Anolis_carolinensis
+EDLD_6,Fruit Fly,A,x,pHRdSV_EDLD_6_TIR_IRAK1_t6bd_GFP,pMJTL753,cl380,644.7,0.6447,3.26,Seq okay,1.88,20240109,20240112,20240117,,,,20240122,,,,20240125,,,,,EDLD_6,Q7K105_DROME,Drosophila_melanogaster
+EDLD_7,Throat Threadworm,A,,pHRdSV_EDLD_7_TIR_IRAK1_t6bd_GFP,-,-,516.3,0.5163,,,1.79,,,,,,,,,,,,,,,,EDLD_7,A0A183E1S8_9BILA,Gongylonema_pulchrum
+EDLD_7,Throat Threadworm,B,x,pHRdSV_EDLD_7_TIR_IRAK1_t6bd_GFP,pMJTL754,cl381,603.8,0.6038,3.48,Seq okay,,,,,,,,,,,,,,,,,EDLD_7,A0A183E1S8_9BILA,Gongylonema_pulchrum
+EDLD_8,Roundworm,A,,pHRdSV_EDLD_8_TIR_IRAK1_t6bd_GFP,-,-,528.1,0.5281,,,1.78,,,,,,,,,,,,,,,,EDLD_8,G5EFS1_CAEEL,Caenorhabditis_elegans
+EDLD_8,Roundworm,B,x,pHRdSV_EDLD_8_TIR_IRAK1_t6bd_GFP,pMJTL755,cl382,661.2,0.6612,3.18,Seq okay,,,,,,,,,,,,,,,,,EDLD_8,G5EFS1_CAEEL,Caenorhabditis_elegans
+EDLD_9,A species of ostracod (Seed Shrimp),A,,pHRdSV_EDLD_9_TIR_IRAK1_t6bd_GFP,-,-,501.9,0.5019,,,1.77,,,,,,,,,,,,,,,,EDLD_9,A0A7R8X875_9CRUS,Darwinula_stevensoni
+EDLD_9,A species of ostracod (Seed Shrimp),B,x,pHRdSV_EDLD_9_TIR_IRAK1_t6bd_GFP,pMJTL756,cl383,756.2,0.7562,2.78,Seq okay,1.83,20240109,20240112,20240117,,,,20240122,,,,20240125,,,,,EDLD_9,A0A7R8X875_9CRUS,Darwinula_stevensoni
+EDLD_10,Cauliflower Coral,A,x,pHRdSV_EDLD_10_TIR_IRAK1_t6bd_GFP,pMJTL757,cl384,787.5,0.7875,2.67,Seq okay,1.85,20240109,20240112,20240117,,,,20240122,,,,,,,,,EDLD_10,A0A3M6TVW5_POCDA,Pocillopora_damicornis
+EDLD_10,Cauliflower Coral,B,,pHRdSV_EDLD_10_TIR_IRAK1_t6bd_GFP,-,-,646.4,0.6464,,,1.84,,,,,,,,,,,,,,,,EDLD_10,A0A3M6TVW5_POCDA,Pocillopora_damicornis
+EDLD_11,Annelid worm (No specific common name),B,x,pHRdSV_EDLD_11_TIR_IRAK1_t6bd_GFP,pMJTL758,cl385,669.1,0.6691,3.14,Seq okay,1.84,20240112,20240115,20240122,,1.1e+5,20240119,20240129,,,,,,,,,EDLD_11,NA,Anneissia_japonica
+EDLD_12,Owl Limpet,A,x,pHRdSV_EDLD_12_TIR_IRAK1_t6bd_GFP,pMJTL759,cl386,744.7,0.7447,2.82,Seq okay,1.82,20240112,20240115,20240122,,7.1e+4,20240119,20240129,,,,,,,,,EDLD_12,V4B650_LOTGI,Lottia_gigantea
+EDLD_13,Purple Sea Urchin,A,x,pHRdSV_EDLD_13_TIR_IRAK1_t6bd_GFP,pMJTL760,cl387,673.6,0.6736,3.12,Seq okay,1.80,20240112,20240115,20240122,,3.1e+4,20240119,20240129,,,,,,,,,EDLD_13,A0A7M7PU22_STRPU,Strongylocentrotus_purpuratus
+EDLD_13,Purple Sea Urchin,B,,pHRdSV_EDLD_13_TIR_IRAK1_t6bd_GFP,-,-,570.7,0.5707,,,1.74,,,,,,,,,,,,,,,,EDLD_13,A0A7M7PU22_STRPU,Strongylocentrotus_purpuratus
+EDLD_14,Hydra,A,x,pHRdSV_EDLD_14_TIR_IRAK1_t6bd_GFP,pMJTL761,cl388,611.2,0.6112,3.44,Seq okay,1.84,20240112,20240115,20240122,,4.3e+4,20240119,20240129,,,,,,,,,EDLD_14,T2M667_HYDVU,Hydra_vulgaris
+EDLD_14,Hydra,B,,pHRdSV_EDLD_14_TIR_IRAK1_t6bd_GFP,-,-,570.7,0.5707,,,1.80,,,,,,,,,,,,,,,,EDLD_14,T2M667_HYDVU,Hydra_vulgaris
+EDLD_15,Florida Lancelet (or Florida Amphioxus),A,x,pHRdSV_EDLD_15_TIR_IRAK1_t6bd_GFP,pMJTL762,cl389,746.2,0.7462,2.81,Seq okay,1.83,,,,,,,,,,,,,,,,EDLD_15,A0A9J7KIN6_BRAFL,Branchiostoma_floridae
+EDLD_15,Florida Lancelet (or Florida Amphioxus),B,,pHRdSV_EDLD_15_TIR_IRAK1_t6bd_GFP,-,-,585.3,0.5853,,,1.79,,,,,,,,,,,,,,,,EDLD_15,A0A9J7KIN6_BRAFL,Branchiostoma_floridae
+EDLD_16,Great Barrier Reef Sponge,A,,pHRdSV_EDLD_16_TIR_IRAK1_t6bd_GFP,-,-,926.2,0.9262,,,1.83,,,,,,,,,,,,,,,,EDLD_16,E5KCC5_AMPQE,Amphimedon_queenslandica
+EDLD_16,Great Barrier Reef Sponge,B,x,pHRdSV_EDLD_16_TIR_IRAK1_t6bd_GFP,pMJTL763,cl390,1002.8,1.0028,2.09,Seq okay,1.85,,,,,,,,,,,,,,,,EDLD_16,E5KCC5_AMPQE,Amphimedon_queenslandica
+EDLD_17,European Centipede,A,x,pHRdSV_EDLD_17_TIR_IRAK1_t6bd_GFP,pMJTL764,cl391,780.1,0.7801,2.69,Seq okay,1.86,,,,,,,,,,,,,,,,EDLD_17,T1J4H3_STRMM,Strigamia_maritima
+EDLD_17,European Centipede,B,,pHRdSV_EDLD_17_TIR_IRAK1_t6bd_GFP,-,-,732.8,0.7328,,,1.87,,,,,,,,,,,,,,,,EDLD_17,T1J4H3_STRMM,Strigamia_maritima
+EDLD_18,Sponge,A,x,pHRdSV_EDLD_18_TIR_IRAK1_t6bd_GFP,pMJTL765,cl392,756.4,0.7564,2.78,Seq okay,1.81,,,,,,,,,,,,,,,,EDLD_18,Q9N9X2_GEOCY,Geodia_cydonium
+EDLD_18,Sponge,B,,pHRdSV_EDLD_18_TIR_IRAK1_t6bd_GFP,-,-,594.1,0.5941,,,1.76,,,,,,,,,,,,,,,,EDLD_18,Q9N9X2_GEOCY,Geodia_cydonium
+EDLD_19,Spanish Slug,A,x,pHRdSV_EDLD_19_TIR_IRAK1_t6bd_GFP,pMJTL766,cl393,944.1,0.9441,2.22,Seq okay,1.87,,,,,,,,,,,,,,,,EDLD_19,A0A0B6Z5I4_9EUPU,Arion_vulgaris
+EDLD_19,Spanish Slug,B,,pHRdSV_EDLD_19_TIR_IRAK1_t6bd_GFP,-,-,789.5,0.7895,,,1.85,,,,,,,,,,,,,,,,EDLD_19,A0A0B6Z5I4_9EUPU,Arion_vulgaris
+EDLD_20,California Two-Spot Octopus,A,,pHRdSV_EDLD_20_TIR_IRAK1_t6bd_GFP,-,-,596.2,0.5962,,,1.75,,,,,,,,,,,,,,,,EDLD_20,A0A0L8FRT2_OCTBM,Octopus_bimaculoides
+EDLD_20,California Two-Spot Octopus,B,x,pHRdSV_EDLD_20_TIR_IRAK1_t6bd_GFP,pMJTL767,cl394,654.9,0.6549,3.21,Seq okay,-,,,,,,,,,,,,,,,,EDLD_20,A0A0L8FRT2_OCTBM,Octopus_bimaculoides
+EDLD_21,Eastern Oyster,A,x,pHRdSV_EDLD_21_TIR_IRAK1_t6bd_GFP,pMJTL768,cl395,925.1,0.9251,2.27,Seq okay,1.84,,,,,,,,,,,,,,,,EDLD_21,A0A8B8DWU3_CRAVI,Crassostrea_virginica
+EDLD_21,Eastern Oyster,B,,pHRdSV_EDLD_21_TIR_IRAK1_t6bd_GFP,-,-,826.3,0.8263,,,1.83,,,,,,,,,,,,,,,,EDLD_21,A0A8B8DWU3_CRAVI,Crassostrea_virginica
+EDLD_22,Placozoan,A,,pHRdSV_EDLD_22_TIR_IRAK1_t6bd_GFP,-,-,567.4,0.5674,,,1.66,,,,,,,,,,,,,,,,EDLD_22,B3RUX3_TRIAD,Trichoplax_adhaerens
+EDLD_22,Placozoan,B,x,pHRdSV_EDLD_22_TIR_IRAK1_t6bd_GFP,pMJTL769,cl396,616.5,0.6165,3.41,Seq okay,1.81,,,,,,,,,,,,,,,,EDLD_22,B3RUX3_TRIAD,Trichoplax_adhaerens
+EDLD_23,Vampire bat,A,,pHRdSV_EDLD_23_TIR_IRAK1_t6bd_GFP,-,-,592.5,0.5925,,,1.64,,,,,,,,,,,,,,,,EDLD_23,K9ISL7,Desmodus_rotundus
+EDLD_23,Vampire bat,B,x,pHRdSV_EDLD_23_TIR_IRAK1_t6bd_GFP,pMJTL770,cl397,714.2,0.7142,2.94,Seq okay,1.84,,,,,,,,,,,,,,,,EDLD_23,K9ISL7,Desmodus_rotundus
+BDLD_30,"BDLD_30, Cyanobacteria",A, ,pHRdSV_BDLD_30_TIR_IRAK1_t6bd_GFP,-,-,368.8,0.3688,5.69,,1.79,,,,,,,,,,,,,,,,BDLD_30,A0A252DUS7,Nostoc_sp_T09
+BDLD_30,"BDLD_30, Cyanobacteria",B,x,pHRdSV_BDLD_30_TIR_IRAK1_t6bd_GFP,pMJTL774,cl401,381.1,0.3811,5.51,Seq okay,1.79,,,,,,,,,,,,,,,,BDLD_30,A0A252DUS7,Nostoc_sp_T09
+BDLD_35,"BDLD_35, Deltaproteobacteria",A,x,pHRdSV_BDLD_35_TIR_IRAK1_t6bd_GFP,pMJTL772,cl399,635.8,0.6358,3.3,Seq okay,1.81,,,,,,,,,,,,,,,,BDLD_35,A0A4Q5XKK3_9DELT,Myxococcales_bacterium
+BDLD_35,"BDLD_35, Deltaproteobacteria",B, ,pHRdSV_BDLD_35_TIR_IRAK1_t6bd_GFP,-,-,549.0,0.549,3.83,,1.75,,,,,,,,,,,,,,,,BDLD_35,A0A4Q5XKK3_9DELT,Myxococcales_bacterium
+BDLD_60,Nitrospinae/Tectomicrobia group,A, ,pHRdSV_BDLD_60_TIR_IRAK1_t6bd_GFP,-,-,540.0,0.54,3.89,,1.80,,,,,,,,,,,,,,,,BDLD_60,NA,Candidatus_Entotheonella_palauensis
+BDLD_60,Nitrospinae/Tectomicrobia group,B,x,pHRdSV_BDLD_60_TIR_IRAK1_t6bd_GFP,pMJTL773,cl400,634.5,0.6345,3.31,Seq okay,1.82,,,,,,,,,,,,,,,,BDLD_60,NA,Candidatus_Entotheonella_palauensis
+BDLD_86,Bacterial symbiont,A,x,pHRdSV_BDLD_86_TIR_IRAK1_t6bd_GFP,-,-,518.6,0.5186,4.05,NOT OK!,1.73,,,,,,,,,,,,,,,,BDLD_86,W4MCI4_9BACT,Candidatus_Entotheonella_gemina
+BDLD_86,Bacterial symbiont,B, ,pHRdSV_BDLD_86_TIR_IRAK1_t6bd_GFP,pMJTL771,cl398,486.4,0.4864,4.32,Seq okay,1.75,,,,,,,,,,,,,,,,BDLD_86,W4MCI4_9BACT,Candidatus_Entotheonella_gemina
+BDLD1_1,"BDLD1, Cyanobacteria",A, ,pHRdSV_BDLD1_1_TIR_IRAK1_t6bd_GFP,-,-,410.6,0.4106,5.11,,1.83,,,,,,,,,,,,,,,,BDLD1_1,NA,Planktothrix_paucivesiculata_PCC_9631
+BDLD1_1,"BDLD1, Cyanobacteria",B,x,pHRdSV_BDLD1_1_TIR_IRAK1_t6bd_GFP,pMJTL775,cl402,487.5,0.4875,4.31,Seq okay,1.82,,,,,,,,,,,,,,,,BDLD1_1,NA,Planktothrix_paucivesiculata_PCC_9631
+BDLD1_2,"BDLD1, Cyanobacteria",A, ,pHRdSV_BDLD1_2_TIR_IRAK1_t6bd_GFP,-,-,271.7,0.2717,7.73,,1.84,,,,,,,,,,,,,,,,BDLD1_2,A0A1C0V6X5,Nostoc_sp_MBR_210
+BDLD1_2,"BDLD1, Cyanobacteria",B,x,pHRdSV_BDLD1_2_TIR_IRAK1_t6bd_GFP,pMJTL776,cl403,437.3,0.4373,4.8,Seq okay,1.79,,,,,,,,,,,,,,,,BDLD1_2,A0A1C0V6X5,Nostoc_sp_MBR_210
+BDLD2_1,"BDLD2, Alphaproteobacteria",A, ,pHRdSV_BDLD2_1_TIR_IRAK1_t6bd_GFP,-,-,337.1,0.3371,6.23,,1.84,,,,,,,,,,,,,,,,BDLD2_1,NA,Labrenzia_sp_OB1
+BDLD2_1,"BDLD2, Alphaproteobacteria",B,x,pHRdSV_BDLD2_1_TIR_IRAK1_t6bd_GFP,pMJTL777,cl404,462.2,0.4622,4.54,Seq okay,1.81,,,,,,,,,,,,,,,,BDLD2_1,NA,Labrenzia_sp_OB1
+EDLD_25,Homo sapiens,A,,pHRdSV_EDLD_25_v3_TIR_IRAK1_t6bd_GFP,pMJTL797,-,883.0,0.883,2.38,NOT OK!,1.87,,,,,,,,,,,,,,,,EDLD_25,,Homo sapiens
+EDLD_25,Homo sapiens,B,x,pHRdSV_EDLD_25_v3_TIR_IRAK1_t6bd_GFP,pMJTL797,cl455,882.7,0.8827,2.38,Seq okay,1.89,20240418,20240421,20240426,Endo,4.6e+5,20240426,20240430,,,,20240507,20240508,20240509,,,EDLD_25,,Homo sapiens
+EDLD_25,Homo sapiens,B,x,pHRdSV_EDLD_25_v3_TIR_IRAK1_t6bd_GFP,pMJTL797,cl456,882.7,0.8827,2.38,Seq okay,1.89,20240418,20240421,20240426,High,1.9e+5,20240426,20240430,,,,20240507,20240508,20240509,,,EDLD_25,,Homo sapiens
+EDLD_26,Gallus gallus,A,,pHRdSV_EDLD_26_v2_TIR_IRAK1_t6bd_GFP,pMJTL798,-,634.3,0.6343,3.31,Seq okay,1.88,,,,,,,,,,,,,,,,EDLD_26,,Gallus gallus
+EDLD_26,Gallus gallus,B,x,pHRdSV_EDLD_26_v2_TIR_IRAK1_t6bd_GFP,pMJTL798,cl457,879.0,0.879,2.39,Seq okay,1.86,20240418,20240421,20240426,Endo,2.7e+5,20240426,20240430,,,,20240507,20240508,20240509,,,EDLD_26,,Gallus gallus
+EDLD_26,Gallus gallus,B,x,pHRdSV_EDLD_26_v2_TIR_IRAK1_t6bd_GFP,pMJTL798,cl458,879.0,0.879,2.39,Seq okay,1.86,20240418,20240421,20240426,High,7e+4,20240426,20240430,,,,20240507,20240508,20240509,,,EDLD_26,,Gallus gallus
+EDLD_27,Danio rerio,A,x,pHRdSV_EDLD_27_v2_TIR_IRAK1_t6bd_GFP,pMJTL800,cl459,883.9,0.8839,2.38,Seq okay,1.88,20240418,20240421,20240426,Endo,6.6e+4,20240426,20240430,,,,20240507,20240508,20240509,,,EDLD_27,,Danio rerio
+EDLD_27,Danio rerio,A,x,pHRdSV_EDLD_27_v2_TIR_IRAK1_t6bd_GFP,pMJTL800,cl460,883.9,0.8839,2.38,Seq okay,1.88,20240418,20240421,20240426,High,2.6e+5,20240426,20240430,,,,20240507,20240508,20240509,,,EDLD_27,,Danio rerio
+EDLD_27,Danio rerio,B,,pHRdSV_EDLD_27_v2_TIR_IRAK1_t6bd_GFP,pMJTL800,-,515.4,0.5154,4.07,NOT OK!,1.81,,,,,,,,,,,,,,,,EDLD_27,,Danio rerio
+EDLD_28,Xenopus laevis,A,x,pHRdSV_EDLD_28_v2_TIR_IRAK1_t6bd_GFP,pMJTL799,cl461,741.4,0.7414,2.83,Seq okay,1.89,20240418,20240421,20240426,Endo,5.1e+5,20240426,20240430,,,,,,,,,EDLD_28,,Xenopus laevis
+EDLD_28,Xenopus laevis,A,x,pHRdSV_EDLD_28_v2_TIR_IRAK1_t6bd_GFP,pMJTL799,cl462,741.4,0.7414,2.83,Seq okay,1.89,20240418,20240421,20240426,High,1e+5,20240426,20240430,,,,,,,,,EDLD_28,,Xenopus laevis
+EDLD_28,Xenopus laevis,B,,pHRdSV_EDLD_28_v2_TIR_IRAK1_t6bd_GFP,pMJTL799,,604.0,0.604,3.48,Seq okay,1.87,,,,,,,,,,,,,,,,EDLD_28,,Xenopus laevis
+EDLD_29,Anolis_carolinensis,A,x,pHRdSV_EDLD_29_v2_TIR_IRAK1_t6bd_GFP,pMJTL801,cl463,574.2,0.5742,3.66,Seq okay,1.80,20240418,20240421,20240426,Endo,5e+5,20240426,20240430,,,,,,,,,EDLD_29,,Anolis_carolinensis
+EDLD_29,Anolis_carolinensis,A,x,pHRdSV_EDLD_29_v2_TIR_IRAK1_t6bd_GFP,pMJTL801,cl464,574.2,0.5742,3.66,Seq okay,1.80,20240418,20240421,20240426,High,7e+5,20240426,20240430,,,,,,,,,EDLD_29,,Anolis_carolinensis
+EDLD_29,Anolis_carolinensis,B,,pHRdSV_EDLD_29_v2_TIR_IRAK1_t6bd_GFP,pMJTL801,-,299.9,0.2999,7,Seq okay,1.84,,,,,,,,,,,,,,,,EDLD_29,,Anolis_carolinensis
+EDLD_30,Drosophila_melanogaster,A,,pHRdSV_EDLD_30_v2_TIR_IRAK1_t6bd_GFP,pMJTL802,,,,,,,,,,,,,,,,,,,,,,EDLD_30,,Drosophila_melanogaster
+EDLD_31,Gongylonema_pulchrum,A,,pHRdSV_EDLD_31_v2_TIR_IRAK1_t6bd_GFP,pMJTL803,,,,,,,,,,,,,,,,,,,,,,EDLD_31,,Gongylonema_pulchrum
+EDLD_32,Caenorhabditis_elegans,A,,pHRdSV_EDLD_32_v2_TIR_IRAK1_t6bd_GFP,pMJTL804,,,,,,,,,,,,,,,,,,,,,,EDLD_32,,Caenorhabditis_elegans
+EDLD_33,Darwinula_stevensoni,A,,pHRdSV_EDLD_33_v2_TIR_IRAK1_t6bd_GFP,pMJTL805,,,,,,,,,,,,,,,,,,,,,,EDLD_33,,Darwinula_stevensoni
+EDLD_34,Pocillopora_damicornis,A,,pHRdSV_EDLD_34_v2_TIR_IRAK1_t6bd_GFP,pMJTL806,,,,,,,,,,,,,,,,,,,,,,EDLD_34,,Pocillopora_damicornis
+EDLD_35,Anneissia_japonica,A,,pHRdSV_EDLD_35_v2_TIR_IRAK1_t6bd_GFP,pMJTL807,,,,,,,,,,,,,,,,,,,,,,EDLD_35,,Anneissia_japonica
+EDLD_36,Lottia_gigantea,A,,pHRdSV_EDLD_36_v2_TIR_IRAK1_t6bd_GFP,pMJTL808,,,,,,,,,,,,,,,,,,,,,,EDLD_36,,Lottia_gigantea
+EDLD_37,Strongylocentrotus_purpuratus,A,,pHRdSV_EDLD_37_v2_TIR_IRAK1_t6bd_GFP,pMJTL809,,,,,,,,,,,,,,,,,,,,,,EDLD_37,,Strongylocentrotus_purpuratus
+EDLD_38,Hydra_vulgaris,A,,pHRdSV_EDLD_38_v2_TIR_IRAK1_t6bd_GFP,pMJTL810,,,,,,,,,,,,,,,,,,,,,,EDLD_38,,Hydra_vulgaris
+EDLD_39,Branchiostoma_floridae,A,,pHRdSV_EDLD_39_v2_TIR_IRAK1_t6bd_GFP,pMJTL811,,,,,,,,,,,,,,,,,,,,,,EDLD_39,,Branchiostoma_floridae
+EDLD_40,Amphimedon_queenslandica,A,,pHRdSV_EDLD_40_v2_TIR_IRAK1_t6bd_GFP,pMJTL812,,,,,,,,,,,,,,,,,,,,,,EDLD_40,,Amphimedon_queenslandica
+EDLD_41,Strigamia_maritima,A,,pHRdSV_EDLD_41_v2_TIR_IRAK1_t6bd_GFP,pMJTL813,,,,,,,,,,,,,,,,,,,,,,EDLD_41,,Strigamia_maritima
+EDLD_42,Geodia_cydonium,A,,pHRdSV_EDLD_42_v2_TIR_IRAK1_t6bd_GFP,pMJTL815,,,,,,,,,,,,,,,,,,,,,,EDLD_42,,Geodia_cydonium
+EDLD_43,Arion_vulgaris,A,,pHRdSV_EDLD_43_v2_TIR_IRAK1_t6bd_GFP,pMJTL814,,,,,,,,,,,,,,,,,,,,,,EDLD_43,,Arion_vulgaris
+EDLD_44,Octopus_bimaculoides,A,,pHRdSV_EDLD_44_v2_TIR_IRAK1_t6bd_GFP,pMJTL816,,,,,,,,,,,,,,,,,,,,,,EDLD_44,,Octopus_bimaculoides
+EDLD_45,Crassostrea_virginica,A,,pHRdSV_EDLD_45_v2_TIR_IRAK1_t6bd_GFP,pMJTL817,,,,,,,,,,,,,,,,,,,,,,EDLD_45,,Crassostrea_virginica
+EDLD_46,Trichoplax_adhaerens,A,,pHRdSV_EDLD_46_v2_TIR_IRAK1_t6bd_GFP,pMJTL818,,,,,,,,,,,,,,,,,,,,,,EDLD_46,,Trichoplax_adhaerens
+EDLD_47,Desmodus_rotundus,A,,pHRdSV_EDLD_47_v2_TIR_IRAK1_t6bd_GFP,pMJTL819,,,,,,,,,,,,,,,,,,,,,,EDLD_47,,Desmodus_rotundus
+BDLD_87,Richelia_sp._SL_2_1,A,,pHRdSV_BDLD_87_v2_TIR_IRAK1_t6bd_GFP,pMJTL820,,,,,,,,,,,,,,,,,,,,,,BDLD_87,,Richelia_sp._SL_2_1
+BDLD_88,Thiotrichaceae_bacterium,A,,pHRdSV_BDLD_88_v2_TIR_IRAK1_t6bd_GFP,pMJTL821,,,,,,,,,,,,,,,,,,,,,,BDLD_88,,Thiotrichaceae_bacterium
+bCARD_1,Lysobacter_enzymogenes,A,,pHRdSV_bCARD_1_TIR_IRAK1_t6bd_GFP,pMJTL822,,,,,,,,,,,,,,,,,,,,,,bCARD_1,,Lysobacter_enzymogenes
+bCARD_2,Azospirillum_sp_TSO35-2,A,,pHRdSV_bCARD_2_TIR_IRAK1_t6bd_GFP,pMJTL823,,,,,,,,,,,,,,,,,,,,,,bCARD_2,,Azospirillum_sp_TSO35-2
+hPYD_ASC,Homo_sapiens,A,,pHRdSV_hPYD_TIR_IRAK1_t6bd_GFP,pMJTL824,,,,,,,,,,,,,,,,,,,,,,hPYD_ASC,,Homo_sapiens
+hCARD_ASC,Homo_sapiens,A,,pHRdSV_hCARD_TIR_IRAK1_t6bd_GFP,pMJTL825,,,,,,,,,,,,,,,,,,,,,,hCARD_ASC,,Homo_sapiens
+WP094104103,Streptomyces phaeoluteigriseus,A,,,,,,,,,,,,,,,,,,,,,,,,,WP094104103,,Streptomyces phaeoluteigriseus
+KUM87944,Streptomyces cellostaticus,A,,,,,,,,,,,,,,,,,,,,,,,,,KUM87944,,Streptomyces cellostaticus
+Syn3xBASS1,,A,,,,,,,,,,,,,,,,,,,,,,,,,Syn3xBASS1,,
+SPF04574,Streptomyces sp. MA5143a,A,,,,,,,,,,,,,,,,,,,,,,,,,SPF04574,,Streptomyces sp. MA5143a
+66306_66307,Actinobacteria,A,,,,,,,,,,,,,,,,,,,,,,,,,66306_66307,,Actinobacteria

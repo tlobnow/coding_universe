@@ -1,0 +1,177 @@
+ID,ASSEMBLY,Assembly Name,Organism Name,Organism Infraspecific Names Strain,Organism Infraspecific Names Isolate,Annotation Name,Assembly Stats Total Sequence Length,Assembly Level,Assembly Release Date,WGS project accession,Assembly Stats Contig N50,Assembly Stats Scaffold N50,Assembly Sequencing Tech,Assembly Submitter,Assembly BioProject Accession,Assembly BioSample Accession,Annotation Count Gene Total,Annotation Count Gene Protein-coding,Annotation Count Gene Pseudogene,Type Material Display Text,CheckM marker set,CheckM completeness,CheckM contamination
+BDLD_01,GCF_000024725.1,ASM2472v1,Nitrosococcus halophilus Nc 4,Nc 4,,GCF_000024725.1-RS_2024_03_28,4145260,Complete Genome,2010-03-26,,4079427,4079427,,US DOE Joint Genome Institute,PRJNA36589,SAMN02598510,3963,3846,63,assembly from type material,Nitrosococcus,97.72,1.29
+BDLD_01,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_02,GCA_001610855.1,ASM161085v1,Gemmata sp. SH-PL17,SH-PL17,,Annotation submitted by NIOO-KNAW,9045424,Complete Genome,2016-04-05,,9045424,9045424,PacBio RS II with P4-C2 chemistry,NIOO-KNAW,PRJNA277747,SAMN03417852,7816,7704,,,Planctomycetia,95.41,3.71
+BDLD_02,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_03,GCA_001865855.1,ASM186585v1,Nocardia seriolae,EM150506,,Annotation submitted by National Institute of Fisheries Science,8304518,Complete Genome,2016-11-03,,8304518,8304518,PacBio,National Institute of Fisheries Science,PRJNA325707,SAMN05225369,7871,7794,,,Nocardia,96.27,5.18
+BDLD_03,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_04,GCA_001865855.1,ASM186585v1,Nocardia seriolae,EM150506,,Annotation submitted by National Institute of Fisheries Science,8304518,Complete Genome,2016-11-03,,8304518,8304518,PacBio,National Institute of Fisheries Science,PRJNA325707,SAMN05225369,7871,7794,,,Nocardia,96.27,5.18
+BDLD_04,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_05,GCA_002356035.1,ASM235603v1,Nocardia seriolae,UTF1,,"Annotation submitted by Research Center for Bioinformatics and Biosciences, National Research Institute of Fisheries Science, Japan Fisheries Research and Education Agency",8121733,Complete Genome,2016-12-01,,8121733,8121733,PacBio RS,"Research Center for Bioinformatics and Biosciences, National Research Institute of Fisheries Science, Japan Fisheries Research and Education Agency",PRJDB5277,SAMD00066002,7607,7533,,,Nocardia,95.58,5.01
+BDLD_05,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_06,GCA_002368175.1,ASM236817v1,Calothrix sp. NIES-2098,NIES-2098,,Annotation submitted by Toyohashi University of Technology,8878628,Complete Genome,2017-06-25,,8656060,8656060,Ilumina MiSeq,Toyohashi University of Technology,PRJDB5665,SAMD00079805,7441,7353,,,,,
+BDLD_06,GCA_963875125.1,ena-yuan-GCF_002368175.1,Calothrix sp. NIES-2098,,ena-yuan-GCF_002368175.1,,8878628,Contig,2024-03-04,CAWNKJ01,8656060,,not collected,Nanjing Agriculture University,PRJEB71012,SAMEA115017499,,,,,Calothrix,94.86,19.24
+BDLD_07,GCA_000522425.1,v3,Candidatus Entotheonella factor,,,NCBI Prokaryotic Genome Annotation Pipeline (PGAP),9695168,Scaffold,2014-01-24,AZHW01,8370,21890,Sanger dideoxy sequencing; 454; Illumina; Pacific Biosciences,Bielefeld University,PRJNA230050,SAMN02420412,8506,8438,2,,,,
+BDLD_07,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_08,GCA_000522425.1,v3,Candidatus Entotheonella factor,,,NCBI Prokaryotic Genome Annotation Pipeline (PGAP),9695168,Scaffold,2014-01-24,AZHW01,8370,21890,Sanger dideoxy sequencing; 454; Illumina; Pacific Biosciences,Bielefeld University,PRJNA230050,SAMN02420412,8506,8438,2,,,,
+BDLD_08,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_09,GCA_000522445.1,v3,Candidatus Entotheonella gemina,,,NCBI Prokaryotic Genome Annotation Pipeline (PGAP),9947785,Scaffold,2014-01-24,AZHX01,4173,12485,Sanger dideoxy sequencing; 454; Illumina; Pacific Biosciences,Bielefeld University,PRJNA230051,SAMN02420414,9044,8989,1,,,,
+BDLD_09,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_10,GCA_000522445.1,v3,Candidatus Entotheonella gemina,,,NCBI Prokaryotic Genome Annotation Pipeline (PGAP),9947785,Scaffold,2014-01-24,AZHX01,4173,12485,Sanger dideoxy sequencing; 454; Illumina; Pacific Biosciences,Bielefeld University,PRJNA230051,SAMN02420414,9044,8989,1,,,,
+BDLD_10,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_11,GCA_002218085.1,ASM221808v1,Tolypothrix sp. NIES-4075,NIES-4075,,Annotation submitted by Toyohashi University of Technology,8254440,Scaffold,2017-06-23,BDUC01,497905,781791,Ilumina MiSeq,Toyohashi University of Technology,PRJDB5665,SAMD00081171,7445,7372,,,Microchaetaceae,92.61,13.19
+BDLD_11,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_12,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_12,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_13,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_13,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_14,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_14,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_15,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_15,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_16,GCA_010672925.1,ASM1067292v1,Symploca sp. SIO1C2,,SIO1C2,NCBI Prokaryotic Genome Annotation Pipeline (PGAP),8667638,Scaffold,2020-02-16,JAAHFP01,109063,111951,Illumina HiSeq,UCSD,PRJNA558979,SAMN12797912,7292,6929,280,,,,
+BDLD_16,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_17,GCA_010672945.1,ASM1067294v1,Symploca sp. SIO1B1,,SIO1B1,NCBI Prokaryotic Genome Annotation Pipeline (PGAP),10325590,Scaffold,2020-02-16,JAAHFO01,13443,14835,Illumina HiSeq,UCSD,PRJNA558979,SAMN12797902,9542,9111,356,,,,
+BDLD_17,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_18,GCA_010672185.1,,,,,,,,,,,,,,,,,,,,,,
+BDLD_18,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_19,GCA_010672185.1,,,,,,,,,,,,,,,,,,,,,,
+BDLD_19,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_20,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_20,GCF_010672525.1,ASM1067252v1,Okeania sp. SIO2B3,,SIO2B3,NCBI Prokaryotic Genome Annotation Pipeline (PGAP),10005084,Scaffold,2020-02-16,JAAHGH01,58419,81995,Illumina HiSeq,UCSD,PRJNA558979,SAMN12797931,7598,7161,391,,Oscillatoriales,99.16,1.45
+BDLD_21,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_21,GCF_010672525.1,ASM1067252v1,Okeania sp. SIO2B3,,SIO2B3,NCBI Prokaryotic Genome Annotation Pipeline (PGAP),10005084,Scaffold,2020-02-16,JAAHGH01,58419,81995,Illumina HiSeq,UCSD,PRJNA558979,SAMN12797931,7598,7161,391,,Oscillatoriales,99.16,1.45
+BDLD_22,GCA_010672185.1,,,,,,,,,,,,,,,,,,,,,,
+BDLD_22,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_23,GCA_010672185.1,,,,,,,,,,,,,,,,,,,,,,
+BDLD_23,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_24,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_24,GCA_012031665.1,ASM1203166v1,Richelia sp. SM2_1_7,,SM2_1_7,NCBI Prokaryotic Genome Annotation Pipeline (PGAP),6143886,Scaffold,2020-04-05,JAAUUF01,8083,8133,IonTorrent,"University of Wisconsin, Madison",PRJNA612530,SAMN14376580,5779,4140,1570,,,,
+BDLD_25,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_25,GCA_012031715.1,ASM1203171v1,Richelia sp. SM1_7_0,,SM1_7_0,NCBI Prokaryotic Genome Annotation Pipeline (PGAP),8882331,Scaffold,2020-04-05,JAAUTV01,19488,19533,IonTorrent,"University of Wisconsin, Madison",PRJNA612530,SAMN14376570,7841,6942,842,,,,
+BDLD_26,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_26,GCA_012032385.1,ASM1203238v1,Richelia sp. RM1_1_1,,RM1_1_1,NCBI Prokaryotic Genome Annotation Pipeline (PGAP),9611769,Scaffold,2020-04-05,JAAUQH01,37322,37322,IonTorrent,"University of Wisconsin, Madison",PRJNA612530,SAMN14376478,8393,7665,669,,,,
+BDLD_27,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_27,GCA_012033205.1,,,,,,,,,,,,,,,,,,,,,,
+BDLD_28,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_28,GCA_012035445.1,ASM1203544v1,Nostocaceae cyanobacterium CSU_2_110,,CSU_2_110,NCBI Prokaryotic Genome Annotation Pipeline (PGAP),2186616,Contig,2020-04-06,JAAUPG01,4402,,IonTorrent,"University of Wisconsin, Madison",PRJNA612530,SAMN14376450,2220,1354,848,,,,
+BDLD_29,GCA_002155185.1,ASM215518v1,Nostoc sp. RF31YmG,RF31YmG,,NCBI Prokaryotic Genome Annotation Pipeline (PGAP),9205737,Scaffold,2017-05-22,MTAX01,30491,134364,Illumina MiSeq,CINVESTAV-Langebio,PRJNA360315,SAMN06209042,7759,7193,472,,,,
+BDLD_29,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_30,GCA_002154695.1,ASM215469v1,Nostoc sp. T09,T09,,NCBI Prokaryotic Genome Annotation Pipeline (PGAP),8251853,Scaffold,2017-05-22,MTAV01,52667,53539,Illumina MiSeq,CINVESTAV-Langebio,PRJNA360300,SAMN06208854,7050,6607,371,,Nostoc,98.66,4.26
+BDLD_30,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_30,GCA_002154695.1,ASM215469v1,Nostoc sp. T09,T09,,NCBI Prokaryotic Genome Annotation Pipeline (PGAP),8251853,Scaffold,2017-05-22,MTAV01,52667,53539,Illumina MiSeq,CINVESTAV-Langebio,PRJNA360300,SAMN06208854,7050,6607,371,,Nostoc,98.66,4.26
+BDLD_30,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_31,GCA_002154725.1,ASM215472v1,Nostoc sp. 106C,106C,,NCBI Prokaryotic Genome Annotation Pipeline (PGAP),8662725,Contig,2017-05-22,MTAW01,83306,,Illumina MiSeq,CINVESTAV-Langebio,PRJNA360305,SAMN06208961,7184,6731,372,,Nostoc,98.92,4.16
+BDLD_31,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_32,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_32,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_33,GCA_003645185.1,ASM364518v1,Gammaproteobacteria bacterium,,B5_G6,NCBI Prokaryotic Genome Annotation Pipeline (PGAP),8365060,Contig,2018-10-15,QNEL01,13603,,Illumina HiSeq,The University of Texas at Austin,PRJNA362212,SAMN09215169,6883,6645,197,,,,
+BDLD_33,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_34,GCA_003645185.1,ASM364518v1,Gammaproteobacteria bacterium,,B5_G6,NCBI Prokaryotic Genome Annotation Pipeline (PGAP),8365060,Contig,2018-10-15,QNEL01,13603,,Illumina HiSeq,The University of Texas at Austin,PRJNA362212,SAMN09215169,6883,6645,197,,,,
+BDLD_34,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_35,GCA_004193285.1,ASM419328v1,Myxococcales bacterium,,PMG_095,NCBI Prokaryotic Genome Annotation Pipeline (PGAP),8660767,Contig,2019-02-12,SECP01,130070,,Illumina HiSeq,University of East Anglia,PRJNA272922,SAMN10678610,7361,7153,159,,,,
+BDLD_35,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_35,GCA_004193285.1,ASM419328v1,Myxococcales bacterium,,PMG_095,NCBI Prokaryotic Genome Annotation Pipeline (PGAP),8660767,Contig,2019-02-12,SECP01,130070,,Illumina HiSeq,University of East Anglia,PRJNA272922,SAMN10678610,7361,7153,159,,,,
+BDLD_35,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_36,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_36,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_37,GCA_900114745.1,IMG-taxon 2675903043 annotated assembly,Nitrosomonas communis,Nm44,,Annotation submitted by DOE - JOINT GENOME INSTITUTE,4421028,Contig,2016-11-02,FOUB01,57286,,,DOE - JOINT GENOME INSTITUTE,PRJEB17477,SAMN05421863,4485,4413,,,Nitrosomonas,94.7,5.99
+BDLD_37,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_38,GCA_900445005.1,58901_F01,Actinomadura madurae,NCTC11373,,Annotation submitted by SC,10191271,Contig,2018-06-30,UAPP01,1416352,,,SC,PRJEB6403,SAMEA104338386,9355,9232,,,Actinomadura,92.79,9.39
+BDLD_38,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_39,GCA_007695245.1,ASM769524v1,Candidatus Competibacteraceae bacterium,,PLM2.Bin17,NCBI Prokaryotic Genome Annotation Pipeline (PGAP),4080318,Contig,2019-07-30,REEE01,14827,,Illumina NextSeq,University of Calgary,PRJNA377096,SAMN10237422,4026,3842,137,,,,
+BDLD_39,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_40,GCA_007695245.1,ASM769524v1,Candidatus Competibacteraceae bacterium,,PLM2.Bin17,NCBI Prokaryotic Genome Annotation Pipeline (PGAP),4080318,Contig,2019-07-30,REEE01,14827,,Illumina NextSeq,University of Calgary,PRJNA377096,SAMN10237422,4026,3842,137,,,,
+BDLD_40,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_41,GCF_000262465.1,ASM26246v1,Frankia sp. QA3,QA3,,NCBI Prokaryotic Genome Annotation Pipeline (PGAP),7590853,Chromosome,2012-06-19,AJWA01,130116,7590853,454: Illumina,DOE Joint Genome Institute,PRJNA63325,SAMN02256510,6390,6112,227,,Frankia,98.87,
+BDLD_41,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_42,GCF_000262465.1,ASM26246v1,Frankia sp. QA3,QA3,,NCBI Prokaryotic Genome Annotation Pipeline (PGAP),7590853,Chromosome,2012-06-19,AJWA01,130116,7590853,454: Illumina,DOE Joint Genome Institute,PRJNA63325,SAMN02256510,6390,6112,227,,Frankia,98.87,
+BDLD_42,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_43,GCF_000721705.1,ASM72170v1,Actinoplanes subtropicus,NRRL B-24665,,GCF_000721705.1-RS_2024_05_02,11257336,Contig,2014-07-02,JOJL01,239119,,Illumina,University of Illinois,PRJNA238534,SAMN02645318,10462,10208,176,assembly from type material,Actinoplanes,94.03,10.82
+BDLD_43,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_44,GCF_002356035.1,ASM235603v1,Nocardia seriolae,UTF1,,GCF_002356035.1-RS_2024_03_28,8121733,Complete Genome,2016-12-01,,8121733,8121733,PacBio RS,"Research Center for Bioinformatics and Biosciences, National Research Institute of Fisheries Science, Japan Fisheries Research and Education Agency",PRJDB5277,SAMD00066002,7687,7353,256,,Nocardia,95.58,5.01
+BDLD_44,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_45,GCF_000760695.4,ASM76069v4,Tolypothrix bouteillei VB521301,VB521301,,GCF_000760695.4-RS_2024_03_14,9949079,Scaffold,2020-04-06,JHEG04,1104795,9494340,Illumina HiSeq; Oxford Nanopore MinION,Indian Institute Of Chemical biology,PRJNA242379,SAMN09809659,8181,7922,164,,Microchaetaceae,93.64,16.77
+BDLD_45,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_46,GCF_000316665.1,ASM31666v1,Rivularia sp. PCC 7116,PCC 7116,,NCBI Prokaryotic Genome Annotation Pipeline (PGAP),8728773,Complete Genome,2012-12-04,,8698463,8698463,454/Illumina,DOE Joint Genome Institute,PRJNA63147,SAMN02232049,6774,6586,120,,Rivulariaceae,99.33,1.26
+BDLD_46,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_47,GCF_000721705.1,ASM72170v1,Actinoplanes subtropicus,NRRL B-24665,,GCF_000721705.1-RS_2024_05_02,11257336,Contig,2014-07-02,JOJL01,239119,,Illumina,University of Illinois,PRJNA238534,SAMN02645318,10462,10208,176,assembly from type material,Actinoplanes,94.03,10.82
+BDLD_47,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_48,GCF_000721705.1,ASM72170v1,Actinoplanes subtropicus,NRRL B-24665,,GCF_000721705.1-RS_2024_05_02,11257336,Contig,2014-07-02,JOJL01,239119,,Illumina,University of Illinois,PRJNA238534,SAMN02645318,10462,10208,176,assembly from type material,Actinoplanes,94.03,10.82
+BDLD_48,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_49,GCF_002356035.1,ASM235603v1,Nocardia seriolae,UTF1,,GCF_002356035.1-RS_2024_03_28,8121733,Complete Genome,2016-12-01,,8121733,8121733,PacBio RS,"Research Center for Bioinformatics and Biosciences, National Research Institute of Fisheries Science, Japan Fisheries Research and Education Agency",PRJDB5277,SAMD00066002,7687,7353,256,,Nocardia,95.58,5.01
+BDLD_49,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_50,GCF_000582685.1,ASM58268v1,[Scytonema hofmanni] UTEX 2349,UTEX 2349,,NCBI Prokaryotic Genome Annotation Pipeline (PGAP),8133444,Scaffold,2014-02-27,ALWD01,81937,5400510,Unknown,DOE Joint Genome Institute,PRJNA63425,SAMN00203911,7473,7173,236,,Microchaetaceae,91.94,9.01
+BDLD_50,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_51,GCF_900114745.1,IMG-taxon 2675903043 annotated assembly,Nitrosomonas communis,Nm44,,NCBI Prokaryotic Genome Annotation Pipeline (PGAP),4421028,Contig,2016-11-02,FOUB01,57286,,,DOE - JOINT GENOME INSTITUTE,PRJEB17477,SAMN05421863,4334,4082,204,,Nitrosomonas,94.7,5.99
+BDLD_51,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_52,GCF_900114745.1,IMG-taxon 2675903043 annotated assembly,Nitrosomonas communis,Nm44,,NCBI Prokaryotic Genome Annotation Pipeline (PGAP),4421028,Contig,2016-11-02,FOUB01,57286,,,DOE - JOINT GENOME INSTITUTE,PRJEB17477,SAMN05421863,4334,4082,204,,Nitrosomonas,94.7,5.99
+BDLD_52,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_53,GCF_900114745.1,IMG-taxon 2675903043 annotated assembly,Nitrosomonas communis,Nm44,,NCBI Prokaryotic Genome Annotation Pipeline (PGAP),4421028,Contig,2016-11-02,FOUB01,57286,,,DOE - JOINT GENOME INSTITUTE,PRJEB17477,SAMN05421863,4334,4082,204,,Nitrosomonas,94.7,5.99
+BDLD_53,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_54,GCF_003667075.1,ASM366707v1,Nocardia seriolae,HSY-NS02,,NCBI Prokaryotic Genome Annotation Pipeline (PGAP),7762195,Scaffold,2018-10-18,RCNK01,46515,46740,Illumina HiSeq,Sichuan Agricultural University,PRJNA493149,SAMN10130794,7478,7048,356,,Nocardia,96.07,5.01
+BDLD_54,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_55,GCF_000583715.2,ASM58371v2,Nocardia seriolae,N-2927,,NCBI Prokaryotic Genome Annotation Pipeline (PGAP),7758286,Contig,2015-01-21,BAWD02,45841,,Roche 454; Illumina MiSeq,Kochi University,PRJDB1598,SAMD00023549,7433,7123,238,,Nocardia,96.34,5.04
+BDLD_55,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_56,GCF_002154695.1,ASM215469v1,Nostoc sp. T09,T09,,NCBI Prokaryotic Genome Annotation Pipeline (PGAP),8251853,Scaffold,2017-05-22,MTAV01,52667,53539,Illumina MiSeq,CINVESTAV-Langebio,PRJNA360300,SAMN06208854,7089,6832,177,,Nostoc,98.66,4.26
+BDLD_56,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_57,GCF_002154725.1,ASM215472v1,Nostoc sp. 106C,106C,,NCBI Prokaryotic Genome Annotation Pipeline (PGAP),8662725,Contig,2017-05-22,MTAW01,83306,,Illumina MiSeq,CINVESTAV-Langebio,PRJNA360305,SAMN06208961,7316,7019,210,,Nostoc,98.92,4.16
+BDLD_57,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_58,GCF_002155185.1,ASM215518v1,Nostoc sp. RF31YmG,RF31YmG,,NCBI Prokaryotic Genome Annotation Pipeline (PGAP),9205737,Scaffold,2017-05-22,MTAX01,30491,134364,Illumina MiSeq,CINVESTAV-Langebio,PRJNA360315,SAMN06209042,7855,7489,271,,,,
+BDLD_58,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_59,GCF_900079105.1,E.factor.ts,Candidatus Entotheonella palauensis,,efactor21,GCF_900079105.1-RS_2024_03_31,6108902,Contig,2016-04-22,FKIO01,5105,,,GeneWiz,PRJEB12599,SAMEA3913524,5925,5648,270,,Bacteria,75.33,
+BDLD_59,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_60,GCF_900079105.1,E.factor.ts,Candidatus Entotheonella palauensis,,efactor21,GCF_900079105.1-RS_2024_03_31,6108902,Contig,2016-04-22,FKIO01,5105,,,GeneWiz,PRJEB12599,SAMEA3913524,5925,5648,270,,Bacteria,75.33,
+BDLD_60,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_60,GCF_900079105.1,E.factor.ts,Candidatus Entotheonella palauensis,,efactor21,GCF_900079105.1-RS_2024_03_31,6108902,Contig,2016-04-22,FKIO01,5105,,,GeneWiz,PRJEB12599,SAMEA3913524,5925,5648,270,,Bacteria,75.33,
+BDLD_60,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_61,GCF_900079095.1,E.gemina.ts,Candidatus Entotheonella palauensis,,egemina21,GCF_900079095.1-RS_2024_03_31,7898184,Contig,2016-04-22,FKIP01,6763,,,GeneWiz,PRJEB12598,SAMEA3913525,7819,7443,353,,Bacteria,84.18,
+BDLD_61,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_62,GCF_900091525.1,IMG-taxon 2622736591 annotated assembly,Micromonospora matsumotoense,DSM 44100,,GCF_900091525.1-RS_2024_05_02,7755577,Scaffold,2016-08-16,FMCU01,317110,317110,,DOE - JOINT GENOME INSTITUTE,PRJEB14520,SAMN04488017,6745,6498,176,assembly from type material,Micromonospora,96.84,7.85
+BDLD_62,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_63,GCA_002368175.1,ASM236817v1,Calothrix sp. NIES-2098,NIES-2098,,Annotation submitted by Toyohashi University of Technology,8878628,Complete Genome,2017-06-25,,8656060,8656060,Ilumina MiSeq,Toyohashi University of Technology,PRJDB5665,SAMD00079805,7441,7353,,,,,
+BDLD_63,GCA_963875125.1,ena-yuan-GCF_002368175.1,Calothrix sp. NIES-2098,,ena-yuan-GCF_002368175.1,,8878628,Contig,2024-03-04,CAWNKJ01,8656060,,not collected,Nanjing Agriculture University,PRJEB71012,SAMEA115017499,,,,,Calothrix,94.86,19.24
+BDLD_64,GCF_002368095.1,ASM236809v1,Calothrix parasitica NIES-267,NIES-267,,NCBI Prokaryotic Genome Annotation Pipeline (PGAP),9491741,Chromosome,2017-06-25,,634901,8952435,Ilumina MiSeq,Toyohashi University of Technology,PRJDB5665,SAMD00079801,7420,7027,311,,,,
+BDLD_64,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_65,GCF_002368455.1,,,,,,,,,,,,,,,,,,,,,,
+BDLD_65,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_66,GCF_002870785.1,ASM287078v1,Fischerella thermalis CCMEE 5201,CCMEE 5201,,NCBI Prokaryotic Genome Annotation Pipeline (PGAP),6721469,Scaffold,2018-01-10,NMQK01,11945,12382,Illumina HiSeq,University of Montana,PRJNA322208,SAMN07256016,5771,5353,371,,,,
+BDLD_66,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_67,GCF_003298855.1,,,,,,,,,,,,,,,,,,,,,,
+BDLD_67,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_68,GCF_003298855.1,,,,,,,,,,,,,,,,,,,,,,
+BDLD_68,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_69,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_69,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_70,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_70,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_71,GCF_004217665.1,ASM421766v1,Candidatus Magnetaquicoccus inordinatus,UR-1,,GCF_004217665.1-RS_2024_03_31,4143644,Scaffold,2019-02-20,RXIU01,12614,13993,Illumina HiSeq,Research Center of Biotechnology RAS,PRJNA509450,SAMN10581107,3575,3494,38,,Alphaproteobacteria,89.53,6.42
+BDLD_71,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_72,GCF_004217665.1,ASM421766v1,Candidatus Magnetaquicoccus inordinatus,UR-1,,GCF_004217665.1-RS_2024_03_31,4143644,Scaffold,2019-02-20,RXIU01,12614,13993,Illumina HiSeq,Research Center of Biotechnology RAS,PRJNA509450,SAMN10581107,3575,3494,38,,Alphaproteobacteria,89.53,6.42
+BDLD_72,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_73,GCF_900079095.1,E.gemina.ts,Candidatus Entotheonella palauensis,,egemina21,GCF_900079095.1-RS_2024_03_31,7898184,Contig,2016-04-22,FKIP01,6763,,,GeneWiz,PRJEB12598,SAMEA3913525,7819,7443,353,,Bacteria,84.18,
+BDLD_73,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_74,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_74,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_75,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_75,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_76,GCF_900445005.1,58901_F01,Actinomadura madurae,NCTC11373,,GCF_900445005.1-RS_2024_03_29,10191271,Contig,2018-06-30,UAPP01,1416352,,,SC,PRJEB6403,SAMEA104338386,9422,9210,106,,Actinomadura,92.79,9.39
+BDLD_76,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_77,GCF_900445005.1,58901_F01,Actinomadura madurae,NCTC11373,,GCF_900445005.1-RS_2024_03_29,10191271,Contig,2018-06-30,UAPP01,1416352,,,SC,PRJEB6403,SAMEA104338386,9422,9210,106,,Actinomadura,92.79,9.39
+BDLD_77,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_78,GCF_007990715.1,ASM799071v1,Nocardia seriolae NBRC 15557,NBRC 15557,,NCBI Prokaryotic Genome Annotation Pipeline (PGAP),7606457,Contig,2019-08-01,BJWY01,45757,,454 GS-FLX Titanium; Illumina HiSeq 1000,National Institute of Technology and Evaluation,PRJDB182,SAMD00169714,7271,6979,223,assembly from type material,Nocardia,96.09,4.82
+BDLD_78,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_79,GCF_009708175.1,,,,,,,,,,,,,,,,,,,,,,
+BDLD_79,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_80,GCF_009708175.1,,,,,,,,,,,,,,,,,,,,,,
+BDLD_80,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_81,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_81,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_82,GCF_001865855.1,ASM186585v1,Nocardia seriolae,EM150506,,NCBI Prokaryotic Genome Annotation Pipeline (PGAP),8304518,Complete Genome,2016-11-03,,8304518,8304518,PacBio,National Institute of Fisheries Science,PRJNA325707,SAMN05225369,7869,7571,219,,Nocardia,96.27,5.18
+BDLD_82,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_83,GCF_011769525.1,ASM1176952v1,Tolypothrix sp. PCC 7910,PCC 7910,,NCBI Prokaryotic Genome Annotation Pipeline (PGAP),8761534,Complete Genome,2020-03-30,,8479123,8479123,PacBio,Chungnam National Univ.,PRJNA610494,SAMN14299416,7087,6807,165,,Microchaetaceae,96.19,7.16
+BDLD_83,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_84,GCA_000024725.1,ASM2472v1,Nitrosococcus halophilus Nc 4,Nc 4,,Annotation submitted by US DOE Joint Genome Institute,4145260,Complete Genome,2010-03-26,,4079427,4079427,,US DOE Joint Genome Institute,PRJNA36589,SAMN02598510,4087,3817,215,assembly from type material,Nitrosococcus,97.72,1.29
+BDLD_84,NA,,,,,,,,,,,,,,,,,,,,,,
+BDLD_85,GCA_001610855.1,ASM161085v1,Gemmata sp. SH-PL17,SH-PL17,,Annotation submitted by NIOO-KNAW,9045424,Complete Genome,2016-04-05,,9045424,9045424,PacBio RS II with P4-C2 chemistry,NIOO-KNAW,PRJNA277747,SAMN03417852,7816,7704,,,Planctomycetia,95.41,3.71
+BDLD_85,NA,,,,,,,,,,,,,,,,,,,,,,
