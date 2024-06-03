@@ -1,4 +1,10 @@
-library(pacman) ; pacman::p_load(data.table, ggplot2, lubridate, stringr, ggpubr, dplyr, cowplot, readxl, scales, knitr, tidyr, ggforce, ggbreak, patchwork, lemon)
+################################################################################
+### ELISA ANALYSIS SCRIPT FOR AMYLOIDS #########################################
+################################################################################
+
+library(pacman) ; pacman::p_load(data.table, ggplot2, lubridate, stringr, ggpubr, 
+                                 dplyr, cowplot, readxl, scales, knitr, tidyr, 
+                                 ggforce, ggbreak, patchwork, lemon)
 
 ################################################################################
 
@@ -42,8 +48,6 @@ if (run_settings_and_prep) {
   plate_data_raw <- ELISA_Fx(Input_Directory)
 }
 
-################################################################################
-################################################################################
 ################################################################################
 
 if (run_processing_and_subset) {
@@ -245,8 +249,6 @@ if (SAVE) {
   fwrite(stat_significance_dt, file.path(Output_Directory, "Amyloids_ELISA_stat_significance_dt.csv"))
 }
 
-################################################################################
-################################################################################
 ################################################################################
 
 if (FOLD_CHANGE) {
