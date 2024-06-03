@@ -2,16 +2,14 @@
 ### ELISA ANALYSIS SCRIPT FOR AMYLOIDS #########################################
 ################################################################################
 
-library(pacman) ; pacman::p_load(data.table, ggplot2, lubridate, stringr, ggpubr, 
-                                 dplyr, cowplot, readxl, scales, knitr, tidyr, 
-                                 ggforce, ggbreak, patchwork, lemon)
+library(pacman) ; pacman::p_load(data.table, ggplot2, lubridate, stringr, ggpubr, dplyr, cowplot, readxl, scales, knitr, tidyr, ggforce, ggbreak, patchwork, lemon)
 
 ################################################################################
 
-run_settings_and_prep     <- TRUE
-run_processing_and_subset <- TRUE
+RUN_SETTINGS_AND_PREP     <- TRUE
+RUN_PROCESSING_AND_SUBSET <- TRUE
 
-if (run_settings_and_prep) {
+if (RUN_SETTINGS_AND_PREP) {
   
   # GENERAL SETTINGS
   figure <- "Figure Amyloids"
@@ -50,12 +48,12 @@ if (run_settings_and_prep) {
 
 ################################################################################
 
-if (run_processing_and_subset) {
+if (RUN_PROCESSING_AND_SUBSET) {
   plate_data     <- left_join(plate_data_raw, NAME_KEY, relationship = "many-to-many")
   plate_data     <- plate_data %>% filter(CELL_LINE != "NA") %>% unique()
   
   #### EXTRA FILTER ####
-  plate_data <- plate_data %>% filter(Date != "2024-05-18")
+  # plate_data <- plate_data %>% filter(Date != "2024-05-18")
   #### EXTRA FILTER ####
   
   # ensure correct column type assignment
@@ -190,43 +188,70 @@ if (REAL_SECRETION) {
             legend.text       = element_text(size = SIZE),
             legend.key.size   = unit(9, "mm"))
     
-    print(Amyloids_ELISA)
+    print(Amyloids_ELISA_real)
   
   }
 }
 
 if (RELATIVE_SECRETION_ZOOM) {
   
-  # statistical analysis based on relative secretion values
-  stat_significance_dt <- process_statistical_analysis(plotting_means, "CL_NAME_ON_PLOT", "Relative_Intensity_mean")
-  plotting_stats       <- prepare_plotting_stats(plotting_data, stat_significance_dt)
-  
-  # plotting relative values
-  Amyloids_ELISA_zoom <- ggplot(data = plotting_stats, aes(x = Relative_Intensity_mean, y = CL_NAME_ON_PLOT, fill = PLOTTING_COLOR, pattern = CONDITION, group = rev(CONDITION))) +
-    geom_col(aes(col = PLOTTING_COLOR), position = position_dodge(width = 0.7), width = 0.68, alpha = 0.5) +
-    geom_errorbar(aes(y = CL_NAME_ON_PLOT,
-                      xmin = Relative_Intensity_mean - Relative_Intensity_sem,
-                      xmax = Relative_Intensity_mean + Relative_Intensity_sem),
-                  linewidth = .75, position = position_dodge(width = 0.5), width = 0.25) +
-    geom_point(data = plotting_means, aes(x = Relative_Intensity_mean, y = CL_NAME_ON_PLOT, fill = PLOTTING_COLOR), col = "black",
-               shape = 21, size = POINTS, position = position_jitterdodge(dodge.width = 0.5, jitter.width = 0.4, seed = 750), show.legend = FALSE) +
-    geom_text(data = plotting_stats, aes(x = max(Relative_Intensity_mean) + 0.05, y = CL_NAME_ON_PLOT, label = significance), 
-              hjust = .5, vjust = 1, size = TEXT, angle = 90) + 
-    scale_x_continuous(breaks = seq(from = 0, to = 3.2, by = 0.5), position = "bottom") +
-    scale_y_discrete(expand = c(0, 0)) +
+  if (nrow(stat_significance_dt) > 0) {
+    plotting_stats                 <- prepare_plotting_stats(plotting_data, stat_significance_dt)
+    plotting_stats$CL_NAME_ON_PLOT <- reorder(plotting_stats$CL_NAME_ON_PLOT, -plotting_stats$ORDER_NO)
     
-    scale_fill_manual(name  = "CL_NAME_ON_PLOT", values = plotting_stats$PLOTTING_COLOR, breaks = plotting_stats$PLOTTING_COLOR, labels = ifelse(plotting_stats$CONDITION == "UNSTIM", paste0("- ", plotting_stats$STIMULANT), paste0("+ ", plotting_stats$STIMULANT))) +
-    scale_color_manual(name = "CL_NAME_ON_PLOT", values = plotting_stats$PLOTTING_COLOR, breaks = plotting_stats$PLOTTING_COLOR, labels = ifelse(plotting_stats$CONDITION == "UNSTIM", paste0("- ", plotting_stats$STIMULANT), paste0("+ ", plotting_stats$STIMULANT))) +
-    labs(x = "Relative IL-2 secretion", y = "") +
-    guides(color = "none", fill = guide_legend(reverse = TRUE)) +
-    theme_cowplot(font_size = SIZE, font_family = FONT) +
-    theme(axis.text.x       = element_text(size = SIZE, vjust = 0.6),
-          axis.title.y      = element_blank(),
-          legend.position   = "bottom", #c(x = 0.4, y = 0.73),
-          legend.title      = element_blank(),
-          legend.text       = element_text(size = SIZE),
-          legend.key.size   = unit(9, "mm")) +
-    facet_zoom(xlim = c(0, 0.3), zoom.data = ifelse(a <= 0.3, NA, FALSE))
+    # plotting relative values
+    Amyloids_ELISA_zoom <- ggplot(data = plotting_stats, aes(x = Relative_Intensity_mean, y = CL_NAME_ON_PLOT, fill = PLOTTING_COLOR, pattern = CONDITION, group = rev(CONDITION))) +
+      geom_col(aes(col = PLOTTING_COLOR), position = position_dodge(width = 0.7), width = 0.68, alpha = 0.5) +
+      geom_errorbar(aes(y = CL_NAME_ON_PLOT,
+                        xmin = Relative_Intensity_mean - Relative_Intensity_sem,
+                        xmax = Relative_Intensity_mean + Relative_Intensity_sem),
+                    linewidth = .75, position = position_dodge(width = 0.5), width = 0.25) +
+      geom_point(data = plotting_means, aes(x = Relative_Intensity_mean, y = CL_NAME_ON_PLOT, fill = PLOTTING_COLOR), col = "black",
+                 shape = 21, size = POINTS, position = position_jitterdodge(dodge.width = 0.5, jitter.width = 0.4, seed = 750), show.legend = FALSE) +
+      geom_text(data = plotting_stats, aes(x = max(Relative_Intensity_mean) + 0.05, y = CL_NAME_ON_PLOT, label = significance), 
+                hjust = .5, vjust = 1, size = TEXT, angle = 90) + 
+      scale_x_continuous(breaks = seq(from = 0, to = 3.2, by = 0.5), position = "bottom") +
+      scale_y_discrete(expand = c(0, 0)) +
+      scale_fill_manual(name  = "CL_NAME_ON_PLOT", values = plotting_stats$PLOTTING_COLOR, breaks = plotting_stats$PLOTTING_COLOR, labels = ifelse(plotting_stats$CONDITION == "UNSTIM", paste0("- ", plotting_stats$STIMULANT), paste0("+ ", plotting_stats$STIMULANT))) +
+      scale_color_manual(name = "CL_NAME_ON_PLOT", values = plotting_stats$PLOTTING_COLOR, breaks = plotting_stats$PLOTTING_COLOR, labels = ifelse(plotting_stats$CONDITION == "UNSTIM", paste0("- ", plotting_stats$STIMULANT), paste0("+ ", plotting_stats$STIMULANT))) +
+      labs(x = "Relative IL-2 secretion", y = "") +
+      guides(color = "none", fill = guide_legend(reverse = TRUE)) +
+      theme_cowplot(font_size = SIZE, font_family = FONT) +
+      theme(axis.text.x       = element_text(size = SIZE, vjust = 0.6),
+            axis.title.y      = element_blank(),
+            legend.position   = "bottom", #c(x = 0.4, y = 0.73),
+            legend.title      = element_blank(),
+            legend.text       = element_text(size = SIZE),
+            legend.key.size   = unit(9, "mm")) +
+      facet_zoom(xlim = c(0, 0.3), zoom.data = ifelse(a <= 0.3, NA, FALSE))
+    
+    print(Amyloids_ELISA_zoom)
+    
+  } else if (nrow(stat_significance_dt) == 0) {
+    print("stat_significance_dt has no row content.")
+    print("the plot will be generated without statisticial analysis.")
+    
+    # plotting relative values
+    Amyloids_ELISA_zoom <- ggplot(data = plotting_means, aes(x = Relative_Intensity_mean, y = CL_NAME_ON_PLOT, fill = PLOTTING_COLOR, pattern = CONDITION, group = rev(CONDITION))) +
+      geom_col(aes(col = PLOTTING_COLOR), position = position_dodge(width = 0.7), width = 0.68, alpha = 0.5) +
+      geom_point(data = plotting_means, aes(x = Relative_Intensity_mean, y = CL_NAME_ON_PLOT, fill = PLOTTING_COLOR), col = "black",
+                 shape = 21, size = POINTS, position = position_jitterdodge(dodge.width = 0.5, jitter.width = 0.4, seed = 750), show.legend = FALSE) +
+      scale_y_discrete(expand = c(0, 0)) +
+      scale_fill_manual(name  = "CL_NAME_ON_PLOT", values = plotting_means$PLOTTING_COLOR, breaks = plotting_means$PLOTTING_COLOR, labels = ifelse(plotting_means$CONDITION == "UNSTIM", paste0("- ", plotting_means$STIMULANT), paste0("+ ", plotting_means$STIMULANT))) +
+      scale_color_manual(name = "CL_NAME_ON_PLOT", values = plotting_means$PLOTTING_COLOR, breaks = plotting_means$PLOTTING_COLOR, labels = ifelse(plotting_means$CONDITION == "UNSTIM", paste0("- ", plotting_means$STIMULANT), paste0("+ ", plotting_means$STIMULANT))) +
+      labs(x = "Relative IL-2 secretion", y = "") +
+      guides(color = "none", fill = guide_legend(reverse = TRUE)) +
+      theme_cowplot(font_size = SIZE, font_family = FONT) +
+      theme(axis.text.x       = element_text(size = SIZE, vjust = 0.6),
+            axis.title.y      = element_blank(),
+            legend.position   = "bottom", #c(x = 0.4, y = 0.73),
+            legend.title      = element_blank(),
+            legend.text       = element_text(size = SIZE),
+            legend.key.size   = unit(9, "mm")) +
+      facet_zoom(xlim = c(0, 0.3), zoom.data = ifelse(a <= 0.3, NA, FALSE))
+    
+    print(Amyloids_ELISA)
+  }
   
   print(Amyloids_ELISA_zoom)
 }
@@ -245,8 +270,11 @@ if (SAVE) {
   fwrite(plate_data,           file.path(Output_Directory, "Amyloids_ELISA_plate_data.csv"))
   fwrite(plotting_data,        file.path(Output_Directory, "Amyloids_ELISA_plotting_data.csv"))
   fwrite(plotting_means,       file.path(Output_Directory, "Amyloids_ELISA_plotting_means.csv"))
-  fwrite(plotting_stats,       file.path(Output_Directory, "Amyloids_ELISA_plotting_stats.csv"))
-  fwrite(stat_significance_dt, file.path(Output_Directory, "Amyloids_ELISA_stat_significance_dt.csv"))
+  
+  if (nrow(stat_significance_dt) == 0) {
+    fwrite(plotting_stats,       file.path(Output_Directory, "Amyloids_ELISA_plotting_stats.csv"))
+    fwrite(stat_significance_dt, file.path(Output_Directory, "Amyloids_ELISA_stat_significance_dt.csv"))
+  }
 }
 
 ################################################################################
