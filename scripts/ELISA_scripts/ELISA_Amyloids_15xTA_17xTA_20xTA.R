@@ -250,10 +250,8 @@ if (RELATIVE_SECRETION_ZOOM) {
             legend.key.size   = unit(9, "mm")) +
       facet_zoom(xlim = c(0, 0.3), zoom.data = ifelse(a <= 0.3, NA, FALSE))
     
-    print(Amyloids_ELISA)
+    print(Amyloids_ELISA_zoom)
   }
-  
-  print(Amyloids_ELISA_zoom)
 }
 
 if (SAVE) {
