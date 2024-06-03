@@ -1,8 +1,0 @@
-COL_NAME,TYPE,CONTENT
-CELL_LINE,chr,name used on the plates (raw data)
-CL_NUMBER,chr,cell line number in our system
-CL_NAME_ON_PLOT,chr,equivalent to what you want to print in figures
-PURPOSE,chr,optional and just designates whether the cell line is used as controls or samples
-INFO,chr,additional information
-PLOTTING_COLOR,chr,color of your cell lines in the figures
-ORDER_NO,int,plotting order (first positive controls > negative controls > samples last)
