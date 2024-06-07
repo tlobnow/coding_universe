@@ -17,6 +17,8 @@ if (SETTINGS) {
   
   GENERATE_AF3_JSON_TABLE <- T
   GENERATE_MSA_TABLE      <- T
+  GENERATE_OPERON_TABLE   <- T
+      DOWNLOAD_AND_PROCESS_GENOMES <- T
   GENERATE_SOTA_TABLE     <- T
   GENERATE_LCI_TABLE      <- T
   
@@ -652,110 +654,20 @@ if (GENERATE_ELISA_TABLE) {
     elisa_cl069_df  <- fread(paste0(temp_dir, "/", "ELISA_SUMMARY_cl069_normalized.csv"))
     elisa_rltv_real <- rbind(elisa_3E10_df, elisa_cl069_df)
     elisa_main      <- elisa_rltv_real %>% left_join(elisa_fc_df) %>% left_join(NAME_KEY, relationship = "many-to-many") %>% filter(PURPOSE == "SAMPLE")
-    rm(elisa_fc_df, elisa_3E10_df, elisa_cl069_df, elisa_rltv_real)
+    elisa_main_cln  <- elisa_main %>% arrange(ID, POSITIVE_CTRL) %>% group_by(ID, POSITIVE_CTRL) %>% fill(c(everything()), .direction = "downup") %>% ungroup() %>%  distinct(ID, POSITIVE_CTRL, .keep_all = T)
+    rm(elisa_fc_df, elisa_3E10_df, elisa_cl069_df, elisa_rltv_real, elisa_main)
     
     if (OVERWRITE) {
-      fwrite(elisa_main, file.path(output_dir, "ELISA_SUMMARY.csv"), append = F); print(paste0("Overwritten: ", output_dir, "/", "ELISA_SUMMARY.csv"))
+      fwrite(elisa_main_cln, file.path(output_dir, "ELISA_SUMMARY.csv"), append = F); print(paste0("Overwritten: ", output_dir, "/", "ELISA_SUMMARY.csv"))
     }
   }
 }
 
 if (GENERATE_AF3_JSON_TABLE) {
   
-  # create the AF3 Data Frame that will contain all the data
-  # af3_df <- data.frame(matrix(ncol = length(alphaFold_cols), nrow = 0)) ; colnames(af3_df) <- alphaFold_cols
-  
-  # Initialize a list to store the large data frames for each af_json_file
-  large_af3_dfs <- list()
-  
-  for (af_json_file in af_json_files) {
-    
-    # af_json_file = af_json_files[1] # for debugging
-    json <- fromJSON(af_json_file)
-    
-    af3_name     <- json[[1]][[1]]
-    af3_seed     <- as.numeric(json[[2]][[1]])
-    af3_seq      <- json[[3]][[1]]$proteinChain$sequence
-    af3_n_chains <- json[[3]][[1]]$proteinChain$count
-    
-    summary_confidences_files <- list.files(af_dir, pattern = "summary_confidences", full.names = TRUE) %>%
-      str_subset(paste0("(?i)", gsub("-", "_", af3_name))) %>%
-      str_subset("\\.json$")
-    
-    # Initialize a list to store the extracted information from each summary_confidences file
-    sum_conf_extract_list <- list()
-    
-    for (summary_confidences_file in summary_confidences_files) {
-      
-      # summary_confidences_file <- summary_confidences_files[1] # for debugging
-      af3_model               <- basename(summary_confidences_file)
-      
-      json <- fromJSON(summary_confidences_file)
-      
-      af3_chain_iptm          <- json[["chain_iptm"]]
-      af3_chain_pair_iptm     <- json[["chain_pair_iptm"]]
-      af3_chain_pair_pae_min  <- json[["chain_pair_pae_min"]]
-      af3_chain_ptm           <- json[["chain_ptm"]]
-      af3_fraction_disordered <- json[["fraction_disordered"]]
-      af3_has_clash           <- json[["has_clash"]]
-      ##########################################################################
-      af3_iptm                <- json[["iptm"]]
-      af3_n_recycles          <- json[["num_recycles"]]
-      af3_ptm                 <- json[["ptm"]]
-      af3_ranking_score       <- json[["ranking_score"]]
-      
-      sum_conf_extract <- cbind(af3_name,
-                                af3_seed,
-                                af3_seq,
-                                af3_n_chains,
-                                af3_model,
-                                af3_chain_iptm,
-                                af3_chain_pair_pae_min,
-                                af3_chain_ptm,
-                                af3_fraction_disordered,
-                                af3_has_clash,
-                                af3_iptm,
-                                af3_n_recycles,
-                                af3_ptm,
-                                af3_ranking_score
-                                ) %>%  as.data.frame()
-      
-      # Add the data frame to the list
-      sum_conf_extract_list <- append(sum_conf_extract_list, list(sum_conf_extract))
-      
-      # Combine the af_json_extract data frame with all the summary_confidences data frames
-      large_af3_df <- bind_rows(sum_conf_extract_list)
-      
-      # Add the large data frame to the list
-      large_af3_dfs <- append(large_af3_dfs, list(large_af3_df))
-    }
-    
-    # Combine all large data frames into one
-    mega_af3_df <- bind_rows(large_af3_dfs) %>%
-      mutate(ID = str_extract(af3_name, "(?i)^(?:[^_]*_)?([A-Z]+[12]?DLD\\d?)_\\d{2}"),
-             ID = str_replace(ID, "(DLD|BDLD[12])_(\\d{2})", "\\1_\\2"))
-    
-    # Subset the data to save a mini version with unique rows based on specific columns
-    mini_af3_df <- mega_af3_df %>%
-      select(
-        ID,
-        af3_name,
-        af3_seed,
-        af3_seq,
-        af3_n_chains,
-        af3_model,
-        af3_iptm,
-        af3_n_recycles,
-        af3_ptm,
-        af3_ranking_score
-      ) %>%
-      distinct()
-    
-    
-    AF3_SUMMARY <- mini_af3_df %>%
-      group_by(af3_name) %>%
-      filter(grepl("summary_confidences_0", af3_model))
-  }
+  mega_af3_df <- extract_af3_json_files(af_json_files = af_json_files)[[1]]
+  mini_af3_df <- extract_af3_json_files(af_json_files = af_json_files)[[2]]
+  AF3_SUMMARY <- extract_af3_json_files(af_json_files = af_json_files)[[3]]
   
   if (OVERWRITE) {
     
@@ -1002,6 +914,80 @@ if (GENERATE_MSA_TABLE) {
   rm(consensus_strings, max_pct_stored, msa_split_df, msa_cons_string, sota, msa_sota, kalign)
 }
 
+if (GENERATE_OPERON_TABLE) {
+
+  operon_df <- fread(file.path(output_dir, "SOTA.csv"), na.strings = c("", NA, "NA"), strip.white = TRUE) %>%
+    # create a subset df that only contains the columns we need
+    select(ID, genbank_acc, uniprot_acc, operon, architecture) %>%
+    # remove rows with missing operon information
+    filter(!is.na(operon)) %>%
+    # remove duplicates
+    distinct(ID, .keep_all = TRUE)
+  
+  # Apply the function to each operon in operon_df and bind rows
+  processed_operons   <- mapply(interpret_operon_direction, ID = operon_df$ID, operon = operon_df$operon, SIMPLIFY = FALSE) %>% bind_rows()
+  
+  # Merge the processed operons with the original data frame
+  operon_df_processed <- operon_df %>% left_join(processed_operons) %>% filter(!is.na(part), part != c("")) %>% 
+    # trim white space from the 'part' column
+    mutate(part = str_trim(part)) %>%
+    group_by(ID) %>%
+    mutate(n_parts = n(),
+           # grab the rows per ID that have the part that contains the pattern 'DLD' and count them
+           n_DLD = sum(str_detect(part, "DLD")),
+           # Identify DLD positions using case_when
+           DLD_position = case_when(
+             # Beginning (bDLD+X+Y+..)
+             str_detect(part, "bDLD") & !str_detect(part, "\\+.*bDLD") ~ "NTD",
+             # End (X+Y+Z+bDLD)
+             str_detect(part, "bDLD") & !str_detect(part, "bDLD.*\\+") ~ "CTD",  
+             # Middle (X+bDLD+Z)
+             str_detect(part, "bDLD") ~ "MID",
+             # Single (bDLD)
+             str_detect(part, "bDLD") ~ "SINGLE"),
+           DLD_position_count = ifelse(str_detect(part, "bDLD"), row_number(), NA_integer_),
+           DLD_pos_cnt_ratio = ifelse(!is.na(DLD_position_count), paste0(DLD_position_count, "/", n_parts), NA_integer_)) %>% 
+    ungroup() 
+  
+  genomes_to_download <- sota %>% select(assembly, assembly_2) %>% 
+    mutate(assembly = case_when(!is.na(assembly) ~ assembly, TRUE ~ assembly_2)) %>% 
+    select(-assembly_2) %>% 
+    distinct(assembly) %>%
+    filter(!is.na(assembly))
+  
+  if (OVERWRITE) {
+    fwrite(operon_df,           file.path(temp_dir, "operon_df.csv"))
+    fwrite(operon_df_processed, file.path(temp_dir, "operon_df_processed.csv"))
+    fwrite(genomes_to_download, file.path(input_dir, "GENOMES", "download_list.csv"), append = F, row.names = F, col.names = F)
+  }
+  
+  if (DOWNLOAD_AND_PROCESS_GENOMES) {
+    ### Download genomes (script #1)
+    system("bash ./scripts/SOTA_GENOME_PREP.sh")
+    system("sleep 3")
+    
+    ### Flatten the folder structure (script #1)
+    system("bash ./scripts/SOTA_GENOME_FLATTEN.sh")
+    system("sleep 3")
+    
+    ### Add the genome prefix to all folder files (script #3)
+    system("bash ./scripts/SOTA_GENOME_RENAME.sh")
+    system("sleep 3")
+  }
+  
+  
+  # TODO: extract operon information from the genomes
+  
+  
+  
+  
+
+  # TODO: finish AF3 extraction script
+  
+  
+  
+}
+
 if (GENERATE_LCI_TABLE) {
   
   GENERATE_CELL_SUMMARY = FALSE
@@ -1019,23 +1005,33 @@ if (GENERATE_LCI_TABLE) {
     
     lci_table$COHORT <- as.factor(lci_table$COHORT) ; rm(lci_data)
     
+    LOW_CAT     <- "< 4 s"
+    MEDIUM_CAT  <- "4-40 s"
+    HIGH_CAT    <- "≥ 40 s"
+    
     # Clean up table, and Measure dwell frames/time of CHARMS associated TRAF6 ----
     cell_table <- lci_table %>% 
-      # filter out the noise
+      # Step 1: Filter out the noise
       filter(PROTEIN == "MyD88", MAX_NORMALIZED_INTENSITY >= 1) %>% 
+      # Step 2: Group the data by 'UNIVERSAL_TRACK_ID'
       group_by(UNIVERSAL_TRACK_ID) %>% 
-      # FRAMES_ADJUSTED starts with 0. This selects tracks with at least three time points
+      # Step 3: Filter tracks with at least two time points based on 'FRAMES_ADJUSTED'
       filter(max(FRAMES_ADJUSTED) >= 2) %>%
+      # Step 4: Calculate colocalization and create a streak identifier ('TRAF6_Streak')
       mutate(COLOCALIZATION = COMPLEMENTARY_NORMALIZED_INTENSITY_1 >= 1) %>%
       mutate(TRAF6_Streak = cumsum(!COLOCALIZATION)) %>%
+      # Step 5: Filter rows with colocalization events
       filter(COLOCALIZATION == 1) %>%
+      # Step 6: Group by multiple variables for further summarization
       group_by(COHORT, IMAGE, CELL, UNIVERSAL_TRACK_ID, TRAF6_Streak) %>%
-      #number of frames that complementary protein is above threshold in a continuous stretch
-      summarise(DWELL_FRAMES = sum(COLOCALIZATION), DWELL_TIME = (sum(COLOCALIZATION)-1)*4) %>%
-      mutate(CATEGORY_DWELL_TIME =  fcase(DWELL_TIME == 0, "0 s",
-                                          DWELL_TIME < 40 & DWELL_TIME != 0, "4-40 s",
-                                          DWELL_TIME >= 40, ">=40 s"
-                                          )) %>% 
+      # Step 7: Summarize the colocalization events
+      summarise(DWELL_FRAMES = sum(COLOCALIZATION), # Number of frames that complementary protein is above threshold in a continuous stretch
+                DWELL_TIME = (sum(COLOCALIZATION) - 1) * 4) %>%
+      # Step 8: Categorize dwell times
+      mutate(CATEGORY_DWELL_TIME = fcase(DWELL_TIME ==  0, LOW_CAT,
+                                         DWELL_TIME <  40 & DWELL_TIME != 0, MEDIUM_CAT,
+                                         DWELL_TIME >= 40, HIGH_CAT)) %>%
+      # Step 9: Convert the result to a data.table
       as.data.table()
     
     if (OVERWRITE) {
@@ -1082,15 +1078,19 @@ if (GENERATE_LCI_TABLE) {
       write.csv(mean_replicates, file.path(temp_dir, "/lci_mean_replicates.csv"), row.names = F)
       write.csv(mean_total,      file.path(temp_dir, "/lci_mean_total.csv"),      row.names = F)
       
-      system(paste0("gzip -f ",    temp_dir, "/lci_mean_cell.csv"))
-      system(paste0("gzip -f ",    temp_dir, "/lci_mean_replicates.csv"))
-      system(paste0("gzip -f ",    temp_dir, "/lci_mean_total.csv"))
+      if (file.exists(file.path(temp_dir, "/lci_mean_cell.csv.gz"))) {file.remove(file.path(temp_dir, "/lci_mean_cell.csv.gz"))}
+      if (file.exists(file.path(temp_dir, "/lci_mean_replicates.csv.gz"))) {file.remove(file.path(temp_dir, "/lci_mean_replicates.csv.gz"))}
+      if (file.exists(file.path(temp_dir, "/lci_mean_total.csv.gz"))) {file.remove(file.path(temp_dir, "/lci_mean_total.csv.gz"))}
+    
+      system(paste0("gzip -f ", temp_dir, "/lci_mean_cell.csv"))
+      system(paste0("gzip -f ", temp_dir, "/lci_mean_replicates.csv"))
+      system(paste0("gzip -f ", temp_dir, "/lci_mean_total.csv"))
       
     }
     
-    mean_repl_long   <- mean_replicates %>% filter(CATEGORY_DWELL_TIME == ">=40 s") %>% group_by(COHORT) %>% mutate(num_replicates = n())
-    mean_repl_medium <- mean_replicates %>% filter(CATEGORY_DWELL_TIME == "4-40 s") %>% group_by(COHORT) %>% mutate(num_replicates = n())
-    mean_repl_short  <- mean_replicates %>% filter(CATEGORY_DWELL_TIME ==    "0 s") %>% group_by(COHORT) %>% mutate(num_replicates = n())
+    mean_repl_long   <- mean_replicates %>% filter(CATEGORY_DWELL_TIME == HIGH_CAT)   %>% group_by(COHORT) %>% mutate(num_replicates = n())
+    mean_repl_medium <- mean_replicates %>% filter(CATEGORY_DWELL_TIME == MEDIUM_CAT) %>% group_by(COHORT) %>% mutate(num_replicates = n())
+    mean_repl_short  <- mean_replicates %>% filter(CATEGORY_DWELL_TIME == LOW_CAT)    %>% group_by(COHORT) %>% mutate(num_replicates = n())
     
     # Perform statistics using t.test (only possible for cell lines with 2 or more replicates)
     stat.test_pct_long_lived_TRAF6   <- mean_repl_long   %>% filter(num_replicates >= 2) %>% ggpubr::compare_means(data = . , PCT_RECRUITMENT ~ COHORT, method = "t.test")

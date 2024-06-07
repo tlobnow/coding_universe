@@ -775,3 +775,294 @@ prepare_fold_change_plots <- function(plotting_data, name_key) {
   
   return(list(results = results, annotations = annotations))
 }
+
+################################################################################
+
+# # extract_af3_json_files <- function(af_json_files) {
+# #   # Initialize a list to store the large data frames for each af_json_file
+# #   large_af3_dfs <- list()
+# #   
+# #   for (af_json_file in af_json_files) {
+# #     
+# #     # af_json_file = af_json_files[1] # for debugging
+# #     json <- fromJSON(af_json_file)
+# #     
+# #     af3_name     <- json[[1]][[1]]
+# #     af3_seed     <- as.numeric(json[[2]][[1]])
+# #     af3_seq      <- json[[3]][[1]]$proteinChain$sequence
+# #     af3_n_chains <- json[[3]][[1]]$proteinChain$count
+# #     
+# #     summary_confidences_files <- list.files(af_dir, pattern = "summary_confidences", full.names = TRUE) %>%
+# #       str_subset(paste0("(?i)", gsub("-", "_", af3_name), "_")) %>%
+# #       str_subset("\\.json$")
+# #     
+# #     # Initialize a list to store the extracted information from each summary_confidences file
+# #     sum_conf_extract_list <- list()
+# #     
+# #     for (summary_confidences_file in summary_confidences_files) {
+# #       
+# #       # summary_confidences_file <- summary_confidences_files[1] # for debugging
+# #       af3_model               <- basename(summary_confidences_file)
+# #       
+# #       json <- fromJSON(summary_confidences_file)
+# #       
+# #       af3_chain_iptm          <- json[["chain_iptm"]]
+# #       af3_chain_pair_iptm     <- json[["chain_pair_iptm"]]
+# #       af3_chain_pair_pae_min  <- json[["chain_pair_pae_min"]]
+# #       af3_chain_ptm           <- json[["chain_ptm"]]
+# #       af3_fraction_disordered <- json[["fraction_disordered"]]
+# #       af3_has_clash           <- json[["has_clash"]]
+# #       
+# #       ##########################################################################
+# #       
+# #       af3_iptm                <- json[["iptm"]]
+# #       af3_n_recycles          <- json[["num_recycles"]]
+# #       af3_ptm                 <- json[["ptm"]]
+# #       af3_ranking_score       <- json[["ranking_score"]]
+# #       
+# #       sum_conf_extract <- cbind(af3_name,
+# #                                 af3_seed,
+# #                                 af3_seq,
+# #                                 af3_n_chains,
+# #                                 af3_model,
+# #                                 af3_chain_iptm,
+# #                                 af3_chain_pair_pae_min,
+# #                                 af3_chain_ptm,
+# #                                 af3_fraction_disordered,
+# #                                 af3_has_clash,
+# #                                 af3_iptm,
+# #                                 af3_n_recycles,
+# #                                 af3_ptm,
+# #                                 af3_ranking_score
+# #       ) %>%  as.data.frame()
+# #       
+# #       # Add the data frame to the list
+# #       sum_conf_extract_list <- append(sum_conf_extract_list, list(sum_conf_extract))
+# #       
+# #       # Combine the af_json_extract data frame with all the summary_confidences data frames
+# #       large_af3_df <- bind_rows(sum_conf_extract_list)
+# #       
+# #       # Add the large data frame to the list
+# #       large_af3_dfs <- append(large_af3_dfs, list(large_af3_df))
+# #     }
+# #     
+# #     # Combine all large data frames into one
+# #     mega_af3_df <- bind_rows(large_af3_dfs) %>%
+# #       mutate(ID = str_extract(af3_name, "(?i)^(?:[^_]*_)?([A-Z]+[12]?DLD\\d?)_\\d{2}"),
+# #              ID = str_replace(ID, "(DLD|BDLD[12])_(\\d{2})", "\\1_\\2"))
+# #     
+# #     # Subset the data to save a mini version with unique rows based on specific columns
+# #     
+# #     ### TODO: find a way to pivot the remaining columns into a wide format!
+# #     mini_af3_df <- mega_af3_df %>%
+# #       select(
+# #         ID,
+# #         af3_name,
+# #         af3_seed,
+# #         af3_seq,
+# #         af3_n_chains,
+# #         af3_model,
+# #         af3_iptm,
+# #         af3_n_recycles,
+# #         af3_ptm,
+# #         af3_ranking_score
+# #       ) %>%
+# #       distinct()
+# #     
+# #     
+# #     AF3_SUMMARY <- mini_af3_df %>%
+# #       group_by(af3_name) %>%
+# #       filter(grepl("summary_confidences_0", af3_model))
+# #   }
+# #   return(list(mega_af3_df, mini_af3_df, AF3_SUMMARY))
+# # }
+# 
+# 
+# # af_json_files <- af_json_files[1:2] # for debugging
+# # af_json_file <- af_json_files[1]    # for debugging
+# # af_dir <- "/Users/u_lobnow/Documents/Github/coding_universe/SOTA/01_raw_data/AF3_PREDICTIONS/OPERONS"
+# # af_json_files <- list.files(af_dir, full.names = TRUE, recursive = TRUE, pattern = "job_request") %>% str_subset("(?i)dld") %>% str_subset("\\.json$")
+# 
+# # Function to extract information from job_request JSON file
+# 
+# extract_job_request_info <- function(af_json_file) {
+#   
+#   json <- fromJSON(af_json_file)
+#   
+#   af3_name  <- json[[1]][[1]]
+#   af3_seed  <- as.numeric(json[[2]][[1]])
+#   sequences <- json[[3]]
+#   
+#   # seq <- sequences[[1]]
+#   chain_info <- lapply(sequences, function(seq) {
+#     list(
+#       sequence = seq$proteinChain[[1]],
+#       count = seq$proteinChain$count
+#     )
+#   })
+#   
+#   chain_sequences <- sapply(chain_info, function(x) x$sequence)
+#   af3_n_chains <- sapply(chain_info, function(x) x$count)
+#   
+#   return(list(
+#     af3_name = af3_name,
+#     af3_seed = af3_seed,
+#     chain_sequences = chain_sequences,
+#     # af3_n_chains = af3_n_chains
+#     af3_n_chains = sum(af3_n_chains)  # Sum to get the total number of chains
+#   ))
+# }
+# 
+# # Function to process chain pair data
+# process_chain_pair_data <- function(af3_n_chains) {
+#   chain_combinations <- expand.grid(1:af3_n_chains, 1:af3_n_chains)
+#   colnames(chain_combinations) <- c("Chain_i", "Chain_j")
+#   return(chain_combinations)
+# }
+# 
+# # summary_confidences_file <- summary_confidences_files[1] # for debugging
+# # Function to extract information from summary_confidences JSON files
+# extract_summary_confidences_info <- function(summary_confidences_file, af3_n_chains) {
+#   
+#   json <- fromJSON(summary_confidences_file)
+#   
+#   chain_pair_iptm <- json[["chain_pair_iptm"]]
+#   chain_pair_pae_min <- json[["chain_pair_pae_min"]]
+#   
+#   chain_combinations <- process_chain_pair_data(af3_n_chains)
+#   
+#   chain_combinations <- chain_combinations %>%
+#     mutate(
+#       iptm = mapply(function(i, j) chain_pair_iptm[i, j], Chain_i, Chain_j),
+#       pae_min = mapply(function(i, j) chain_pair_pae_min[i, j], Chain_i, Chain_j)
+#     )
+#   
+#   return(chain_combinations)
+# }
+# 
+# 
+# job_request_info <- extract_job_request_info(af_json_file)
+# af3_n_chains     <- job_request_info$af3_n_chains
+# 
+# summary_confidences_files <- list.files(af_dir, pattern = "summary_confidences", full.names = TRUE, recursive = T) %>%
+#   str_subset(paste0("(?i)", gsub("-", "_", af3_name), "_")) %>%
+#   str_subset("\\.json$")
+# 
+# # Read and combine all summary_confidences data
+# all_chain_pair_data <- lapply(summary_confidences_files, function(summary_confidences_file) {
+#   extract_summary_confidences_info(summary_confidences_file, af3_n_chains)
+# })
+# 
+# # Combine all chain pair data into one data frame
+# combined_chain_pair_data <- bind_rows(all_chain_pair_data)
+# 
+# # pivot the information from combined_chain_pair_data into a wide format
+# wide_chain_pair_data <- combined_chain_pair_data %>%
+#   pivot_wider(id_cols = c(Chain_i, Chain_j, iptm, pae_min), names_from = c(Chain_i, Chain_j, iptm, pae_min), values_from = c(iptm, pae_min))
+
+
+
+
+################################################################################
+
+# # Function to interpret directions in an operon string
+# interpret_operon_direction <- function(ID, operon) {
+#   
+#   # Extract components with direction symbols using stringr::str_split
+#   components <- unlist(str_split(operon, "(?<=→|<-)"))
+#   
+#   # Get parts and directions
+#   parts <- str_extract(components, "^[^→<-]*")
+#   directions <- str_extract(components, "→|<-")
+#   
+#   # Determine the direction for the last gene correctly
+#   if (!is.na(directions[length(directions)])) {
+#     if (directions[length(directions)] == "<-" || str_ends(parts[length(parts)], "REV")) {
+#       directions[length(directions)] <- "REV"
+#     } else {
+#       directions[length(directions)] <- "FWD"
+#     }
+#   } else {
+#     directions[length(directions)] <- "REV"  # Assuming default direction as "<-" for the last gene if its direction is NA
+#   }
+#   
+#   # Combine parts and directions into a data frame
+#   operon_data <- data.frame(ID = ID, part = parts, direction = directions, stringsAsFactors = FALSE)
+#   
+#   # Replace direction symbols with "FWD" and "REV"
+#   operon_data$direction[operon_data$direction == "→"]  <- "FWD"
+#   operon_data$direction[operon_data$direction == "<-"] <- "REV"
+#   
+#   # Return the interpreted operon data
+#   return(operon_data)
+# }
+
+################################################################################
+
+# # operons <- operon_df$operon[1:10]
+# # ids     <- operon_df$ID[1:10]
+# operon = operons[2]               # for debugging
+# # ID     = ids[2]                   # for debugging
+# 
+# # Function to interpret directions in an operon string
+# # Function to interpret directions in an operon string
+# interpret_operon_direction <- function(ID, operon) {
+#   
+#   operon <- gsub("<-", "←", operon)
+#   
+#   # Extract components with direction symbols using stringr::str_split
+#   # components <- unlist(str_split(operon, "(?<=[←→<\\|])")) ; components
+#   components <- unlist(str_split(operon, "(?<=→|←|\\|\\|)")) ; components
+#   
+#   # Initialize vectors for parts and directions
+#   parts <- character(length(components))
+#   directions <- character(length(components))
+#   
+#   # Temporary storage for the last direction sign encountered
+#   last_direction <- NA
+#   
+#   # Loop through components to separate ?|| into individual parts
+#   for (i in seq_along(components)) {
+#     if (components[i] == "?") {
+#       parts[i] <- "?"
+#       directions[i] <- last_direction  # Assign the last stored direction
+#     } else if (components[i] == "||") {
+#       parts[i] <- "||"
+#       directions[i] <- NA  # No direction associated with ||
+#     } else if (str_detect(components[i], "\\?\\|\\|")) {
+#       parts[i] <- "?"
+#       directions[i] <- last_direction  # Assign the last stored direction
+#     } else {
+#       parts[i] <- components[i]
+#       directions[i] <- str_extract(components[i], "←|→")
+#       if (!is.na(directions[i])) {
+#         last_direction <- directions[i]  # Update last stored direction
+#       }
+#     }
+#   }
+#   
+#   # Determine the direction for the last gene correctly
+#   if (!is.na(directions[length(directions)])) {
+#     if (directions[length(directions)] == "←" || str_ends(parts[length(parts)], "REV")) {
+#       directions[length(directions)] <- "REV"
+#     } else {
+#       directions[length(directions)] <- "FWD"
+#     }
+#   } else {
+#     directions[length(directions)] <- "REV"  # Default direction as "<-" for the last gene if its direction is NA
+#   }
+#   
+#   # Remove empty parts
+#   operon_data <- data.frame(ID = ID, part = parts, direction = directions, stringsAsFactors = FALSE)
+#   operon_data <- operon_data[!is.na(operon_data$part) & operon_data$part != "", ]
+#   
+#   # Replace direction symbols with "FWD" and "REV"
+#   operon_data$direction[operon_data$direction == "→"] <- "FWD"
+#   operon_data$direction[operon_data$direction == "←"] <- "REV"
+#   
+#   operon_data$part <- str_replace_all(operon_data$part, "→|←|\\|", "")
+#   
+#   # Return the interpreted operon data
+#   return(operon_data)
+# }
+# 

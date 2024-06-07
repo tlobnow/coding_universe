@@ -28,7 +28,7 @@ cl_gen_cols           <- c("pmjtl", "cell_line_endo", "cl_line_high", "cell_line
                            "tf_date", "td_date", "td_cl204", "facs_date", "facs_yield", "frozen_date", "frozen_date_us")
 
 elisa_cols            <- c("elisa_stim_1", "elisa_stim_2", "elisa_stim_3", "elisa_stim_4", "elisa_stim_5", "elisa_stim_6", "elisa_assay", "elisa_assay_2",
-                           "ID", "CL_NUMBER", "ORIGIN", "EXPRESSION_LVL",  "POSITIVE_CTRL", "Date", "p_value_rltv",
+                           "ID", "ORIGIN", "EXPRESSION_LVL",  "POSITIVE_CTRL", "Date", "p_value_rltv",
                            "p_value_real", "significance_rltv", "significance_real",
                            "IL2_concentration_Dilution_Factor_mean_UNSTIM", "IL2_concentration_Dilution_Factor_mean_STIM",
                            "IL2_concentration_Dilution_Factor_sem_UNSTIM", "IL2_concentration_Dilution_Factor_sem_STIM",
