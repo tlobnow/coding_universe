@@ -1,8 +1,11 @@
 ### Generating a State Of The Art (SOTA) Table on BDLD summary
-SETTINGS = TRUE
+LOAD_SETTINGS_AND_PATHS = TRUE
+FEEDBACK                = TRUE # Set to TRUE to get feedback on the progress of the script
 
-if (SETTINGS) {
-  
+### TODO: Add feedback functionality to the script (instead of automatic print / head calls)
+
+if (LOAD_SETTINGS_AND_PATHS) {
+  setwd("/Users/u_lobnow/Documents/Github/coding_universe")
   LOAD_PATHS   <- T
   GET_OVERVIEW <- T
   OPEN_DATA    <- T
@@ -18,49 +21,31 @@ if (SETTINGS) {
   GENERATE_AF3_JSON_TABLE <- T
   GENERATE_MSA_TABLE      <- T
   GENERATE_OPERON_TABLE   <- T
-      DOWNLOAD_AND_PROCESS_GENOMES <- T
+  DOWNLOAD_AND_PROCESS_GENOME_FOLDERS <- F
+  EXTRACT_OPERONS              <- T
   GENERATE_SOTA_TABLE     <- T
-  GENERATE_LCI_TABLE      <- T
+  GENERATE_LCI_TABLE      <- F
   
   library(pacman)
   pacman::p_load(data.table, ggplot2, lubridate, stringr, ggpubr, dplyr, cowplot, 
                  readxl, scales, knitr, tidyr, visdat, purrr, fs, jsonlite,
-                 rentrez, taxize, pwalign, Biostrings, plotrix) ; unloadNamespace("msa")
+                 rentrez, taxize, pwalign, Biostrings, plotrix, ape, rtracklayer,
+                 read.gb) ; unloadNamespace("msa")
   
   # BiocManager::install("pwalign")
+  # BiocManager::install("rtracklayer")
   
   reduce <- purrr::reduce
+  select <- dplyr::select
   
-  setwd("/Users/u_lobnow/Documents/Github/coding_universe")
   source("scripts/SOTA_FX.R")
+  source("scripts/SOTA_PATHS.R")
   source("scripts/SOTA_COLNAMES.R") ; ls(pattern = "_cols")
 }
 
 ##############################################################
 ##############################################################
 ##############################################################
-
-if (LOAD_PATHS) {
-  input_dir  <- "SOTA/01_raw_data"
-  temp_dir   <- "SOTA/02_temp_data"
-  output_dir <- "SOTA/03_output_data"
-  elisa_dir  <- file.path(input_dir, "ELISA_PLATES")
-  af_dir     <- file.path(input_dir, "AF3_PREDICTIONS")
-  
-  input_files   <- list.files(input_dir,  full.names = TRUE)
-  temp_files    <- list.files(temp_dir,   full.names = TRUE)
-  out_files     <- list.files(output_dir, full.names = TRUE)
-  elisa_plates  <- list.files(elisa_dir,  full.names = TRUE)
-  af_json_files <- list.files(af_dir,     full.names = TRUE, recursive = TRUE, pattern = "job_request") %>% str_subset("(?i)dld") %>% str_subset("\\.json$")
-  
-  # group file lists
-  excel_files <- input_files[grepl("\\.xlsx$",  input_files,  ignore.case = TRUE)]
-  csv_files   <- input_files[grepl("\\.csv$",   input_files,  ignore.case = TRUE)]
-  tsv_files   <- input_files[grepl("\\.tsv$",   input_files,  ignore.case = TRUE)]
-  elisa_files <- elisa_plates[grepl("\\.xlsx$", elisa_plates, ignore.case = TRUE)]
-  order_files <- csv_files[grepl("ORDER",       csv_files,    ignore.case = TRUE)]
-
-}
 
 if (OPEN_DATA) {
   # Load DD Library Data
@@ -111,11 +96,14 @@ if (CLEAN) {
     dplyr::rename(
       gene              = Abbr,
       genbank_acc       = NCBI_Abbr,
+      genbank_acc_2     = NCBI_Abbr_2,
       aa_start          = AA_START,
       aa_end            = AA_END,
       architecture      = ARCHITECTURE,
-      assembly          = ASSEMBLY,
-      assembly_2        = ASSEMBLY_new,
+      genbank_gca       = GenBank_GCA,
+      genbank_gca_2     = GenBank_GCA_new,
+      refseq_gcf        = RefSeq_GCF,
+      refseq_gcf_2      = RefSeq_GCF_new,
       abs_260_280       = `260/280`,
       af_confidence     = Confidence,
       annotated_domains = `ANNOTATED_DOMAINS NCBI [UniProt]`,
@@ -264,7 +252,7 @@ if (CLEAN) {
   }
   
   # declutter environment and remove all objects that are no longer needed
-  rm(dd_lab_tmp, dd_lib_tmp, dd_order_tmp, cl_name_df, taxid_df)
+  # rm(dd_lab_tmp, dd_lib_tmp, dd_order_tmp, cl_name_df, taxid_df)
   # charms_vars <- grep("^CHARMS", ls(), value = TRUE) ; rm(list = charms_vars)
 }
 
@@ -274,12 +262,13 @@ if (GENERATE_GENOME_TABLE) {
   setnames(ncbi_genome_data, "Assembly Accession", "assembly")
   
   # Join Library Data with ncbi genome information
-  genome_info_tbl <- SOTA_to_clean[,c("assembly", "assembly_2", "ID")] %>% 
-    pivot_longer(cols = 1:2, names_to = "ORIGINAL_COL", values_to = "assembly") %>%
+  genome_info_tbl <- SOTA_to_clean[,c("genbank_gca", "genbank_gca_2", "refseq_gcf", "refseq_gcf_2", "ID")] %>% 
+    pivot_longer(cols = 1:4, names_to = "ORIGINAL_COL", values_to = "assembly") %>%
     filter(!is.na(assembly), assembly != "NA") %>%
     select(-ORIGINAL_COL) %>%
     left_join(ncbi_genome_data) %>%
-    select_if(~ !all(is.na(.)))
+    select_if(~ !all(is.na(.))) %>%
+    unique()
   
   if (OVERWRITE) {
     # save NCBI Genome Info Data as CSV
@@ -521,8 +510,8 @@ if (GENERATE_ELISA_TABLE) {
       
       # save figure
       if (plot_elisa) {
-        ggsave(paste0(temp_dir, "/figures/", "ELISA_rltv_secretion_", control,"_normalized.svg"), plot = figure_ELISA_rltv, device = "svg", width = 12, height = 24)
-        ggsave(paste0(temp_dir, "/figures/", "ELISA_real_secretion_", control,"_normalized.svg"), plot = figure_ELISA_real, device = "svg", width = 12, height = 24)
+        ggsave(paste0(temp_dir, "/FIGURES/", "ELISA_rltv_secretion_", control,"_normalized.svg"), plot = figure_ELISA_rltv, device = "svg", width = 12, height = 24)
+        ggsave(paste0(temp_dir, "/FIGURES/", "ELISA_real_secretion_", control,"_normalized.svg"), plot = figure_ELISA_real, device = "svg", width = 12, height = 24)
       }
       
       # save tables
@@ -636,7 +625,7 @@ if (GENERATE_ELISA_TABLE) {
       
       # save figure
       if (plot_elisa) {
-        ggsave(paste0(temp_dir, "/figures/", "ELISA_fold_change.svg"), plot = fc_plot_elisa, device = "svg", width = 12, height = 24); print(paste0("Overwritten: ", temp_dir, "/figures/", "ELISA_fold_change.svg"))
+        ggsave(paste0(temp_dir, "/FIGURES/", "ELISA_fold_change.svg"), plot = fc_plot_elisa, device = "svg", width = 12, height = 24); print(paste0("Overwritten: ", temp_dir, "/FIGURES/", "ELISA_fold_change.svg"))
         }
       
       # save tables
@@ -663,6 +652,7 @@ if (GENERATE_ELISA_TABLE) {
   }
 }
 
+### TODO: finish AF3 extraction script
 if (GENERATE_AF3_JSON_TABLE) {
   
   mega_af3_df <- extract_af3_json_files(af_json_files = af_json_files)[[1]]
@@ -695,6 +685,7 @@ if (GENERATE_AF3_JSON_TABLE) {
      af3_ranking_score, sum_conf_extract)
 }
 
+### TODO: Add the new tables to SOTA
 if (GENERATE_SOTA_TABLE) {
   SOTA_SUMMARY  <- fread(file.path(list.files(temp_dir, pattern = "\\SOTA.csv$",   ignore.case = TRUE, full.names = TRUE)), na.strings = c("", "NA", NA)) %>% unique()
   # SOTA_final[duplicated(SOTA_final$seq_DLD_aa)]$ID
@@ -712,6 +703,7 @@ if (GENERATE_SOTA_TABLE) {
   
 }
 
+### TODO: perform correlation analysis
 if (GENERATE_MSA_TABLE) {
   
   library(msa)
@@ -721,12 +713,12 @@ if (GENERATE_MSA_TABLE) {
   
   # write a FASTA file of all ordered sequences
   df_for_msa <- AF3_SUMMARY %>% distinct(ID, af3_seq, .keep_all = F) %>% filter(!is.na(af3_seq))
-  write_fasta(df_for_msa, "ID", "af3_seq", file.path(temp_dir, "seqs_and_alignments/DLD_sequences.fasta")); rm(df_for_msa)
-  msa_sota <- readAAStringSet(file.path(temp_dir, "/seqs_and_alignments/DLD_sequences.fasta")) ; head(msa_sota)
+  write_fasta(df_for_msa, "ID", "af3_seq", file.path(temp_dir, "SEQS_AND_ALNS/DLD_sequences.fasta")); rm(df_for_msa)
+  msa_sota <- readAAStringSet(file.path(temp_dir, "/SEQS_AND_ALNS/DLD_sequences.fasta")) ; head(msa_sota)
   
   methods <- c("ClustalW", "ClustalOmega", "Muscle", "MAFFT", "kalign")
   for (method in methods) {
-    output_file <- paste0(temp_dir, "/seqs_and_alignments/DLD_sequences_aligned_", tolower(method), ".fasta")
+    output_file <- paste0(temp_dir, "/SEQS_AND_ALNS/DLD_sequences_aligned_", tolower(method), ".fasta")
     if (method %in% c("ClustalW", "ClustalOmega", "Muscle")) {
       aln_msa_sota <- msa(msa_sota, method = method)
       print(aln_msa_sota, show = "complete")
@@ -734,17 +726,17 @@ if (GENERATE_MSA_TABLE) {
         writeXStringSet(as(aln_msa_sota, "AAStringSet"), filepath = output_file)
       }
     } else if (method == "MAFFT") {
-      system(paste0("mafft --auto --inputorder --thread 4 --reorder ", file.path(temp_dir, "/seqs_and_alignments/DLD_sequences.fasta"), " > ", output_file))
+      system(paste0("mafft --auto --inputorder --thread 4 --reorder ", file.path(temp_dir, "/SEQS_AND_ALNS/DLD_sequences.fasta"), " > ", output_file))
     } else if (method == "kalign") {
       # run in command line - kalign is a bit meh running directly from R
-      # kalign -i SOTA/02_temp_data/seqs_and_alignments/DLD_sequences.fasta -o SOTA/02_temp_data/seqs_and_alignments/DLD_sequences_aligned_kalign.fasta
+      # kalign -i SOTA/02_temp_data/SEQS_AND_ALNS/DLD_sequences.fasta -o SOTA/02_temp_data/SEQS_AND_ALNS/DLD_sequences_aligned_kalign.fasta
     }
   }
   
   ## create a function to process all alignments in a streamlined way
   run_iterative_msa_masking = FALSE
   if (run_iterative_msa_masking) {
-    for (file_path in list.files(file.path(temp_dir, "seqs_and_alignments"), pattern = "^DLD_sequences_aligned_.*\\.fa(sta)?$", full.names = TRUE)) {
+    for (file_path in list.files(file.path(temp_dir, "SEQS_AND_ALNS"), pattern = "^DLD_sequences_aligned_.*\\.fa(sta)?$", full.names = TRUE)) {
       iterative_msa_masking(file_path, temp_dir, sota,
                             min_fraction_start_end = seq(0.1, 0.6, by = 0.1),
                             min_block_width_start_end = c(1, 2, 3))
@@ -755,7 +747,7 @@ if (GENERATE_MSA_TABLE) {
   consensus_sequences <- data.frame()
   
   # Loop through each consensus sequence file
-  for (cons_seq_file in list.files(file.path(temp_dir, "seqs_and_alignments/iterative_msa_masking/"), pattern = paste0("(", paste(tolower(methods), collapse = "|"), ")*_cons_string\\.csv$"), full.names = TRUE)) {
+  for (cons_seq_file in list.files(file.path(temp_dir, "SEQS_AND_ALNS/iterative_msa_masking/"), pattern = paste0("(", paste(tolower(methods), collapse = "|"), ")*_cons_string\\.csv$"), full.names = TRUE)) {
     print(cons_seq_file)
     consensus_sequences <- rbind(consensus_sequences, fread(cons_seq_file))
   }
@@ -790,7 +782,7 @@ if (GENERATE_MSA_TABLE) {
   )
   
   # Optionally, set row names to the sequences
-  rownames(consensus_counts) <- basename(list.files(file.path(temp_dir, "seqs_and_alignments/iterative_msa_masking/"), pattern = "cons_string.csv$", full.names = TRUE))
+  rownames(consensus_counts) <- basename(list.files(file.path(temp_dir, "SEQS_AND_ALNS/iterative_msa_masking/"), pattern = "cons_string.csv$", full.names = TRUE))
   rownames(consensus_counts) <- str_replace_all(string = rownames(consensus_counts), "DLD_sequences_aligned_", "")
   rownames(consensus_counts) <- str_replace_all(string = rownames(consensus_counts), "_cons_string.csv", "")
   consensus_counts$min_block_width <- as.numeric(str_extract(rownames(consensus_counts), "(?<=_min_block_width_)\\d+"))
@@ -833,11 +825,11 @@ if (GENERATE_MSA_TABLE) {
     names(aligned_seqs_with_names) <- aligned_names
     
     # Write aligned sequences to a FASTA file
-    writeXStringSet(aligned_seqs_with_names, file = file.path(temp_dir, "seqs_and_alignments", "DLD_aligned_consensus_across_methods.fasta"))
+    writeXStringSet(aligned_seqs_with_names, file = file.path(temp_dir, "SEQS_AND_ALNS", "DLD_aligned_consensus_across_methods.fasta"))
   }
   
   #### Generate the consensus of the conensus
-  origMAlign <- Biostrings::readAAMultipleAlignment(file.path(temp_dir, "seqs_and_alignments", "DLD_aligned_consensus_across_methods.fasta"))
+  origMAlign <- Biostrings::readAAMultipleAlignment(file.path(temp_dir, "SEQS_AND_ALNS", "DLD_aligned_consensus_across_methods.fasta"))
   
   ## list the names of the sequences in the alignment
   rownames(origMAlign)
@@ -864,20 +856,20 @@ if (GENERATE_MSA_TABLE) {
   clust       <- hclust(sdist, method = "single")
   
   if (OVERWRITE) {
-    fwrite(as.data.frame(cons_string), file.path(temp_dir, "seqs_and_alignments", "DLD_aligned_consensus_across_methods_cons_string.csv"))
+    fwrite(as.data.frame(cons_string), file.path(temp_dir, "SEQS_AND_ALNS", "DLD_aligned_consensus_across_methods_cons_string.csv"))
     print(paste0("Overwritten: ", temp_dir, "/", "DLD_aligned_consensus_across_methods_cons_string.csv"))
   }
   
   ## Add the MSA to SOTA table
   sota <- fread(file.path(output_dir, "SOTA.csv"))
-  msa_cons_string <- fread(file.path(temp_dir, "seqs_and_alignments", "DLD_aligned_consensus_across_methods_cons_string.csv"))
-  msa_sota <- readAAStringSet(file.path(temp_dir, "/seqs_and_alignments/DLD_sequences.fasta")) ; head(msa_sota)
+  msa_cons_string <- fread(file.path(temp_dir, "SEQS_AND_ALNS", "DLD_aligned_consensus_across_methods_cons_string.csv"))
+  msa_sota <- readAAStringSet(file.path(temp_dir, "/SEQS_AND_ALNS/DLD_sequences.fasta")) ; head(msa_sota)
   
-  kalign   <- readAAMultipleAlignment(file.path(temp_dir, "/seqs_and_alignments/DLD_sequences_aligned_kalign.fasta")) ; kalign
-  # mafft    <- readAAMultipleAlignment(file.path(temp_dir, "/seqs_and_alignments/DLD_sequences_aligned_mafft.fasta"))  ; mafft
-  # muscle   <- readAAMultipleAlignment(file.path(temp_dir, "/seqs_and_alignments/DLD_sequences_aligned_muscle.fasta")) ; muscle
-  # clustalw <- readAAMultipleAlignment(file.path(temp_dir, "/seqs_and_alignments/DLD_sequences_aligned_clustalw.fasta")) ; clustalw
-  # clustalo <- readAAMultipleAlignment(file.path(temp_dir, "/seqs_and_alignments/DLD_sequences_aligned_clustalomega.fasta")) ; clustalo
+  kalign   <- readAAMultipleAlignment(file.path(temp_dir, "/SEQS_AND_ALNS/DLD_sequences_aligned_kalign.fasta")) ; kalign
+  # mafft    <- readAAMultipleAlignment(file.path(temp_dir, "/SEQS_AND_ALNS/DLD_sequences_aligned_mafft.fasta"))  ; mafft
+  # muscle   <- readAAMultipleAlignment(file.path(temp_dir, "/SEQS_AND_ALNS/DLD_sequences_aligned_muscle.fasta")) ; muscle
+  # clustalw <- readAAMultipleAlignment(file.path(temp_dir, "/SEQS_AND_ALNS/DLD_sequences_aligned_clustalw.fasta")) ; clustalw
+  # clustalo <- readAAMultipleAlignment(file.path(temp_dir, "/SEQS_AND_ALNS/DLD_sequences_aligned_clustalomega.fasta")) ; clustalo
   
   # Split the MSA into a data frame with one column per position
   msa_split_df <- data.frame(ID = rownames(kalign), seq = kalign@unmasked) %>% 
@@ -891,7 +883,7 @@ if (GENERATE_MSA_TABLE) {
 
   # One-liner to apply the consensus function and convert the result to a single string
   # curly brackets allow you to treat the result of the pipe as an argument in the paste function.
-  
+  # The unlist function is used to convert the result to a vector before pasting it together.
   consensus_strings <- data.frame() ; max_pct_stored    <- data.frame()
 
   for (max_pct in seq(0.5, 1.0, by = 0.1)) {
@@ -912,80 +904,6 @@ if (GENERATE_MSA_TABLE) {
   
   # declutter environment and remove all objects that are no longer needed
   rm(consensus_strings, max_pct_stored, msa_split_df, msa_cons_string, sota, msa_sota, kalign)
-}
-
-if (GENERATE_OPERON_TABLE) {
-
-  operon_df <- fread(file.path(output_dir, "SOTA.csv"), na.strings = c("", NA, "NA"), strip.white = TRUE) %>%
-    # create a subset df that only contains the columns we need
-    select(ID, genbank_acc, uniprot_acc, operon, architecture) %>%
-    # remove rows with missing operon information
-    filter(!is.na(operon)) %>%
-    # remove duplicates
-    distinct(ID, .keep_all = TRUE)
-  
-  # Apply the function to each operon in operon_df and bind rows
-  processed_operons   <- mapply(interpret_operon_direction, ID = operon_df$ID, operon = operon_df$operon, SIMPLIFY = FALSE) %>% bind_rows()
-  
-  # Merge the processed operons with the original data frame
-  operon_df_processed <- operon_df %>% left_join(processed_operons) %>% filter(!is.na(part), part != c("")) %>% 
-    # trim white space from the 'part' column
-    mutate(part = str_trim(part)) %>%
-    group_by(ID) %>%
-    mutate(n_parts = n(),
-           # grab the rows per ID that have the part that contains the pattern 'DLD' and count them
-           n_DLD = sum(str_detect(part, "DLD")),
-           # Identify DLD positions using case_when
-           DLD_position = case_when(
-             # Beginning (bDLD+X+Y+..)
-             str_detect(part, "bDLD") & !str_detect(part, "\\+.*bDLD") ~ "NTD",
-             # End (X+Y+Z+bDLD)
-             str_detect(part, "bDLD") & !str_detect(part, "bDLD.*\\+") ~ "CTD",  
-             # Middle (X+bDLD+Z)
-             str_detect(part, "bDLD") ~ "MID",
-             # Single (bDLD)
-             str_detect(part, "bDLD") ~ "SINGLE"),
-           DLD_position_count = ifelse(str_detect(part, "bDLD"), row_number(), NA_integer_),
-           DLD_pos_cnt_ratio = ifelse(!is.na(DLD_position_count), paste0(DLD_position_count, "/", n_parts), NA_integer_)) %>% 
-    ungroup() 
-  
-  genomes_to_download <- sota %>% select(assembly, assembly_2) %>% 
-    mutate(assembly = case_when(!is.na(assembly) ~ assembly, TRUE ~ assembly_2)) %>% 
-    select(-assembly_2) %>% 
-    distinct(assembly) %>%
-    filter(!is.na(assembly))
-  
-  if (OVERWRITE) {
-    fwrite(operon_df,           file.path(temp_dir, "operon_df.csv"))
-    fwrite(operon_df_processed, file.path(temp_dir, "operon_df_processed.csv"))
-    fwrite(genomes_to_download, file.path(input_dir, "GENOMES", "download_list.csv"), append = F, row.names = F, col.names = F)
-  }
-  
-  if (DOWNLOAD_AND_PROCESS_GENOMES) {
-    ### Download genomes (script #1)
-    system("bash ./scripts/SOTA_GENOME_PREP.sh")
-    system("sleep 3")
-    
-    ### Flatten the folder structure (script #1)
-    system("bash ./scripts/SOTA_GENOME_FLATTEN.sh")
-    system("sleep 3")
-    
-    ### Add the genome prefix to all folder files (script #3)
-    system("bash ./scripts/SOTA_GENOME_RENAME.sh")
-    system("sleep 3")
-  }
-  
-  
-  # TODO: extract operon information from the genomes
-  
-  
-  
-  
-
-  # TODO: finish AF3 extraction script
-  
-  
-  
 }
 
 if (GENERATE_LCI_TABLE) {
@@ -1056,7 +974,7 @@ if (GENERATE_LCI_TABLE) {
       filter(sum(N_CATEGORY_DWELL_TIME) >= 3) %>%
       mutate(PCT_RECRUITMENT = N_CATEGORY_DWELL_TIME/sum(N_CATEGORY_DWELL_TIME)*100,
              #DATE = strsplit(IMAGE, " ")[[1]][1]
-             ) %>%
+      ) %>%
       arrange(CATEGORY_DWELL_TIME) %>%
       as.data.table()
     
@@ -1081,7 +999,7 @@ if (GENERATE_LCI_TABLE) {
       if (file.exists(file.path(temp_dir, "/lci_mean_cell.csv.gz"))) {file.remove(file.path(temp_dir, "/lci_mean_cell.csv.gz"))}
       if (file.exists(file.path(temp_dir, "/lci_mean_replicates.csv.gz"))) {file.remove(file.path(temp_dir, "/lci_mean_replicates.csv.gz"))}
       if (file.exists(file.path(temp_dir, "/lci_mean_total.csv.gz"))) {file.remove(file.path(temp_dir, "/lci_mean_total.csv.gz"))}
-    
+      
       system(paste0("gzip -f ", temp_dir, "/lci_mean_cell.csv"))
       system(paste0("gzip -f ", temp_dir, "/lci_mean_replicates.csv"))
       system(paste0("gzip -f ", temp_dir, "/lci_mean_total.csv"))
@@ -1111,6 +1029,265 @@ if (GENERATE_LCI_TABLE) {
   
 }
 
-### TODO: perform MSA and save as extra column (with gaps)
-### TODO: split MSA column by aa
-### TODO: perform correlation analysis
+if (GENERATE_OPERON_TABLE) {
+
+  sota      <- fread(file.path(output_dir, "SOTA.csv"), na.strings = c("", NA, "NA"), strip.white = TRUE)
+  operon_df <- fread(file.path(output_dir, "SOTA.csv"), na.strings = c("", NA, "NA"), strip.white = TRUE) %>%
+    # create a subset df that only contains the columns we need
+    select(ID, genbank_acc, uniprot_acc, operon, architecture, genbank_gca, genbank_gca_2, refseq_gcf, refseq_gcf_2) %>%
+    # remove rows with missing operon information
+    filter(!is.na(operon)) %>%
+    # remove duplicates
+    distinct(ID, .keep_all = TRUE)
+  
+  # Apply the function to each operon in operon_df and bind rows
+  processed_operons   <- mapply(interpret_operon_direction, ID = operon_df$ID, operon = operon_df$operon, SIMPLIFY = FALSE) %>% bind_rows()
+  
+  # Merge the processed operons with the original data frame
+  operon_df_processed <- operon_df %>% left_join(processed_operons) %>% filter(!is.na(part), part != c("")) %>% 
+    # trim white space from the 'part' column
+    mutate(part = str_trim(part)) %>%
+    group_by(ID) %>%
+    mutate(n_parts = n(),
+           # grab the rows per ID that have the part that contains the pattern 'DLD' and count them
+           n_DLD = sum(str_detect(part, "DLD")),
+           # Identify DLD positions using case_when
+           DLD_position = case_when(
+             # Beginning (bDLD+X+Y+..)
+             str_detect(part, "bDLD") & !str_detect(part, "\\+.*bDLD") ~ "NTD",
+             # End (X+Y+Z+bDLD)
+             str_detect(part, "bDLD") & !str_detect(part, "bDLD.*\\+") ~ "CTD",  
+             # Middle (X+bDLD+Z)
+             str_detect(part, "bDLD") ~ "MID",
+             # Single (bDLD)
+             str_detect(part, "bDLD") ~ "SINGLE"),
+           part_pos_count     = row_number(),
+           DLD_position_count = ifelse(str_detect(part, "bDLD"), row_number(), NA_integer_),
+           DLD_pos_cnt_ratio  = ifelse(!is.na(DLD_position_count), paste0(DLD_position_count, "/", n_parts), NA_integer_),
+           n_upstream         = DLD_position_count - 1,
+           n_downstream       = n_parts - DLD_position_count) %>% 
+    ungroup()
+  
+  genomes_to_download <- sota %>% select(genbank_gca, genbank_gca_2) %>% 
+    pivot_longer(cols = c(genbank_gca, genbank_gca_2), names_to = "assembly_type", values_to = "assembly") %>% 
+    filter(!is.na(assembly)) %>% 
+    distinct(assembly)
+  
+  
+  if (OVERWRITE) {
+    fwrite(operon_df,           file.path(temp_dir,  "operon_df.csv"))
+    fwrite(operon_df_processed, file.path(temp_dir,  "operon_df_processed.csv"))
+    fwrite(genomes_to_download, file.path(input_dir, "genome_download_list.csv"), append = F, row.names = F, col.names = F)
+    
+    # declutter environment and remove all objects that are no longer needed
+    rm(operon_df, operon_df_processed, processed_operons, genomes_to_download)
+  }
+}
+  
+if (DOWNLOAD_AND_PROCESS_GENOME_FOLDERS) {
+    ### Download genomes (script #1)
+    # run this directly in the command line - connection cannot be established via R CLI
+    # go to coding_universe > scripts > run SOTA_GENOME_DOWNLOAD.sh
+    # ************************************************************************ #
+    
+    ### Flatten the folder structure (script #2) and add the genome prefix to all folder files (script #3)
+    system("bash ./scripts/SOTA_GENOME_FLATTEN.sh") ; system("bash ./scripts/SOTA_GENOME_RENAME.sh") ; system("sleep 3")
+    
+    # check if the genomes have been downloaded and processed by comparing files in file.path(input_dir, "GENOMES") to genomes_to_download
+    # genome_files <- list.files(file.path(input_dir, "GENOMES"), pattern = "_extracted$", full.names = FALSE) %>% stringr::str_remove("_extracted$") %>% na.omit()
+    # genomes_to_download <- genomes_to_download %>% pull(assembly)
+    # setdiff(genomes_to_download, genome_files)
+  }
+  
+  # # remotes::install_github("thackl/gggenomes")
+  # # library(gggenomes)
+  # 
+  # operon_df_processed <- fread(file.path(temp_dir, "operon_df_processed.csv"))
+  # sota                <- fread(file.path(output_dir, "SOTA.csv"), na.strings = c("", NA, "NA"), strip.white = TRUE)
+  # genome_files        <- list.files(file.path(input_dir, "GENOMES"), pattern = "_extracted$", full.names = FALSE) %>% stringr::str_remove("_extracted$") %>% na.omit()
+  # 
+  # # genome_file <- "GCA_002154725.1" # NOSTOC SP. 106C
+  # # genome_file <- "GCF_963875125.1" # CALOTHRIX NIES-2098 NEW
+  # # genome_file <- genome_files[3]
+  # 
+  # genome_list <- list.files(file.path(input_dir, "GENOMES"), pattern = genome_file, full.names = TRUE, recursive = TRUE)
+  # genome      <- readDNAStringSet(genome_list[grepl(".fna", genome_list)])
+  # genome_gff  <- read.gff(genome_list[grepl(".gff", genome_list)])
+  # # genome_gb   <- read_gbk(genome_list[grepl(".gb", genome_list)])
+  # 
+  # # genome_gb_CDS <- genome_gb %>% filter(type == "CDS")
+  # 
+  # gb_names <- search_target_by_pattern_col(sota, genome_file, "genbank_gca", "refseq_gcf", "genbank_acc") %>% unique()
+  
+  
+  if (EXTRACT_OPERONS) {
+    
+    operon_df_processed <- fread(file.path(temp_dir, "operon_df_processed.csv"))
+    
+    # list genomes (fna files)
+    genome_files <- list.files(file.path(input_dir, "GENOMES"), pattern = "_extracted$", full.names = FALSE) %>% stringr::str_remove("_extracted$") %>% na.omit()
+    
+    # genome_file <- genome_files[3] # for debugging
+    # genome_file <- "GCA_000522425.1"
+    # genome_file <- "GCA_002154725.1"
+    # genome_file <- "GCA_001610855.1"
+    for (genome_file in genome_files) {
+      if (genome_file == "") next  # Skip if the genome_file is empty
+      tryCatch({
+        
+        ### (1) Load raw files (genome fasta, gff, maybe gb) ###################
+        genome_list <- list.files(file.path(input_dir, "GENOMES"), pattern = genome_file, full.names = TRUE, recursive = TRUE)
+        genome      <- readDNAStringSet(genome_list[grepl(".fna", genome_list)])
+        genome_gff  <- read.gff(genome_list[grepl(".gff", genome_list)])
+        
+        ####### Fetch relevant gene names and genbank accessions
+        gene_names <- search_target_by_pattern_col(sota, genome_file, "assembly", "assembly_2", "gene")
+        gb_names   <- search_target_by_pattern_col(sota, genome_file, "assembly", "assembly_2", "genbank_acc")
+        
+        ####### Initialize a list to collect data
+        
+        data_list <- list(
+          genbank_acc = character(),
+          n_DLD = numeric(),
+          n_parts = numeric(),
+          gene_base_start = numeric(),
+          gene_base_end = numeric(),
+          operon_base_start = numeric(),
+          operon_base_end = numeric(),
+          operon_components = character()
+        )
+        
+        ### (2) Process each genbank accession #################################
+        
+        for (i in seq_along(gb_names)) {
+          cat("************************************************************* \n")
+          gb_name <- gb_names[i]
+          cat("*** Starting ", gb_name, " *** \n")
+          
+          # Find the gene or gb accession in the GFF file
+          if (!is.na(gb_name) && nchar(gb_name) > 0) {
+            n_parts <- operon_df_processed$n_parts[operon_df_processed$genbank_acc == gb_name] %>% unique()
+            bDD_parts <- operon_df_processed$DLD_position_count[operon_df_processed$genbank_acc == gb_name]
+            bDD_parts <- bDD_parts[!is.na(bDD_parts)]
+            
+            for (j in seq_along(bDD_parts)) {
+              bDD_part <- bDD_parts[j]
+              cat("*** bDD position: ", bDD_part, "/", n_parts, " *** \n")
+              
+              get_n_upstream   <- as.numeric(bDD_part - 1)
+              get_n_downstream <- as.numeric(n_parts   - bDD_part)
+              
+              # Get gene start and end positions
+              gene_start <- genome_gff$start[grepl(gb_name, genome_gff$attributes)] %>% unique()
+              gene_end <- genome_gff$end[grepl(gb_name, genome_gff$attributes)] %>% unique()
+              
+              if (length(gene_start) == 0 || length(gene_end) == 0) {
+                cat("Gene start or end not found for ", gb_name, "\n")
+                next
+              }
+              
+              if (get_n_downstream == 0 & get_n_upstream == 0) {
+                upstream_genes    <- NA
+                downstream_genes  <- NA
+                operon_start      <- gene_start
+                operon_end        <- gene_end
+                operon_components <- gb_name
+                
+              } else if (get_n_downstream == 0 & get_n_upstream > 0) {
+                upstream_genes    <- get_upstream_genes(gb_name, get_n_upstream)
+                downstream_genes  <- NA
+                operon_start      <- genome_gff$start[grepl(upstream_genes, genome_gff$attributes)] %>% unique()
+                operon_end        <- gene_end
+                operon_components <- c(upstream_genes, gb_name)
+                
+              } else if (get_n_downstream > 0 & get_n_upstream == 0) {
+                upstream_genes    <- NA
+                downstream_genes  <- get_downstream_genes(gb_name, get_n_downstream)
+                operon_start      <- gene_start
+                operon_end        <- genome_gff$end[grepl(downstream_genes[length(downstream_genes)], genome_gff$attributes)] %>% unique()
+                operon_components <- c(gb_name, downstream_genes)
+                
+              } else {
+                upstream_genes    <- get_upstream_genes(gb_name, get_n_upstream)
+                downstream_genes  <- get_downstream_genes(gb_name, get_n_downstream)
+                operon_start      <- genome_gff$start[grepl(upstream_genes[1], genome_gff$attributes)] %>% unique()
+                operon_end        <- genome_gff$end[grepl(downstream_genes[length(downstream_genes)], genome_gff$attributes)] %>% unique()
+                operon_components <- c(upstream_genes, gb_name, downstream_genes)
+              }
+              
+              # Ensure consistency in length
+              data_list$genbank_acc       <- c(data_list$gb_name, gb_name)
+              data_list$n_DLD             <- c(data_list$bDD_part, bDD_part)
+              data_list$n_parts           <- c(data_list$n_parts, n_parts)
+              data_list$gene_base_start   <- c(data_list$gene_base_start, ifelse(length(gene_start) > 0, gene_start, NA))
+              data_list$gene_base_end     <- c(data_list$gene_base_end, ifelse(length(gene_end) > 0, gene_end, NA))
+              data_list$operon_base_start <- c(data_list$operon_base_start, ifelse(length(operon_start) > 0, operon_start, NA))
+              data_list$operon_base_end   <- c(data_list$operon_base_end, ifelse(length(operon_end) > 0, operon_end, NA))
+              data_list$operon_components <- c(data_list$operon_components, paste(operon_components, collapse=", "))
+            }
+          } else {
+            warning(paste("No genbank accession found for", genome_file, "in SOTA or matched in the genome_gff table. Skipping."))
+            next
+          }
+        }
+        
+        # Combine lists into a data frame
+        operon_df <- data.frame(
+          genbank_acc       = data_list$genbank_acc,
+          n_DLD             = data_list$n_DLD,
+          n_parts           = data_list$n_parts,
+          gene_base_start   = data_list$gene_base_start,
+          gene_base_end     = data_list$gene_base_end,
+          operon_base_start = data_list$operon_base_start,
+          operon_base_end   = data_list$operon_base_end,
+          operon_components = data_list$operon_components,
+          stringsAsFactors  = FALSE
+        )
+        
+        operon_df_processed_final <- left_join(operon_df_processed, operon_df)
+        
+        opf <- operon_df_processed_final %>%
+          group_by(ID) %>%
+          select(ID, part_pos_count, n_parts, operon_components) %>%
+          separate_rows(operon_components, sep = ",\\s*") %>%
+          group_by(ID) %>%
+          select(ID, operon_components) %>%
+          distinct() %>%
+          mutate(part_pos_count = row_number()) %>%
+          filter(!is.na(operon_components)) %>%
+          ungroup()
+        
+        # Step 3: Merge the processed operons with the original data frame
+        operon_df_processed_final <- operon_df_processed_final %>% select(-operon_components) %>% left_join(opf)
+        
+      }, error = function(e) {
+        message("Error processing genome file: ", genome_file, "\n", e)
+      })
+    }
+    
+    if (OVERWRITE) {
+      fwrite(operon_df_processed, file.path(temp_dir, "operon_df_processed.csv"))
+    }
+  }
+    
+    
+    
+    
+   
+    
+    
+    # extract bDD-containing gene names from sota
+    # bDD_genes <- sota$genbank_acc %>% str_extract(".*(?=\\.)") %>% unique()
+    
+    
+  # TODO: extract operon information from the genomes
+  # TODO: Load genome data and annotation data
+  # TODO: Extract operons based on up/downstream genes
+  # TODO: Extract operons based on gene clustering?
+  # TODO: Extract operons based on distance (extract +/- 10kb from the bDD-containing gene)
+  # TODO: Set up a line plot for comparing the different approaches
+  
+  
+
+
+
