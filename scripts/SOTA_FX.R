@@ -54,7 +54,7 @@ ELISA_Fx <- function(Input_Directory, Output_Directory = Input_Directory) {
   All_plates_data = data.frame()
   
   # Get a list of Excel files in the main directory matching the pattern
-  excel_files <- list.files(Input_Directory, recursive = FALSE, full.names = TRUE, pattern = "\\d{8}_Plate_\\d+\\.xlsx$")
+  excel_files <- list.files(Input_Directory, recursive = T, full.names = TRUE, pattern = "\\d{8}_Plate_\\d+\\.xlsx$")
   
   # Check if there are plates found
   if (length(excel_files) > 0) {
@@ -489,13 +489,15 @@ perform_statistical_analysis <- function(DATA, GROUP_BY_COLUMN, TESTING_COLUMN) 
 ################################################################################
 ################################################################################
 
-process_data_for_plot <- function(data, change_unstim_plt_col = T, unstim_plt_col = "#BEBDBD") {
+process_data_for_plot <- function(data, change_unstim_plt_col = T, unstim_plt_col = "#BEBDBD", unstim_plt_col_lightest = F) {
   # Reorder cell lines for plotting
   data$CL_NAME_ON_PLOT <- reorder(data$CL_NAME_ON_PLOT, -data$ORDER_NO)
   
   # Reformat condition for legend text
   data$CONDITION <- factor(data$CONDITION, levels = c("UNSTIM", "STIM"))
-  if (change_unstim_plt_col) {
+  if (unstim_plt_col_lightest) {
+    data$PLOTTING_COLOR[data$CONDITION == "UNSTIM"] <- data$PLT_LIGHTEST[data$CONDITION == "UNSTIM"] 
+  } else if (change_unstim_plt_col) {
     data$PLOTTING_COLOR[data$CONDITION == "UNSTIM"] <- unstim_plt_col 
   }
   
@@ -537,7 +539,6 @@ process_statistical_analysis <- function(data, group_var, value_var) {
     p_value = statistical_significance$annotations,
     significance = statistical_significance$p_values
   )
-  
   return(stat_significance_dt)
 }
 
@@ -546,10 +547,11 @@ process_statistical_analysis <- function(data, group_var, value_var) {
 ################################################################################
 
 prepare_plotting_stats <- function(data, stat_significance_dt, 
-                                   group_var = c("CELL_LINE", "CONDITION", "CL_NAME_ON_PLOT", "PATHWAY", "STIMULANT", "STIM_CONCENTRATION", "PLOTTING_COLOR", "ORDER_NO"),
+                                   group_var = c("CELL_LINE", "CONDITION", "CL_NAME_ON_PLOT", "PLT_LIGHTEST", "PATHWAY", "STIMULANT", "STIM_CONCENTRATION", "PLOTTING_COLOR", "ORDER_NO"),
                                    mean_var = "triplicate_mean_per_day",
                                    change_unstim_plt_col = T,
                                    unstim_plt_col = "#BEBDBD",
+                                   unstim_plt_col_lightest = F,
                                    fold_change_option = F) {
   # Group and summarize data for plotting_stats
   plotting_stats_main <- data %>%
@@ -566,7 +568,9 @@ prepare_plotting_stats <- function(data, stat_significance_dt,
   plotting_stats_main$CONDITION <- factor(plotting_stats_main$CONDITION, levels = c("UNSTIM", "STIM"))
   plotting_stats_main$CL_NAME_ON_PLOT <- reorder(plotting_stats_main$CL_NAME_ON_PLOT, -plotting_stats_main$ORDER_NO)
   
-  if (change_unstim_plt_col) {
+  if (unstim_plt_col_lightest) {
+    plotting_stats_main$PLOTTING_COLOR[plotting_stats_main$CONDITION == "UNSTIM"] <- plotting_stats_main$PLT_LIGHTEST[plotting_stats_main$CONDITION == "UNSTIM"] 
+  } else if (change_unstim_plt_col) {
     plotting_stats_main$PLOTTING_COLOR[plotting_stats_main$CONDITION == "UNSTIM"] <- unstim_plt_col
   }
   
@@ -583,7 +587,7 @@ process_alignments <- function(file_path,
                                min.fraction=0.5, 
                                min.block.width=2, 
                                OVERWRITE=TRUE,
-                               base = paste0(temp_dir, "/seqs_and_alignments/", basename(file_path) %>% str_replace_all("\\.fasta", ""))){
+                               base = paste0(temp_dir, "/SEQS_AND_ALNS/", basename(file_path) %>% str_replace_all("\\.fasta", ""))){
   ## load the multiple alignment
   origMAlign <- Biostrings::readAAMultipleAlignment(file_path)
   
@@ -625,7 +629,7 @@ process_alignments <- function(file_path,
   
   if (OVERWRITE) {
     ## write out the results to CSV files
-    # base <- paste0(temp_dir, "/seqs_and_alignments/", basename(file_path) %>% str_replace_all("\\.fasta", ""))
+    # base <- paste0(temp_dir, "/SEQS_AND_ALNS/", basename(file_path) %>% str_replace_all("\\.fasta", ""))
     
     fwrite(as.data.frame(alph_freq),   paste0(base, "_alph_freq.csv"))
     fwrite(as.data.frame(cons_mat),    paste0(base, "_cons_mat.csv"))
@@ -651,7 +655,7 @@ iterative_msa_masking <- function(file_path,
   for (min_fraction in min_fraction_start_end) {
     for (min_block_width in min_block_width_start_end) {
       # Construct the base variable inside the loops
-      base <- paste0(output_dir, "/seqs_and_alignments/iterative_msa_masking/", 
+      base <- paste0(output_dir, "/SEQS_AND_ALNS/iterative_msa_masking/", 
                      basename(file_path) %>% str_replace_all("\\.fasta", ""), 
                      "_min_fraction_", min_fraction, 
                      "_min_block_width_", min_block_width)
@@ -961,108 +965,375 @@ prepare_fold_change_plots <- function(plotting_data, name_key) {
 #   pivot_wider(id_cols = c(Chain_i, Chain_j, iptm, pae_min), names_from = c(Chain_i, Chain_j, iptm, pae_min), values_from = c(iptm, pae_min))
 
 
-
-
 ################################################################################
 
-# # Function to interpret directions in an operon string
-# interpret_operon_direction <- function(ID, operon) {
-#   
-#   # Extract components with direction symbols using stringr::str_split
-#   components <- unlist(str_split(operon, "(?<=→|<-)"))
-#   
-#   # Get parts and directions
-#   parts <- str_extract(components, "^[^→<-]*")
-#   directions <- str_extract(components, "→|<-")
-#   
-#   # Determine the direction for the last gene correctly
-#   if (!is.na(directions[length(directions)])) {
-#     if (directions[length(directions)] == "<-" || str_ends(parts[length(parts)], "REV")) {
-#       directions[length(directions)] <- "REV"
-#     } else {
-#       directions[length(directions)] <- "FWD"
-#     }
-#   } else {
-#     directions[length(directions)] <- "REV"  # Assuming default direction as "<-" for the last gene if its direction is NA
-#   }
-#   
-#   # Combine parts and directions into a data frame
-#   operon_data <- data.frame(ID = ID, part = parts, direction = directions, stringsAsFactors = FALSE)
-#   
-#   # Replace direction symbols with "FWD" and "REV"
-#   operon_data$direction[operon_data$direction == "→"]  <- "FWD"
-#   operon_data$direction[operon_data$direction == "<-"] <- "REV"
-#   
-#   # Return the interpreted operon data
-#   return(operon_data)
-# }
-
-################################################################################
-
-# # operons <- operon_df$operon[1:10]
-# # ids     <- operon_df$ID[1:10]
+# operons <- operon_df$operon[1:10]
+# ids     <- operon_df$ID[1:10]
 # operon = operons[2]               # for debugging
-# # ID     = ids[2]                   # for debugging
-# 
-# # Function to interpret directions in an operon string
-# # Function to interpret directions in an operon string
-# interpret_operon_direction <- function(ID, operon) {
-#   
-#   operon <- gsub("<-", "←", operon)
-#   
-#   # Extract components with direction symbols using stringr::str_split
-#   # components <- unlist(str_split(operon, "(?<=[←→<\\|])")) ; components
-#   components <- unlist(str_split(operon, "(?<=→|←|\\|\\|)")) ; components
-#   
-#   # Initialize vectors for parts and directions
-#   parts <- character(length(components))
-#   directions <- character(length(components))
-#   
-#   # Temporary storage for the last direction sign encountered
-#   last_direction <- NA
-#   
-#   # Loop through components to separate ?|| into individual parts
-#   for (i in seq_along(components)) {
-#     if (components[i] == "?") {
-#       parts[i] <- "?"
-#       directions[i] <- last_direction  # Assign the last stored direction
-#     } else if (components[i] == "||") {
-#       parts[i] <- "||"
-#       directions[i] <- NA  # No direction associated with ||
-#     } else if (str_detect(components[i], "\\?\\|\\|")) {
-#       parts[i] <- "?"
-#       directions[i] <- last_direction  # Assign the last stored direction
-#     } else {
-#       parts[i] <- components[i]
-#       directions[i] <- str_extract(components[i], "←|→")
-#       if (!is.na(directions[i])) {
-#         last_direction <- directions[i]  # Update last stored direction
-#       }
-#     }
-#   }
-#   
-#   # Determine the direction for the last gene correctly
-#   if (!is.na(directions[length(directions)])) {
-#     if (directions[length(directions)] == "←" || str_ends(parts[length(parts)], "REV")) {
-#       directions[length(directions)] <- "REV"
-#     } else {
-#       directions[length(directions)] <- "FWD"
-#     }
-#   } else {
-#     directions[length(directions)] <- "REV"  # Default direction as "<-" for the last gene if its direction is NA
-#   }
-#   
-#   # Remove empty parts
-#   operon_data <- data.frame(ID = ID, part = parts, direction = directions, stringsAsFactors = FALSE)
-#   operon_data <- operon_data[!is.na(operon_data$part) & operon_data$part != "", ]
-#   
-#   # Replace direction symbols with "FWD" and "REV"
-#   operon_data$direction[operon_data$direction == "→"] <- "FWD"
-#   operon_data$direction[operon_data$direction == "←"] <- "REV"
-#   
-#   operon_data$part <- str_replace_all(operon_data$part, "→|←|\\|", "")
-#   
-#   # Return the interpreted operon data
-#   return(operon_data)
-# }
-# 
+# ID     = ids[2]                   # for debugging
+
+# Function to interpret directions in an operon string
+interpret_operon_direction <- function(ID, operon) {
+
+  operon <- gsub("<-", "←", operon)
+
+  # Extract components with direction symbols using stringr::str_split
+  # components <- unlist(str_split(operon, "(?<=[←→<\\|])")) ; components
+  components <- unlist(str_split(operon, "(?<=→|←|\\|\\|)")) ; components
+
+  # Initialize vectors for parts and directions
+  parts <- character(length(components))
+  directions <- character(length(components))
+
+  # Temporary storage for the last direction sign encountered
+  last_direction <- NA
+
+  # Loop through components to separate ?|| into individual parts
+  for (i in seq_along(components)) {
+    if (components[i] == "?") {
+      parts[i] <- "?"
+      directions[i] <- last_direction  # Assign the last stored direction
+    } else if (components[i] == "||") {
+      parts[i] <- "||"
+      directions[i] <- NA  # No direction associated with ||
+    } else if (str_detect(components[i], "\\?\\|\\|")) {
+      parts[i] <- "?"
+      directions[i] <- last_direction  # Assign the last stored direction
+    } else {
+      parts[i] <- components[i]
+      directions[i] <- str_extract(components[i], "←|→")
+      if (!is.na(directions[i])) {
+        last_direction <- directions[i]  # Update last stored direction
+      }
+    }
+  }
+
+  # Determine the direction for the last gene correctly
+  if (!is.na(directions[length(directions)])) {
+    if (directions[length(directions)] == "←" || str_ends(parts[length(parts)], "REV")) {
+      directions[length(directions)] <- "REV"
+    } else {
+      directions[length(directions)] <- "FWD"
+    }
+  } else {
+    directions[length(directions)] <- "REV"  # Default direction as "<-" for the last gene if its direction is NA
+  }
+
+  # Remove empty parts
+  operon_data <- data.frame(ID = ID, part = parts, direction = directions, stringsAsFactors = FALSE)
+  operon_data <- operon_data[!is.na(operon_data$part) & operon_data$part != "", ]
+
+  # Replace direction symbols with "FWD" and "REV"
+  operon_data$direction[operon_data$direction == "→"] <- "FWD"
+  operon_data$direction[operon_data$direction == "←"] <- "REV"
+
+  operon_data$part <- str_replace_all(operon_data$part, "→|←|\\|", "")
+
+  # Return the interpreted operon data
+  return(operon_data)
+}
+
+################################################################################
+
+# Function to search for matches in search_col1 and search_col2 and return the target_col
+search_target_by_pattern_col <- function(df, pattern, search_col1, search_col2, target_col) {
+  # Search in search_col1 column
+  match_col1 <- df %>%
+    filter(grepl(pattern, .[[search_col1]])) %>%
+    select(all_of(target_col))
+  
+  # If match found in search_col1, return the target_col name(s)
+  if (nrow(match_col1) > 0) {
+    return(match_col1[[target_col]])
+  }
+  
+  # If no match found in search_col1, search in search_col2 column
+  match_assembly_2 <- df %>%
+    filter(grepl(pattern, .[[search_col2]])) %>%
+    select(all_of(target_col))
+  
+  # Return the target_col name(s) found in search_col2 or NULL if not found
+  if (nrow(match_assembly_2) > 0) {
+    return(match_assembly_2[[target_col]])
+  } else {
+    return(NULL)  # Return NULL if no match is found in either column
+  }
+}
+
+################################################################################
+
+# gene = "WP_044290893.1"
+# Function to split the gene name into character and numeric parts
+split_gene_name <- function(gene) {
+  parts <- regmatches(gene, regexec("^([A-Za-z_]+)([0-9]+)\\.([0-9]+)$", gene))
+  if (length(parts[[1]]) > 0) {
+    return(list(prefix = parts[[1]][2], number = parts[[1]][3], suffix = parts[[1]][4]))
+  } else {
+    return(NULL)
+  }
+}
+
+# Function to get upstream genes
+get_upstream_genes <- function(gene, n) {
+  parts <- split_gene_name(gene)
+  if (!is.null(parts)) {
+    num_length <- nchar(parts$number)
+    upstream_genes <- sapply((as.numeric(parts$number) - n):(as.numeric(parts$number) - 1), function(num) {
+      sprintf("%s%0*d.%s", parts$prefix, num_length, num, parts$suffix)
+    })
+    return(upstream_genes)
+  } else {
+    return(NULL)
+  }
+}
+
+# Function to get downstream genes
+get_downstream_genes <- function(gene, n) {
+  parts <- split_gene_name(gene)
+  if (!is.null(parts)) {
+    num_length <- nchar(parts$number)
+    downstream_genes <- sapply((as.numeric(parts$number) + 1):(as.numeric(parts$number) + n), function(num) {
+      sprintf("%s%0*d.%s", parts$prefix, num_length, num, parts$suffix)
+    })
+    return(downstream_genes)
+  } else {
+    return(NULL)
+  }
+}
+
+################################################################################
+
+extract_operon <- function(genome, start, end, strand) {
+  # Calculate cumulative lengths of contigs
+  cumulative_lengths <- cumsum(sapply(genome, length))
+  
+  # Find the contig that contains the start position
+  contig_start <- which(start <= cumulative_lengths & start > cumulative_lengths - sapply(genome, length))
+  # Find the contig that contains the end position
+  contig_end <- which(end <= cumulative_lengths & end > cumulative_lengths - sapply(genome, length))
+  
+  if (length(contig_start) == 0 || length(contig_end) == 0) {
+    stop("Start or end position is out of bounds.")
+  }
+  
+  # If both positions are within the same contig
+  if (contig_start == contig_end) {
+    local_start <- start - (cumulative_lengths[contig_start] - length(genome[[contig_start]]))
+    local_end   <- end   - (cumulative_lengths[contig_end]   - length(genome[[contig_end]]))
+    operon_sequence <- subseq(genome[[contig_start]], start=local_start, end=local_end)
+  } else {
+    # If the operon spans multiple contigs
+    operon_sequence <- DNAStringSet()
+    
+    # Extract the sequence from the start position to the end of the start contig
+    local_start <- start - (cumulative_lengths[contig_start] - length(genome[[contig_start]]))
+    operon_sequence <- c(operon_sequence, DNAStringSet(subseq(genome[[contig_start]], start=local_start, end=length(genome[[contig_start]]))))
+    
+    # Extract the sequences from any intermediate contigs
+    if (contig_start + 1 < contig_end) {
+      for (i in (contig_start + 1):(contig_end - 1)) {
+        operon_sequence <- c(operon_sequence, DNAStringSet(genome[[i]]))
+      }
+    }
+    
+    # Extract the sequence from the beginning of the end contig to the end position
+    local_end <- end - (cumulative_lengths[contig_end] - length(genome[[contig_end]]))
+    operon_sequence <- c(operon_sequence, DNAStringSet(subseq(genome[[contig_end]], start=1, end=local_end)))
+    
+    # Concatenate all the sequences into a single DNAString
+    operon_sequence <- unlist(operon_sequence)
+  }
+  
+  # Reverse complement if the strand is negative
+  if (strand == "-") {
+    operon_sequence <- reverseComplement(operon_sequence)
+  }
+  
+  return(operon_sequence)
+}
+
+################################################################################
+
+# Function to find all genes in the operon starting from a given gene
+find_operon_genes <- function(start_gene, operonic_gp_list) {
+  operon_genes <- c(start_gene)  # Initialize with the start gene
+  new_genes <- c(start_gene)     # Genes to be checked
+  
+  while (length(new_genes) > 0) {
+    current_genes <- new_genes
+    new_genes <- c()
+    
+    # Find all pairs where current_genes are involved
+    for (gene in current_genes) {
+      new_pairs <- operonic_gp_list %>%
+        filter((IdGene %in% gene | IdGene2 %in% gene) & CLASS == "Operon" & Probability >= 0.5)
+      
+      # Add new genes to operon_genes
+      new_genes <- c(new_genes, new_pairs$IdGene, new_pairs$IdGene2)
+    }
+    
+    # Keep only unique genes that are not already in operon_genes
+    new_genes <- setdiff(unique(new_genes), operon_genes)
+    operon_genes <- unique(c(operon_genes, new_genes))
+  }
+  
+  return(operon_genes)
+}
+
+################################################################################
+
+# Define a function to convert DNAStringSet to a character vector
+convert_to_character <- function(dna_string_set) {
+  if (length(dna_string_set) > 0) {
+    as.character(dna_string_set)
+  } else {
+    NULL
+  }
+}
+
+################################################################################
+
+# Function to read files and add ID and db columns
+read_and_add_ID_and_db <- function(folder_path, file_names, db_names) {
+  ID <- unlist(lapply(strsplit(basename(folder_path), "_mmseqs", fixed=TRUE), function(x) return(x[1])))
+  file_paths <- file.path(folder_path, file_names)
+  data_list <- lapply(seq_along(file_paths), function(i) {
+    data <- fread(file_paths[i], sep = "\t")
+    data$ID <- ID
+    data$db <- db_names[i]
+    return(data)
+  })
+  return(data_list)
+}
+
+################################################################################
+
+extract_operon_components_from_list <- function(main_df = sota, genome, list, output_path = file.path(output_dir, "OPERONS", genome_name)) {
+  output_path <- output_path
+  if (!dir.exists(output_path)) {dir.create(output_path, showWarnings = FALSE)}
+  
+  genome_path           <- genome_fasta_files[sapply(genome_fasta_files, function(x) grepl(genome_name, x))]
+  gff_path              <- genome_gff_files[sapply(genome_gff_files, function(x) grepl(genome_name, x))]
+  operon_list_path      <- operon_lists[sapply(operon_lists, function(x) grepl(genome_name, x))]
+  operonic_gp_list_path <- operonic_gene_pairs[sapply(operonic_gene_pairs, function(x) grepl(genome_name, x))]
+  protein_seq_path      <- predicted_protein_sequences[sapply(predicted_protein_sequences, function(x) grepl(genome_name, x))]
+  ORFs_coordinates_path <- fread(ORFs_coordinates_main[sapply(ORFs_coordinates_main, function(x) grepl(genome_name, x))])
+  
+  genome            <- readDNAStringSet(genome_path)
+  gff               <- ape::read.gff(gff_path)
+  operon_list       <- fread(operon_list_path)
+  operonic_gp_list  <- fread(operonic_gp_list_path)
+  protein_sequences <- readAAStringSet(protein_seq_path)
+  ORFs_coordinates  <- ORFs_coordinates_path
+  
+  # Retrieve the bDD AA sequences and convert to AAStringSet
+  cat("*** Retrieving bDD AA Sequences *************************************** \n")
+  print(aa_seq_patterns <- main_df %>% filter(genbank_gca == genome_name | genbank_gca_2 == genome_name | refseq_gcf == genome_name | refseq_gcf_2 == genome_name) %>% pull(seq_DLD_aa) %>% unique())
+  print(IDs             <- main_df %>% filter(genbank_gca == genome_name | genbank_gca_2 == genome_name | refseq_gcf == genome_name | refseq_gcf_2 == genome_name) %>% select(ID, seq_DLD_aa) %>% unique())
+  
+  # Initialize a vector to store names of matching sequences
+  matching_names <- character()
+  
+  # Loop through each pattern and find matches
+  pattern <- aa_seq_patterns[1]
+  for (pattern in aa_seq_patterns) {
+    ID <- IDs %>% filter(seq_DLD_aa == pattern) %>% pull(ID) %>% unique() %>% paste(collapse = "_")
+    aa_pattern <- AAString(pattern)
+    matches <- vmatchPattern(aa_pattern, protein_sequences, max.mismatch = 1, fixed = TRUE)
+    cat(matching_names <- unique(c(matching_names, names(protein_sequences)[sapply(matches, function(x) length(x) > 0)])), "\n")
+    
+    # save the matching sequences to a file - the file name should have the genome and matching name
+    if (length(matching_names) > 0) {
+      cat("Match found! \n")
+      for (matching_name in matching_names) {
+        # save the matching sequences to a file - the file name should have the genome and matching name
+        matching_seq        <- protein_sequences[[matching_name]]
+        print(matching_seq        <- AAStringSet(matching_seq))
+        
+        names(matching_seq) <- paste0(genome_name, "_", matching_name, "_", ID)
+        writeXStringSet(matching_seq, file.path(output_path, paste0(names(matching_seq), "_matching_seq.faa")))
+        cat("Overwriting", file.path(output_path, paste0(names(matching_seq), "_matching_seqs.faa")), "\n")
+      }
+    }
+    
+    for (protein in gene_list) {
+      matching_seq        <- protein_sequences[[paste0("cds-", protein)]]
+      matching_seq        <- AAStringSet(matching_seq)
+      if (length(matching_seq) > 0 && OVERWRITE) {
+        names(matching_seq) <- paste0(genome_name, "_", protein, "_", ID)
+        writeXStringSet(matching_seq, file.path(output_path, paste0(names(matching_seq), ".fna")))
+      }
+    }
+  }
+}
+
+################################################################################
+
+
+extract_specific_operons <- function(genome_name, list, output_path = file.path(output_dir, "OPERONS", genome_name), OVERWRITE = TRUE) {
+  
+  # Initialize a list to store results for each genome
+  genome_fasta_files <- list.files(file.path(input_dir, "GENOMES"), pattern = "\\.fna$", full.names = TRUE, recursive = TRUE)
+  genome_path <- genome_fasta_files[sapply(genome_fasta_files, function(x) grepl(genome_name, x))]
+  genome      <- readDNAStringSet(genome_path) 
+  gff_path    <- genome_gff_files[sapply(genome_gff_files, function(x) grepl(genome_name, x))]    ; gff    <- ape::read.gff(gff_path)
+  gff_data    <- read_tsv(gff_path, comment = "#", col_names = c("seqid","source","type","start","end","score" ,"strand","phase","attributes"), col_types = cols()) %>% filter(type == "CDS")
+  
+  # Create a data frame to store the operon components
+  df <- data.frame(gene = list,
+                   start = NA,
+                   end = NA,
+                   seqid = NA,
+                   type = NA,
+                   strand = NA,
+                   stringsAsFactors = FALSE)
+  
+  
+  # Iterate over df and match the 'gene' column with the 'attributes' column in gff_data
+  for (i in 1:nrow(df)) {
+    gene <- df$gene[i]
+    matched_row <- gff_data %>% filter(grepl(gene, attributes))
+    if (nrow(matched_row) > 0) {
+      df$start[i]  <- matched_row$start[1]
+      df$end[i]    <- matched_row$end[1]
+      df$seqid[i]  <- matched_row$seqid[1]
+      df$type[i]   <- matched_row$type[1]
+      df$strand[i] <- matched_row$strand[1]
+    }
+  }
+  
+  # Display the updated df
+  print(df)
+  
+  # extract the operon from the genome based on the start and end positions
+  print(special_operon <- extract_operon(genome = genome,
+                                         start  = min(df$start), 
+                                         end    = max(df$end),
+                                         strand = unique(df$strand)))
+  special_operon <- DNAStringSet(special_operon)
+  names(special_operon) <- paste0(genome_name, "_", paste0(list, collapse = "_"), "_operon")
+  
+  df$operon <- convert_to_character(special_operon)
+  if (OVERWRITE) {
+    # create ouutput dir if it does not exist
+    if (!dir.exists(output_path)) {dir.create(output_path, showWarnings = FALSE)}
+    fwrite(df, file.path(output_path, paste0(genome_name, "_", paste0(list, collapse = "_"), "_operon.csv")), append = FALSE)
+    writeXStringSet(DNAStringSet(special_operon), file.path(output_path, paste0(genome_name, "_", paste0(list, collapse = "_"), "_operon.fna")))
+    cat("Files written to", file.path(getwd(), output_path), "\n")
+  }
+  
+  # add the fasta files of the individual genes based on each start and end position
+  for (i in 1:nrow(df)) {
+    gene <- df$gene[i]
+    start <- df$start[i]
+    end <- df$end[i]
+    strand <- df$strand[i]
+    gene_seq <- extract_operon(genome = genome, start = start, end = end, strand = strand)
+    gene_seq <- DNAStringSet(gene_seq)
+    names(gene_seq) <- paste0(genome_name, "_", gene)
+    if (OVERWRITE) {
+      writeXStringSet(gene_seq, file.path(output_path, paste0(genome_name, "_", gene, ".fna")))
+    }
+  }
+  return(df)
+}
