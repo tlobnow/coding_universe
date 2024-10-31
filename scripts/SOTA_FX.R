@@ -1535,7 +1535,7 @@ prepare_fasta_data <- function(df, domain_name = "bDLD3") {
 }
 
 # Write domain sequences to FASTA files
-write_domain_fasta <- function(df_list, strict_filename, extended_filename) {
+write_domain_fasta <- function(df_list, domain_name = "bDLD3", strict_filename, extended_filename) {
   # Check if the sequences are DNA or protein
   if (all(grepl("^[ACGTacgt]*$", df_list$strict$sequence))) {
     strict_fasta <- DNAStringSet(df_list$strict$sequence)
