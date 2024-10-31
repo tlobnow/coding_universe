@@ -430,7 +430,9 @@ process_ELISA_data <- function(DF, NEGATIVE_CTRL, POSITIVE_CTRL) {
   DATA_NORMALIZED <- DF_normalization_adj %>%
     group_by(!!!syms(group_vars), CELL_LINE, CONDITION) %>%
     mutate(Concentration_NORMALIZED = ifelse(Concentration_REDUCED / normalization_control_value < 0, 0, Concentration_REDUCED / normalization_control_value),
-           triplicate_mean_per_day  = mean(Concentration_NORMALIZED)) %>%
+           triplicate_mean_per_day  = mean(Concentration_NORMALIZED),
+           POSITIVE_CTRL = POSITIVE_CTRL,
+           NEGATIVE_CTRL = NEGATIVE_CTRL) %>%
     ungroup()
   
   return(DATA_NORMALIZED)
@@ -508,7 +510,7 @@ process_data_for_plot <- function(data, change_unstim_plt_col = T, unstim_plt_co
 ################################################################################
 ################################################################################
 
-prepare_plotting_means <- function(data, group_var = c("CELL_LINE", "CONDITION", "STIM_DAY", "CL_NAME_ON_PLOT", "PATHWAY", "STIMULANT", "STIM_CONCENTRATION", "PLOTTING_COLOR", "ORDER_NO")) {
+prepare_plotting_means <- function(data, group_var = c("CELL_LINE", "CONDITION", "STIM_DAY", "CL_NAME_ON_PLOT", "PATHWAY", "STIMULANT", "STIM_CONCENTRATION", "PLOTTING_COLOR", "ORDER_NO", "POSITIVE_CTRL", "NEGATIVE_CTRL")) {
   # Group and summarize data for plotting_means
   plotting_means <- data %>%
     group_by(!!!syms(group_var)) %>%
@@ -546,16 +548,36 @@ process_statistical_analysis <- function(data, group_var, value_var) {
 ################################################################################
 ################################################################################
 
+# data = plotting_data_main
+# group_var = c("CELL_LINE", "CONDITION", "CL_NAME_ON_PLOT", "PATHWAY", "STIMULANT", "STIM_CONCENTRATION", "PLOTTING_COLOR", "ORDER_NO")
+# mean_var = "triplicate_mean_per_day"
+# change_unstim_plt_col = T
+# unstim_plt_col = "#BEBDBD"
+# unstim_plt_col_lightest = F
+# fold_change_option = F
+
 prepare_plotting_stats <- function(data, stat_significance_dt, 
-                                   group_var = c("CELL_LINE", "CONDITION", "CL_NAME_ON_PLOT", "PLT_LIGHTEST", "PATHWAY", "STIMULANT", "STIM_CONCENTRATION", "PLOTTING_COLOR", "ORDER_NO"),
+                                   group_var = c("CELL_LINE", "CONDITION", "CL_NAME_ON_PLOT", 
+                                                 "PATHWAY", "STIMULANT", "STIM_CONCENTRATION", 
+                                                 "PLOTTING_COLOR", "ORDER_NO",
+                                                 "POSITIVE_CTRL", "NEGATIVE_CTRL"),
                                    mean_var = "triplicate_mean_per_day",
                                    change_unstim_plt_col = T,
                                    unstim_plt_col = "#BEBDBD",
                                    unstim_plt_col_lightest = F,
                                    fold_change_option = F) {
+  
+  # Determine grouping variables based on the condition
+  if (unstim_plt_col_lightest) {
+    group_vars <- c(group_var, "PLT_LIGHTEST")
+    # group_vars <- group_var
+  } else {
+    group_vars <- group_var
+  }
+  
   # Group and summarize data for plotting_stats
   plotting_stats_main <- data %>%
-    group_by(!!!syms(group_var)) %>%
+    group_by(!!!syms(group_vars)) %>%
     summarise(
       IL2_concentration_Dilution_Factor_mean = mean(Concentration),
       IL2_concentration_Dilution_Factor_sem = sem(Concentration),
@@ -569,7 +591,8 @@ prepare_plotting_stats <- function(data, stat_significance_dt,
   plotting_stats_main$CL_NAME_ON_PLOT <- reorder(plotting_stats_main$CL_NAME_ON_PLOT, -plotting_stats_main$ORDER_NO)
   
   if (unstim_plt_col_lightest) {
-    plotting_stats_main$PLOTTING_COLOR[plotting_stats_main$CONDITION == "UNSTIM"] <- plotting_stats_main$PLT_LIGHTEST[plotting_stats_main$CONDITION == "UNSTIM"] 
+    plotting_stats_main$PLOTTING_COLOR[plotting_stats_main$CONDITION == "UNSTIM"] <- plotting_stats_main$PLT_LIGHTEST[plotting_stats_main$CONDITION == "UNSTIM"]
+    # plotting_stats_main$PLOTTING_COLOR[plotting_stats_main$CONDITION == "UNSTIM"] <- unstim_plt_col
   } else if (change_unstim_plt_col) {
     plotting_stats_main$PLOTTING_COLOR[plotting_stats_main$CONDITION == "UNSTIM"] <- unstim_plt_col
   }
@@ -703,18 +726,18 @@ consensus_char <- function(column, min_pct, max_pct) {
 }
 
 ################################################################################
-
+# plotting_data = plotting_data; name_key = NAME_KEY
 prepare_fold_change_plots <- function(plotting_data, name_key) {
   
   # Select Data of interest
   cohort_data <- plotting_data
   
-  # Set negative measured values to zero for now
+  # Set negative measured values to zero
   cohort_data$MEASUREMENT <- ifelse(cohort_data$MEASUREMENT < 0, 0, cohort_data$MEASUREMENT)
   
   # Normalization for fold change from UNSTIM to STIM
   normalized_to_control <- cohort_data %>%
-    group_by(Date, STIM_DAY, CELL_LINE, CONDITION, CL_NAME_ON_PLOT, PLOTTING_COLOR) %>%
+    group_by(Date, STIM_DAY, CELL_LINE, CONDITION, CL_NAME_ON_PLOT, PLOTTING_COLOR, CL_NUMBER) %>%
     summarise(mean_per_day = mean(MEASUREMENT),
               Concentration = mean(Concentration),
               .groups = 'drop')
@@ -722,12 +745,12 @@ prepare_fold_change_plots <- function(plotting_data, name_key) {
   # First, calculate the mean for the UNSTIM condition separately.
   unstim_means <- cohort_data %>%
     filter(CONDITION == "UNSTIM") %>%
-    group_by(CELL_LINE) %>%
+    group_by(CELL_LINE, CL_NUMBER) %>%
     summarise(mean_unstim = ifelse(mean(MEASUREMENT) == 0, 1, mean(MEASUREMENT)),
               .groups = 'drop')
   
   # Now, join this back to the main dataset.
-  cohort_subset <- cohort_data %>% left_join(unstim_means, by = "CELL_LINE", relationship = "many-to-many")
+  cohort_subset <- cohort_data %>% left_join(unstim_means, by = c("CELL_LINE", "CL_NUMBER"), relationship = "many-to-many")
   
   # Compute the fold change.
   normalized_to_control <- cohort_subset %>%
@@ -740,44 +763,62 @@ prepare_fold_change_plots <- function(plotting_data, name_key) {
     ungroup()
   
   # Helper function to perform a t-test and return p-value and annotation
+  # perform_ttest <- function(data) {
+  #   ttest_result <- t.test(data$MEASUREMENT[data$CONDITION == "STIM"],
+  #                          data$MEASUREMENT[data$CONDITION == "UNSTIM"],
+  #                          paired = FALSE)
+  #   p_value <- ttest_result$p.value
+  #   annotation <- ifelse(p_value < 0.0001, '****', 
+  #                        ifelse(p_value < 0.001, '***', 
+  #                               ifelse(p_value < 0.01, '**',
+  #                                      ifelse(p_value < 0.05, '*', 'ns'))))
+  #   return(list(p_value = p_value, annotation = annotation))
+  # }
+  
+  # Helper function to perform a t-test and return p-value and annotation
   perform_ttest <- function(data) {
-    ttest_result <- t.test(data$MEASUREMENT[data$CONDITION == "STIM"],
-                           data$MEASUREMENT[data$CONDITION == "UNSTIM"],
+    ttest_result <- t.test(,
                            paired = FALSE)
     p_value <- ttest_result$p.value
-    annotation <- ifelse(p_value < 0.0001, '****', 
-                         ifelse(p_value < 0.001, '***', 
+    annotation <- ifelse(p_value < 0.0001, '****',
+                         ifelse(p_value < 0.001, '***',
                                 ifelse(p_value < 0.01, '**',
                                        ifelse(p_value < 0.05, '*', 'ns'))))
     return(list(p_value = p_value, annotation = annotation))
   }
   
-  cohort_subset <- cohort_subset %>% filter(CELL_LINE != "cl204")
+  control_subset_fc <- cohort_subset %>% 
+    group_by(CL_NAME_ON_PLOT, Date, CL_NUMBER) %>%
+    filter(CELL_LINE == "cl204") %>% 
+    summarise(fold_change_neg_ctrl = round(mean(MEASUREMENT[CONDITION == "UNSTIM"])))
+
+  cohort_subset  <- cohort_subset %>% filter(CELL_LINE != "cl204") %>% 
+    left_join(control_subset_fc)
   
   results <- cohort_subset %>% group_by(CL_NAME_ON_PLOT, Date) %>%
     do({
       data <- .
       fold_change_data <- data %>%
         filter(MEASUREMENT != 0) %>%
-        summarise(fold_change = round(mean(MEASUREMENT[CONDITION == "STIM"]) / 
-                                        mean(MEASUREMENT[CONDITION == "UNSTIM"]), digits = 2),
-                  .groups = 'drop')
-      ttest_results <- perform_ttest(data)
-      cbind(fold_change_data, ttest_results)
+        summarise(fold_change = round(mean(MEASUREMENT[CONDITION == "STIM"]) / mean(MEASUREMENT[CONDITION == "UNSTIM"]), digits = 2), .groups = 'drop')
+      #ttest_results <- perform_ttest(data)
+      #cbind(fold_change_data, ttest_results)
     }) %>%
     ungroup() %>%
-    left_join(name_key[, c("CL_NAME_ON_PLOT", "ORDER_NO", "PLOTTING_COLOR")], 
+    left_join(name_key[, c("CL_NAME_ON_PLOT", "ORDER_NO", "PLOTTING_COLOR", "CL_NUMBER")], 
               by = c("CL_NAME_ON_PLOT" = "CL_NAME_ON_PLOT"), relationship = "many-to-many") %>%
     unique()
   
   # Extract annotations for plotting
-  annotations <- results$annotation
-  names(annotations) <- results$CL_NAME_ON_PLOT
+  # annotations <- results$annotation
+  # names(annotations) <- results$CL_NAME_ON_PLOT
   
   # Reorder by your preferred visualization order
   results$CL_NAME_ON_PLOT <- reorder(results$CL_NAME_ON_PLOT, -results$ORDER_NO)
   
-  return(list(results = results, annotations = annotations))
+  return(list(results = results#,
+              #annotations = annotations
+              ))
 }
 
 ################################################################################
@@ -1337,3 +1378,182 @@ extract_specific_operons <- function(genome_name, list, output_path = file.path(
   }
   return(df)
 }
+
+##############################################################################
+# Function to plot data
+# *** DEBUGGING *** 
+# plotting_means = plotting_means; plotting_stats = plotting_stats_relative; x_mean    = "Relative_Intensity_mean"; x_sem     = "Relative_Intensity_sem"; x_label   = "Relative IL-2 secretion"; cl_label = "CL_NAME_ON_PLOT"
+prepare_and_plot <- function(plotting_means, plotting_stats, x_mean, x_sem, x_label, cl_label = "CL_NAME_ON_PLOT") {
+  
+  # print if stats has significance column
+  if("significance" %in% colnames(plotting_stats)){ 
+    cat("Yep, stats were calculated for ya!\n") 
+  } else { 
+    cat("Sorry, couldn't calculate stats for ya!\n") 
+  }
+  
+  plotting_means$CL_NAME_ON_PLOT <- reorder(plotting_means$CL_NAME_ON_PLOT, -plotting_means$ORDER_NO)
+  plotting_stats$CL_NAME_ON_PLOT <- reorder(plotting_stats$CL_NAME_ON_PLOT, -plotting_stats$ORDER_NO)
+  
+  # !!sym(x_mean) dynamically references the column name stored in x_mean, allowing flexible use of different columns in plots or calculations.
+  ELISA_PLOT <- ggplot(data = plotting_stats, aes(x = !!sym(x_mean), y = CL_NAME_ON_PLOT, fill = PLOTTING_COLOR, pattern = CONDITION, group = rev(CONDITION))) +
+    geom_col(aes(col = PLOTTING_COLOR), position = position_dodge(width = 0.7), width = 0.68, alpha = 0.5) +
+    # geom_bar(stat = "identity", position = position_dodge(), color = "black") +
+    geom_point(data = plotting_means, aes(x = !!sym(x_mean), y = CL_NAME_ON_PLOT, fill = PLOTTING_COLOR), 
+               col = "black", shape = 21, size = POINTS, position = position_jitterdodge(dodge.width = 0.5, jitter.width = 0.4, seed = 750), show.legend = FALSE) +
+    scale_y_discrete(expand = c(0, 0)) +
+    scale_fill_manual(name  = cl_label, values = plotting_means$PLOTTING_COLOR, breaks = plotting_means$PLOTTING_COLOR, labels = ifelse(plotting_means$CONDITION == "UNSTIM", paste0("- ", plotting_means$STIMULANT), paste0("+ ", plotting_means$STIMULANT))) +
+    scale_color_manual(name = cl_label, values = plotting_means$PLOTTING_COLOR, breaks = plotting_means$PLOTTING_COLOR, labels = ifelse(plotting_means$CONDITION == "UNSTIM", paste0("- ", plotting_means$STIMULANT), paste0("+ ", plotting_means$STIMULANT))) +
+    labs(x = x_label, y = "") +
+    guides(color = "none", fill = guide_legend(reverse = TRUE)) +
+    theme_cowplot(font_size = SIZE, font_family = FONT) +
+    theme(axis.text.x       = element_text(size = SIZE, vjust = 0.6),
+          axis.title.y      = element_blank(),
+          legend.position   = "bottom",
+          legend.title      = element_blank(),
+          legend.text       = element_text(size = SIZE),
+          legend.key.size   = unit(9, "mm"))
+  
+  if ("significance" %in% colnames(plotting_stats)) {
+    ELISA_PLOT <- ELISA_PLOT +
+      geom_errorbar(aes(y = !!sym(cl_label),
+                        xmin = !!sym(x_mean) - !!sym(x_sem),
+                        xmax = !!sym(x_mean) + !!sym(x_sem)),
+                    linewidth = .75, position = position_dodge(width = 0.5), width = 0.25) +
+      geom_text(data = plotting_stats, aes(x = 1.2 * max(!!sym(x_mean)), y = CL_NAME_ON_PLOT, label = significance), 
+                hjust = .5, vjust = 1, size = TEXT, 
+                #angle = case_when(plotting_stats$significance == "ns" ~ 0, T ~ 90)
+      )
+  }
+  
+  if (length(unique(plotting_means$POSITIVE_CTRL)) > 1 & x_mean == "Relative_Intensity_mean") {
+    ELISA_PLOT <- ELISA_PLOT +
+      facet_wrap(~POSITIVE_CTRL, scales = "free", ncol = 1)
+  }
+  
+  print(ELISA_PLOT)
+  
+}
+
+##############################################################################
+  # Function to generate statistics from means
+  run_statistics <- function(plotting_means, x_mean) {
+    
+    tryCatch({
+      stat_significance_dt <- process_statistical_analysis(data = plotting_means, group_var = "CL_NAME_ON_PLOT", value_var = x_mean)
+
+    }, error = function(e) {
+      print("Statistical analysis failed.")
+      print("The plot will be generated without statistical analysis.")
+    })
+    
+    
+    if (exists("stat_significance_dt")) {
+      plotting_stats <- prepare_plotting_stats(plotting_data_main, stat_significance_dt)
+      
+      if (sum(plotting_stats$Relative_Intensity_sem) == 0) {
+        group_vars_1 <- c("CL_NUMBER", "CELL_LINE", "CONDITION", "CL_NAME_ON_PLOT", 
+                          "PATHWAY", "STIMULANT", "STIM_CONCENTRATION", "PLOTTING_COLOR", 
+                          "ORDER_NO", "Plate", "POSITIVE_CTRL", "NEGATIVE_CTRL")
+        
+        plotting_stats_main <- plotting_data_main %>%
+          group_by(!!!syms(group_vars_1)) %>%
+          summarise(
+            IL2_concentration_Dilution_Factor_mean = mean(Concentration),
+            IL2_concentration_Dilution_Factor_sem  = sem(Concentration),
+            Relative_Intensity_mean                = mean(Concentration_NORMALIZED),
+            Relative_Intensity_sem                 = sem(Concentration_NORMALIZED)) %>%
+          as.data.table() %>%
+          left_join(stat_significance_dt) %>%
+          distinct(CL_NUMBER, CELL_LINE, CONDITION, CL_NAME_ON_PLOT, .keep_all = T)
+        
+        plotting_stats_main$CONDITION       <- factor(plotting_stats_main$CONDITION, levels = c("UNSTIM", "STIM"))
+        plotting_stats_main$CL_NAME_ON_PLOT <- reorder(plotting_stats_main$CL_NAME_ON_PLOT, -plotting_stats_main$ORDER_NO)
+        plotting_stats_main$PLOTTING_COLOR[plotting_stats_main$CONDITION == "UNSTIM"] <- "#BEBDBD"
+        
+        plotting_stats <- plotting_stats_main
+      }
+    } else {
+      plotting_stats <- plotting_means
+    }
+    return(plotting_stats)
+  }
+
+
+
+################################################################################
+### 20241031 FX TO EXTRACT DOMAINS FROM PROTEIN SEQUENCES ######################
+################################################################################
+
+# Function to find extended boundaries with adjustments for N and C terminal conditions
+extend_boundaries <- function(df) {
+  df %>%
+    group_by(Accession) %>%
+    arrange(start) %>%
+    mutate(
+      extended_start = case_when(
+        domain_position == "N" ~ start,
+        domain_position == "C" ~ lag(end, default = NA, order_by = start) + 1,
+        TRUE ~ lag(start, default = NA, order_by = start)
+      ),
+      extended_end = case_when(
+        domain_position == "N" ~ lead(start, default = NA, order_by = start) - 1,
+        domain_position == "C" ~ Length,
+        TRUE ~ lead(start, default = NA, order_by = start) - 1
+      ),
+      
+      # Fill NA defaults with original boundaries if needed
+      extended_start = ifelse(is.na(extended_start), start, extended_start),
+      extended_end = ifelse(is.na(extended_end), end, extended_end),
+      
+      # Extract extended sequence based on adjusted boundaries
+      fasta_extended = substr(fasta_FL, extended_start, extended_end)
+    ) %>%
+    ungroup()
+}
+
+# Prepare headers and sequences for strict and extended FASTA files
+prepare_fasta_data <- function(df, domain_name = "bDLD3") {
+  # Strict domain FASTA
+  df_strict <- df %>%
+    filter(PFAM_name == domain_name) %>%
+    mutate(
+      header = glue(">{Accession} | {domain_name} aa({start}-{end} | {`Tax Name`} | TaxID={`Tax ID`} | Mode=strict"),
+      sequence = fasta_domain
+    )
+  
+  # Extended domain FASTA
+  df_extended <- df %>%
+    filter(PFAM_name == domain_name) %>%
+    mutate(
+      header = glue(">{Accession} | {domain_name} aa{extended_start}-{extended_end} | {`Tax Name`} | TaxID={`Tax ID`} | Mode=extended"),
+      sequence = fasta_extended
+    )
+  
+  # Combine strict and extended data into a list for easy writing
+  list(strict = df_strict, extended = df_extended)
+}
+
+# Write domain sequences to FASTA files
+write_domain_fasta <- function(df_list, strict_filename, extended_filename) {
+  # Check if the sequences are DNA or protein
+  if (all(grepl("^[ACGTacgt]*$", df_list$strict$sequence))) {
+    strict_fasta <- DNAStringSet(df_list$strict$sequence)
+  } else {
+    strict_fasta <- AAStringSet(df_list$strict$sequence)
+  }
+  names(strict_fasta) <- df_list$strict$header
+  writeXStringSet(strict_fasta, filepath = strict_filename)
+  
+  if (all(grepl("^[ACGTacgt]*$", df_list$extended$sequence))) {
+    extended_fasta <- DNAStringSet(df_list$extended$sequence)
+  } else {
+    extended_fasta <- AAStringSet(df_list$extended$sequence)
+  }
+  names(extended_fasta) <- df_list$extended$header
+  writeXStringSet(extended_fasta, filepath = extended_filename)
+}
+
+################################################################################
+################################################################################
+################################################################################
