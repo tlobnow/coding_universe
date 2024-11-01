@@ -1488,7 +1488,7 @@ prepare_and_plot <- function(plotting_means, plotting_stats, x_mean, x_sem, x_la
 # Function to find extended boundaries with adjustments for N and C terminal conditions
 extend_boundaries <- function(df) {
   df %>%
-    group_by(Accession) %>%
+    group_by(accession) %>%
     arrange(start) %>%
     mutate(
       extended_start = case_when(
@@ -1498,7 +1498,7 @@ extend_boundaries <- function(df) {
       ),
       extended_end = case_when(
         domain_position == "N" ~ lead(start, default = NA, order_by = start) - 1,
-        domain_position == "C" ~ Length,
+        domain_position == "C" ~ length,
         TRUE ~ lead(start, default = NA, order_by = start) - 1
       ),
       
@@ -1516,17 +1516,17 @@ extend_boundaries <- function(df) {
 prepare_fasta_data <- function(df, domain_name = "bDLD3") {
   # Strict domain FASTA
   df_strict <- df %>%
-    filter(PFAM_name == domain_name) %>%
+    filter(pfam_name == domain_name) %>%
     mutate(
-      header = glue(">{Accession} | {domain_name} aa({start}-{end} | {`Tax Name`} | TaxID={`Tax ID`} | Mode=strict"),
+      header = glue(">{accession} | {domain_name} aa({start}-{end} | {tax_name} | TaxID={tax_id} | Mode=strict"),
       sequence = fasta_domain
     )
   
   # Extended domain FASTA
   df_extended <- df %>%
-    filter(PFAM_name == domain_name) %>%
+    filter(pfam_name == domain_name) %>%
     mutate(
-      header = glue(">{Accession} | {domain_name} aa{extended_start}-{extended_end} | {`Tax Name`} | TaxID={`Tax ID`} | Mode=extended"),
+      header = glue(">{accession} | {domain_name} aa{extended_start}-{extended_end} | {tax_name} | TaxID={tax_id} | Mode=extended"),
       sequence = fasta_extended
     )
   
@@ -1552,6 +1552,38 @@ write_domain_fasta <- function(df_list, domain_name = "bDLD3", strict_filename, 
   }
   names(extended_fasta) <- df_list$extended$header
   writeXStringSet(extended_fasta, filepath = extended_filename)
+}
+
+################################################################################
+### 20241101 FX TO BACKTRANSLATE SEQUENCES BASED ON CODON USAGE ################
+################################################################################
+
+# Define E. coli codon usage table for each amino acid
+ecoli_codon_table <- list(
+  A = "GCT", C = "TGT", D = "GAT", E = "GAA", F = "TTT",
+  G = "GGT", H = "CAT", I = "ATT", K = "AAA", L = "CTG",
+  M = "ATG", N = "AAT", P = "CCT", Q = "CAA", R = "CGT",
+  S = "TCT", T = "ACT", V = "GTT", W = "TGG", Y = "TAT",
+  # Stop codons: Let's use TAA as the default
+  "*" = "TAA"
+)  
+
+# Define Mus musculus codon usage table for each amino acid
+mouse_codon_table <- list(
+  A = "GCC", C = "TGC", D = "GAC", E = "GAG", F = "TTC",
+  G = "GGC", H = "CAC", I = "ATC", K = "AAG", L = "CTG",
+  M = "ATG", N = "AAC", P = "CCC", Q = "CAG", R = "CGC",
+  S = "AGC", T = "ACC", V = "GTC", W = "TGG", Y = "TAC",
+  # Stop codons: Let's use TAA as the default
+  "*" = "TAA"
+)
+
+# Function to backtranslate an amino acid sequence to nucleotide sequence
+backtranslate <- function(aa_seq, codon_table) {
+  # Split sequence into individual amino acids and map to codons
+  codons <- sapply(strsplit(aa_seq, NULL)[[1]], function(aa) codon_table[[aa]])
+  # Concatenate codons to form the nucleotide sequence
+  paste(codons, collapse = "")
 }
 
 ################################################################################
