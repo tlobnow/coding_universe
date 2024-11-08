@@ -1486,11 +1486,46 @@ prepare_and_plot <- function(plotting_means, plotting_stats, x_mean, x_sem, x_la
 ################################################################################
 
 # Function to find extended boundaries with adjustments for N and C terminal conditions
+# extend_boundaries <- function(df) {
+#   df %>%
+#     group_by(accession) %>%
+#     arrange(start) %>%
+#     mutate(
+      # extended_start = case_when(
+      #   domain_position == "N" ~ start,
+      #   domain_position == "C" ~ lag(end, default = NA, order_by = start) + 1,
+      #   TRUE ~ lag(start, default = NA, order_by = start)
+      # ),
+      # extended_end = case_when(
+      #   domain_position == "N" ~ lead(start, default = NA, order_by = start) - 1,
+      #   domain_position == "C" ~ length,
+      #   TRUE ~ lead(start, default = NA, order_by = start) - 1
+      # ),
+#       
+      # # Fill NA defaults with original boundaries if needed
+      # extended_start = ifelse(is.na(extended_start), start, extended_start),
+      # extended_end = ifelse(is.na(extended_end), end, extended_end),
+      # 
+      # # Extract the extended sequence based on adjusted boundaries
+      # fasta_extended = substr(fasta_FL, extended_start, extended_end),
+#       
+#       # Calculate medium boundaries with ±10 amino acids, respecting sequence and domain limits
+#       medium_start = pmax(start - 10, extended_start),
+#       medium_end = pmin(end + 10, extended_end),
+#       
+#       # Extract the medium sequence based on medium boundaries
+#       medium_fasta = substr(fasta_FL, medium_start, medium_end)
+#     ) %>%
+#     ungroup()
+# }
+
+# 20241104 optimized to include slightly extended bDDs
 extend_boundaries <- function(df) {
   df %>%
     group_by(accession) %>%
     arrange(start) %>%
     mutate(
+      # Calculate extended boundaries based on position within the sequence
       extended_start = case_when(
         domain_position == "N" ~ start,
         domain_position == "C" ~ lag(end, default = NA, order_by = start) + 1,
@@ -1506,8 +1541,19 @@ extend_boundaries <- function(df) {
       extended_start = ifelse(is.na(extended_start), start, extended_start),
       extended_end = ifelse(is.na(extended_end), end, extended_end),
       
-      # Extract extended sequence based on adjusted boundaries
-      fasta_extended = substr(fasta_FL, extended_start, extended_end)
+      # Extract the extended sequence based on adjusted boundaries
+      fasta_extended = substr(fasta_FL, extended_start, extended_end),
+      
+      # Calculate medium boundaries with ±10 amino acids, constrained by protein limits
+      medium_start = pmax(1,      start - 10),
+      medium_end   = pmin(length, end   + 10),
+      
+      # Ensure medium boundaries do not exceed extended boundaries
+      medium_start = pmax(extended_start, medium_start),
+      medium_end = pmin(extended_end, medium_end),
+      
+      # Extract the medium sequence based on medium boundaries
+      fasta_medium = substr(fasta_FL, medium_start, medium_end)
     ) %>%
     ungroup()
 }

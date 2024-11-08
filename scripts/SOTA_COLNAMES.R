@@ -8,15 +8,15 @@ basics_cols           <- c("ID", "species", "cl_name_endo", "cl_name_high")
 
 taxonomy_cols         <- c("ID", "species", "genus", "family", "order", "class", "phylum", "clade", "superkingdom")
 
-accession_cols        <- c("assembly", "gene", "genbank_acc", "uniprot_acc")
+accession_cols        <- c("genbank_gca", "genbank_gca_2", "refseq_gcf", "refseq_gcf_2", "gene", "genbank_acc", "genbank_acc_2", "uniprot_acc")
 
-basics_extended_cols  <- c("ID", "assembly", "assembly_2", "pmjtl", "gene", "gene_name", "genbank_acc", "uniprot_acc", "info", "taxid", "taxend")
+basics_extended_cols  <- c("ID","genbank_gca", "genbank_gca_2", "refseq_gcf", "refseq_gcf_2", "pmjtl", "gene", "gene_name", "genbank_acc", "genbank_acc_2", "uniprot_acc", "info", "taxid", "taxend")
 
 environment_cols      <- c("aquatic", "terrestrial", "saltwater", "freshwater", "soil", "hotspring", "env", "env_temp")
 
-sequence_cols         <- c("seq_FL_aa", "seq_FL_nt", "seq_DLD_aa", "aa_start", "aa_end", "aa_len", "bp_len")
+sequence_cols         <- c("seq_FL_aa", "seq_FL_nt",  "seq_DLD_aa", "seq_DLD_nt", "aa_start", "aa_end", "aa_len", "bp_len")
 
-annotation_cols       <- c("genbank_acc", "uniprot_acc", "gene", "annotated_domains", "architecture", "operon", "gene_suppr", "genome_suppr")
+annotation_cols       <- c("genbank_acc", "genbank_acc_2", "uniprot_acc", "gene", "annotated_domains", "architecture", "operon", "gene_suppr", "genome_suppr")
 
 alphaFold_cols        <- c("af_confidence", "af3_name", "af3_seq", "af3_n_chains", "af3_model", "af3_iptm", "af3_n_recycles", "af3_ptm", "af3_ranking_score", "af3_seed")
 
@@ -50,6 +50,35 @@ ncbi_genome_cols      <- c("ID", "ASSEMBLY", "Assembly Name", "Organism Name", "
                            "Assembly BioSample Accession", "Annotation Count Gene Total", "Annotation Count Gene Protein-coding", 
                            "Annotation Count Gene Pseudogene", "Type Material Display Text", 
                            "CheckM marker set", "CheckM completeness", "CheckM contamination")
+
+cog_categories <- c(
+  "J" = "Translation, ribosomal structure, and biogenesis",
+  "A" = "RNA processing and modification",
+  "K" = "Transcription",
+  "L" = "Replication, recombination, and repair",
+  "B" = "Chromatin structure and dynamics",
+  "D" = "Cell cycle control, cell division, chromosome partitioning",
+  "Y" = "Nuclear structure",
+  "V" = "Defense mechanisms",
+  "T" = "Signal transduction mechanisms",
+  "M" = "Cell wall/membrane/envelope biogenesis",
+  "N" = "Cell motility",
+  "Z" = "Cytoskeleton",
+  "W" = "Extracellular structures",
+  "U" = "Intracellular trafficking, secretion, and vesicular transport",
+  "O" = "Posttranslational modification, protein turnover, chaperones",
+  "X" = "Mobilome: prophages, transposons",
+  "C" = "Energy production and conversion",
+  "G" = "Carbohydrate transport and metabolism",
+  "E" = "Amino acid transport and metabolism",
+  "F" = "Nucleotide transport and metabolism",
+  "H" = "Coenzyme transport and metabolism",
+  "I" = "Lipid transport and metabolism",
+  "P" = "Inorganic ion transport and metabolism",
+  "Q" = "Secondary metabolites biosynthesis, transport, and catabolism",
+  "R" = "General function prediction only",
+  "S" = "Function unknown"
+)
 
 
 # ls(pattern = "_cols")
