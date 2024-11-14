@@ -1,0 +1,389 @@
+---
+title: "Lysis Assay Analysis"
+date: ", Last edited on `r format(Sys.time(), '%d %B %Y')`"
+author: "Finn Lobnow"
+output: 
+  github_document:
+    toc: true
+    df_print: kable
+---
+
+``` {r setup, include=FALSE}
+
+MAIN   <- "/Users/u_lobnow/Documents/etc/PhD/Phage_Phase"
+
+# Load required packages
+pacman::p_load(tidyverse, data.table, stringr, glue, readxl, cowplot, lubridate, purrr, matrixStats, knitr)
+
+GENERAL <- TRUE
+
+```
+
+```{r 20241106, warning=FALSE, message=FALSE}
+list.dirs(MAIN, full.names = F, recursive = F)
+FOLDER <- "20241106"
+SKIP   <- 57 # How many lines to skip in the Tecan data files (depends on setup)
+
+# Latest Phage Titer Details
+n_plaques           = 280
+dilution_step       = -4
+phage_volume_plated = 0.1
+
+# Assay Details
+bacterial_volume    = 0.18
+phage_volume_added  = 0.02
+
+if (GENERAL)   {source("/Users/u_lobnow/Documents/Github/coding_universe/scripts/Tecan_scripts/01_GENERAL_SETTINGS.R")}
+if (READ_DATA) {source("/Users/u_lobnow/Documents/Github/coding_universe/scripts/Tecan_scripts/02_READ_DATA.R")}
+if (PREP_KEY)  {source("/Users/u_lobnow/Documents/Github/coding_universe/scripts/Tecan_scripts/03_PREP_KEY.R")}
+if (JOIN_DATA) {source("/Users/u_lobnow/Documents/Github/coding_universe/scripts/Tecan_scripts/04_JOIN_DATA.R")}
+```
+
+```{r 20241106_plots} 
+  data_for_plotting %>%
+    arrange(Cycle) %>%
+    # ggplot(aes(x = Time_min, y = mean_OD600_normalized, color = ARABINOSE, group = CONDITION, alpha = -(as.numeric(T6_PHAGE)))) +
+    ggplot(aes(x = Time_min, y = original_mean, color = ARABINOSE, group = CONDITION)) +
+    # geom_line() +
+    geom_smooth() +
+    facet_wrap(~CELL_LINE+ARABINOSE, nrow = 1) +
+    theme_cowplot() +
+    labs(title = "OD600 over time", x = "time [min]", y = "OD600") +
+  theme(legend.position = "bottom")
+
+  data_for_plotting %>%
+    arrange(Cycle) %>%
+    # ggplot(aes(x = Time_min, y = mean_OD600_normalized, color = ARABINOSE, group = CONDITION, linetype = paste("10e-", T6_PHAGE))) +
+    ggplot(aes(x = Time_min, y = original_mean, color = ARABINOSE, group = CONDITION, linetype = paste(T6_PHAGE))) +
+    geom_smooth() +
+    facet_wrap(~CELL_LINE, nrow = 2) +
+    theme_cowplot() +
+    labs(title = "OD600 over time", x = "time [min]", y = "OD600", subtitle = unique(data_for_plotting$Date))
+
+data_for_plotting %>% 
+    arrange(Cycle) %>%
+    # ggplot(aes(x = Time_min, y = mean_OD600_normalized, color = CONDITION_2, group = CONDITION)) +
+    # ggplot(aes(x = Time_min, y = mean_OD600, color = CONDITION_2, group = CONDITION)) +
+    ggplot(aes(x = Time_min, y = original_mean, color = CONDITION_2, group = CONDITION)) +
+    geom_smooth() +
+    facet_wrap(~MOI, nrow = 1) +
+    theme_cowplot() +
+    theme(legend.position = "bottom") +
+    labs(title = "OD600 over time", x = "time [min]", y = "OD600", subtitle = unique(data_for_plotting$Date))
+ 
+data_for_plotting %>% 
+    arrange(Cycle) %>%
+    ggplot(aes(x = Time_min, y = original_mean, color = CONDITION_2, linetype = as.factor(MOI))) +
+    geom_smooth() +
+    facet_wrap(~CELL_LINE, nrow = 1) +
+    theme_cowplot() +
+    # theme(legend.position = "bottom") +
+    labs(title = "OD600 over time", x = "time [min]", y = "OD600", subtitle = unique(data_for_plotting$Date)) +
+    scale_color_manual(values = colors)
+```
+
+
+```{r 20241108, include=FALSE}
+
+list.dirs(MAIN, full.names = F, recursive = F)
+FOLDER <- "20241108"
+SKIP   <- 57 # How many lines to skip in the Tecan data files (depends on setup)
+
+# Latest Phage Titer Details
+n_plaques           = 280
+dilution_step       = -4
+phage_volume_plated = 0.1
+
+# Assay Details
+bacterial_volume    = 0.18
+phage_volume_added  = 0.02
+
+if (GENERAL)   {source("/Users/u_lobnow/Documents/Github/coding_universe/scripts/Tecan_scripts/01_GENERAL_SETTINGS.R")}
+if (READ_DATA) {source("/Users/u_lobnow/Documents/Github/coding_universe/scripts/Tecan_scripts/02_READ_DATA.R")}
+if (PREP_KEY)  {source("/Users/u_lobnow/Documents/Github/coding_universe/scripts/Tecan_scripts/03_PREP_KEY.R")}
+if (JOIN_DATA) {source("/Users/u_lobnow/Documents/Github/coding_universe/scripts/Tecan_scripts/04_JOIN_DATA.R")}
+```
+
+```{r 20241108_plots} 
+  data_for_plotting %>%
+    arrange(Cycle) %>%
+    # ggplot(aes(x = Time_min, y = mean_OD600_normalized, color = ARABINOSE, group = CONDITION, alpha = -(as.numeric(T6_PHAGE)))) +
+    ggplot(aes(x = Time_min, y = original_mean, color = ARABINOSE, group = CONDITION)) +
+    # geom_line() +
+    geom_smooth() +
+    facet_wrap(~CELL_LINE+ARABINOSE, nrow = 1) +
+    theme_cowplot() +
+    labs(title = "OD600 over time", x = "time [min]", y = "OD600") +
+  theme(legend.position = "bottom")
+
+  data_for_plotting %>%
+    arrange(Cycle) %>%
+    # ggplot(aes(x = Time_min, y = mean_OD600_normalized, color = ARABINOSE, group = CONDITION, linetype = paste("10e-", T6_PHAGE))) +
+    ggplot(aes(x = Time_min, y = original_mean, color = ARABINOSE, group = CONDITION, linetype = paste(T6_PHAGE))) +
+    geom_smooth() +
+    facet_wrap(~CELL_LINE, nrow = 2) +
+    theme_cowplot() +
+    labs(title = "OD600 over time", x = "time [min]", y = "OD600", subtitle = unique(data_for_plotting$Date))
+
+data_for_plotting %>% 
+    arrange(Cycle) %>%
+    # ggplot(aes(x = Time_min, y = mean_OD600_normalized, color = CONDITION_2, group = CONDITION)) +
+    # ggplot(aes(x = Time_min, y = mean_OD600, color = CONDITION_2, group = CONDITION)) +
+    ggplot(aes(x = Time_min, y = original_mean, color = CONDITION_2, group = CONDITION)) +
+    geom_smooth() +
+    facet_wrap(~MOI, nrow = 1) +
+    theme_cowplot() +
+    theme(legend.position = "bottom") +
+    labs(title = "OD600 over time", x = "time [min]", y = "OD600", subtitle = unique(data_for_plotting$Date))
+ 
+data_for_plotting %>% 
+    arrange(Cycle) %>%
+    ggplot(aes(x = Time_min, y = original_mean, color = CONDITION_2, linetype = as.factor(MOI))) +
+    geom_smooth() +
+    facet_wrap(~CELL_LINE, nrow = 1) +
+    theme_cowplot() +
+    # theme(legend.position = "bottom") +
+    labs(title = "OD600 over time", x = "time [min]", y = "OD600", subtitle = unique(data_for_plotting$Date)) +
+    scale_color_manual(values = colors)
+```
+
+
+```{r 20241109, warning=FALSE, message=FALSE}
+list.dirs(MAIN, full.names = F, recursive = F)
+FOLDER <- "20241109"
+SKIP   <- 57 # How many lines to skip in the Tecan data files (depends on setup)
+
+# Latest Phage Titer Details
+n_plaques           = 280
+dilution_step       = -4
+phage_volume_plated = 0.1
+
+# Assay Details
+bacterial_volume    = 0.18
+phage_volume_added  = 0.02
+
+if (GENERAL)   {source("/Users/u_lobnow/Documents/Github/coding_universe/scripts/Tecan_scripts/01_GENERAL_SETTINGS.R")}
+if (READ_DATA) {source("/Users/u_lobnow/Documents/Github/coding_universe/scripts/Tecan_scripts/02_READ_DATA.R")}
+if (PREP_KEY)  {source("/Users/u_lobnow/Documents/Github/coding_universe/scripts/Tecan_scripts/03_PREP_KEY.R")}
+if (JOIN_DATA) {source("/Users/u_lobnow/Documents/Github/coding_universe/scripts/Tecan_scripts/04_JOIN_DATA.R")}
+```
+
+```{r 20241109_plots} 
+  data_for_plotting %>%
+    arrange(Cycle) %>%
+    # ggplot(aes(x = Time_min, y = mean_OD600_normalized, color = ARABINOSE, group = CONDITION, alpha = -(as.numeric(T6_PHAGE)))) +
+    ggplot(aes(x = Time_min, y = original_mean, color = ARABINOSE, group = CONDITION)) +
+    # geom_line() +
+    geom_smooth() +
+    facet_wrap(~CELL_LINE+ARABINOSE, nrow = 1) +
+    theme_cowplot() +
+    labs(title = "OD600 over time", x = "time [min]", y = "OD600") +
+  theme(legend.position = "bottom")
+
+  data_for_plotting %>%
+    arrange(Cycle) %>%
+    # ggplot(aes(x = Time_min, y = mean_OD600_normalized, color = ARABINOSE, group = CONDITION, linetype = paste("10e-", T6_PHAGE))) +
+    ggplot(aes(x = Time_min, y = original_mean, color = ARABINOSE, group = CONDITION, linetype = paste(T6_PHAGE))) +
+    geom_smooth() +
+    facet_wrap(~CELL_LINE, nrow = 2) +
+    theme_cowplot() +
+    labs(title = "OD600 over time", x = "time [min]", y = "OD600", subtitle = unique(data_for_plotting$Date))
+ 
+  data_for_plotting %>% 
+    arrange(Cycle) %>%
+    # ggplot(aes(x = Time_min, y = mean_OD600_normalized, color = CONDITION_2, group = CONDITION)) +
+    # ggplot(aes(x = Time_min, y = mean_OD600, color = CONDITION_2, group = CONDITION)) +
+    ggplot(aes(x = Time_min, y = original_mean, color = CONDITION_2, group = CONDITION)) +
+    geom_smooth() +
+    facet_wrap(~T6_PHAGE, nrow = 1) +
+    facet_wrap(~MOI, nrow = 1) +
+    theme_cowplot() +
+    theme(legend.position = "bottom") +
+    labs(title = "OD600 over time", x = "time [min]", y = "OD600", subtitle = unique(data_for_plotting$Date))
+
+  data_for_plotting %>% 
+    arrange(Cycle) %>%
+    ggplot(aes(x = Time_min, y = original_mean, color = CONDITION_2, linetype = as.factor(MOI))) +
+    geom_smooth() +
+    facet_wrap(~CELL_LINE, nrow = 1) +
+    theme_cowplot() +
+    # theme(legend.position = "bottom") +
+    labs(title = "OD600 over time", x = "time [min]", y = "OD600", subtitle = unique(data_for_plotting$Date)) +
+    scale_color_manual(values = colors)
+```
+
+
+```{r 20241111, warning=FALSE, message=FALSE}
+list.dirs(MAIN, full.names = F, recursive = F)
+FOLDER <- "20241111"
+SKIP   <- 57 # How many lines to skip in the Tecan data files (depends on setup)
+
+# Latest Phage Titer Details
+n_plaques           = 280
+dilution_step       = -4
+phage_volume_plated = 0.1
+
+# Assay Details
+bacterial_volume    = 0.18
+phage_volume_added  = 0.02
+
+if (GENERAL)   {source("/Users/u_lobnow/Documents/Github/coding_universe/scripts/Tecan_scripts/01_GENERAL_SETTINGS.R")}
+if (READ_DATA) {source("/Users/u_lobnow/Documents/Github/coding_universe/scripts/Tecan_scripts/02_READ_DATA.R")}
+if (PREP_KEY)  {source("/Users/u_lobnow/Documents/Github/coding_universe/scripts/Tecan_scripts/03_PREP_KEY.R")}
+if (JOIN_DATA) {source("/Users/u_lobnow/Documents/Github/coding_universe/scripts/Tecan_scripts/04_JOIN_DATA.R")}
+```
+
+``` {r 20241111_plots} 
+  data_for_plotting %>%
+    arrange(Cycle) %>%
+    # ggplot(aes(x = Time_min, y = mean_OD600_normalized, color = ARABINOSE, group = CONDITION, alpha = -(as.numeric(T6_PHAGE)))) +
+    ggplot(aes(x = Time_min, y = original_mean, color = ARABINOSE, group = CONDITION)) +
+    # geom_line() +
+    geom_smooth() +
+    facet_wrap(~CELL_LINE+ARABINOSE, nrow = 1) +
+    theme_cowplot() +
+    labs(title = "OD600 over time", x = "time [min]", y = "OD600") +
+  theme(legend.position = "bottom")
+
+  data_for_plotting %>%
+    arrange(Cycle) %>%
+    # ggplot(aes(x = Time_min, y = mean_OD600_normalized, color = ARABINOSE, group = CONDITION, linetype = paste("10e-", T6_PHAGE))) +
+    ggplot(aes(x = Time_min, y = original_mean, color = ARABINOSE, group = CONDITION, linetype = paste(T6_PHAGE))) +
+    geom_smooth() +
+    facet_wrap(~CELL_LINE, nrow = 2) +
+    theme_cowplot() +
+    labs(title = "OD600 over time", x = "time [min]", y = "OD600", subtitle = unique(data_for_plotting$Date))
+ 
+  data_for_plotting %>% 
+    arrange(Cycle) %>%
+    # ggplot(aes(x = Time_min, y = mean_OD600_normalized, color = CONDITION_2, group = CONDITION)) +
+    # ggplot(aes(x = Time_min, y = mean_OD600, color = CONDITION_2, group = CONDITION)) +
+    ggplot(aes(x = Time_min, y = original_mean, color = CONDITION_2, group = CONDITION)) +
+    geom_smooth() +
+    facet_wrap(~T6_PHAGE, nrow = 1) +
+    facet_wrap(~MOI, nrow = 1) +
+    theme_cowplot() +
+    theme(legend.position = "bottom") +
+    labs(title = "OD600 over time", x = "time [min]", y = "OD600", subtitle = unique(data_for_plotting$Date))
+
+  data_for_plotting %>% 
+    arrange(Cycle) %>%
+    ggplot(aes(x = Time_min, y = original_mean, color = CONDITION_2, linetype = as.factor(MOI))) +
+    geom_smooth() +
+    facet_wrap(~CELL_LINE, nrow = 1) +
+    theme_cowplot() +
+    # theme(legend.position = "bottom") +
+    labs(title = "OD600 over time", x = "time [min]", y = "OD600", subtitle = unique(data_for_plotting$Date)) +
+    scale_color_manual(values = colors)
+```
+
+
+```{r 20241112, warning=FALSE, message=FALSE}
+list.dirs(MAIN, full.names = F, recursive = F)
+FOLDER <- "20241112"
+SKIP   <- 54 # How many lines to skip in the Tecan data files (depends on setup)
+
+# Latest Phage Titer Details
+n_plaques           = 25
+dilution_step       = -4
+phage_volume_plated = 0.01
+
+# Assay Details
+bacterial_volume    = 0.15
+phage_volume_added  = 0.05
+
+if (GENERAL)   {source("/Users/u_lobnow/Documents/Github/coding_universe/scripts/Tecan_scripts/01_GENERAL_SETTINGS.R")}
+if (READ_DATA) {source("/Users/u_lobnow/Documents/Github/coding_universe/scripts/Tecan_scripts/02_READ_DATA.R")}
+if (PREP_KEY)  {source("/Users/u_lobnow/Documents/Github/coding_universe/scripts/Tecan_scripts/03_PREP_KEY.R")}
+if (JOIN_DATA) {source("/Users/u_lobnow/Documents/Github/coding_universe/scripts/Tecan_scripts/04_JOIN_DATA.R")}
+
+```
+
+``` {r 20241112_plots}
+data_for_plotting_main <- data_for_plotting
+
+data_for_plotting$MOI <- round(abs(data_for_plotting_main$MOI), 5)
+unique(data_for_plotting$MOI)
+
+data_for_plotting %>%
+    arrange(Cycle) %>%
+    # ggplot(aes(x = Time_min, y = mean_OD600_normalized, color = ARABINOSE, group = CONDITION, alpha = -(as.numeric(T6_PHAGE)))) +
+    ggplot(aes(x = Time_min, y = original_mean, color = ARABINOSE, group = CONDITION)) +
+    # geom_line() +
+    geom_smooth() +
+    facet_wrap(~CELL_LINE+ARABINOSE, nrow = 1) +
+    theme_cowplot() +
+    labs(title = "OD600 over time", x = "time [min]", y = "OD600", subtitle = unique(data_for_plotting$Date)) +
+    theme(legend.position = "bottom")
+    
+
+# data_for_plotting$MOI <- round(data_for_plotting_main$MOI, 5)
+data_for_plotting %>% 
+    arrange(Cycle) %>%
+    ggplot(aes(x = Time_min, y = original_mean, color = CONDITION_2, group = CONDITION)) +
+    geom_smooth() +
+    facet_wrap(~T6_PHAGE, nrow = 1) +
+    facet_wrap(~MOI, nrow = 1) +
+    theme_cowplot() +
+    theme(legend.position = "bottom") +
+    labs(title = "OD600 over time", x = "time [min]", y = "OD600", subtitle = unique(data_for_plotting$Date)) +
+    scale_color_manual(values = colors)
+
+# data_for_plotting$MOI <- desc(round(data_for_plotting_main$MOI, 4))
+data_for_plotting %>% 
+  arrange(Cycle) %>%
+  ggplot(aes(x = Time_min, y = original_mean, color = CONDITION_2, linetype = as.factor(MOI))) +
+  geom_smooth(se = F) +
+  # facet_wrap(~CELL_LINE, nrow = 1) +
+  # facet_wrap(~CONDITION_2, nrow = 1) +
+  theme_cowplot() +
+  # theme(legend.position = "bottom") +
+  labs(title = "OD600 over time", x = "time [min]", y = "OD600", subtitle = unique(data_for_plotting$Date)) +
+  scale_color_manual(values = colors) +
+  xlim(0,250)
+
+# data_for_plotting$MOI <- desc(round(data_for_plotting_main$MOI, 4))
+data_for_plotting %>% 
+  arrange(Cycle) %>%
+  ggplot(aes(x = Time_min, y = refined_OD600_mean, color = CONDITION_2, linetype = as.factor(MOI))) +
+  geom_smooth(se = F) +
+  #facet_wrap(~CONDITION_2, nrow = 1) +
+  theme_cowplot() +
+  # theme(legend.position = "bottom") +
+  labs(title = "OD600 over time", x = "time [min]", y = "OD600", subtitle = unique(data_for_plotting$Date)) +
+  scale_color_manual(values = colors) +
+  xlim(0,250)
+
+data_for_plotting %>% 
+  arrange(Cycle) %>%
+  ggplot(aes(x = Time_min, y = refined_OD600_mean, color = CONDITION_2, linetype = as.factor(MOI))) +
+  geom_smooth(se = F) +
+  facet_wrap(~MOI, ncol = 1, scales = "free_y") +
+  theme_cowplot() +
+  # theme(legend.position = "bottom") +
+  labs(title = "OD600 over time", x = "time [min]", y = "OD600", subtitle = unique(data_for_plotting$Date)) +
+  scale_color_manual(values = colors) #+
+  # xlim(0,250)
+
+```
+
+```{r 20241113, warning=FALSE, message=FALSE}
+list.dirs(MAIN, full.names = F, recursive = F)
+FOLDER <- "20241112"
+SKIP   <- 54 # How many lines to skip in the Tecan data files (depends on setup)
+
+# Latest Phage Titer Details
+n_plaques           = 25
+dilution_step       = -4
+phage_volume_plated = 0.01
+
+# Assay Details
+bacterial_volume    = 0.15
+phage_volume_added  = 0.05
+
+if (GENERAL)   {source("/Users/u_lobnow/Documents/Github/coding_universe/scripts/Tecan_scripts/01_GENERAL_SETTINGS.R")}
+if (READ_DATA) {source("/Users/u_lobnow/Documents/Github/coding_universe/scripts/Tecan_scripts/02_READ_DATA.R")}
+if (PREP_KEY)  {source("/Users/u_lobnow/Documents/Github/coding_universe/scripts/Tecan_scripts/03_PREP_KEY.R")}
+if (JOIN_DATA) {source("/Users/u_lobnow/Documents/Github/coding_universe/scripts/Tecan_scripts/04_JOIN_DATA.R")}
+```
+

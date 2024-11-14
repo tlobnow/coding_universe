@@ -363,6 +363,81 @@ sem <- function(x) sd(x)/sqrt(length(x))
 # DF = CHARMS
 # NEGATIVE_CTRL = "3xKO"
 # POSITIVE_CTRL = "Wild Type"
+# DF = CHARMS; NEGATIVE_CTRL = "cl204"; POSITIVE_CTRL = "cl028"
+
+# process_ELISA_data <- function(DF, NEGATIVE_CTRL, POSITIVE_CTRL) {
+#   
+#   group_vars <- c("STIM_DAY", "Date")
+#   
+#   # Get baseline
+#   get_baseline <- function(DF, NEGATIVE_CTRL) {
+#     if (any((DF$CELL_LINE %in% NEGATIVE_CTRL & DF$CONDITION == "UNSTIM") | unique(DF$CL_NAME_ON_PLOT %in% NEGATIVE_CTRL & DF$CONDITION == "UNSTIM"))) {
+#       baseline <- DF %>%
+#         group_by(!!!syms(group_vars)) %>%
+#         filter((CELL_LINE %in% NEGATIVE_CTRL & CONDITION == "UNSTIM") | (CL_NAME_ON_PLOT %in% NEGATIVE_CTRL & CONDITION == "UNSTIM")) %>%
+#         summarise(baseline_control_value = mean(Concentration))
+#     } else if (any(DF$CELL_LINE %in% NEGATIVE_CTRL)) {
+#       baseline <- DF %>%
+#         group_by(!!!syms(group_vars)) %>%
+#         summarise(baseline_control_value = min(Concentration[CONDITION == "UNSTIM"]))
+#     } else {
+#       baseline <- DF %>%
+#         group_by(!!!syms(group_vars)) %>%
+#         summarise(baseline_control_value = min(Concentration))
+#     }
+#     
+#     # Join the calculated values with the dataset
+#     DF_baseline_adj <- left_join(DF, baseline) %>%
+#       mutate(Concentration_REDUCED = case_when(!is.na(baseline_control_value) ~ Concentration - baseline_control_value, TRUE ~ Concentration))
+#     
+#     return(DF_baseline_adj)
+#   }
+#   
+#   DF_baseline_adj <- get_baseline(DF = DF, NEGATIVE_CTRL = NEGATIVE_CTRL)
+#   
+#   get_normalization_value <- function(DF, POSITIVE_CTRL) {
+#     
+#     if (any(DF$CELL_LINE %in% POSITIVE_CTRL & DF$CONDITION %in% "STIM" | DF$CL_NAME_ON_PLOT %in% POSITIVE_CTRL & DF$CONDITION %in% "STIM" | DF$CL_NUMBER %in% POSITIVE_CTRL & DF$CONDITION %in% "STIM")) {
+#       normalization_control_value <- DF %>%
+#         group_by(!!!syms(group_vars)) %>%
+#         filter((CELL_LINE %in% POSITIVE_CTRL & CONDITION == "STIM") | (CL_NAME_ON_PLOT %in% POSITIVE_CTRL & CONDITION == "STIM") | (CL_NUMBER %in% POSITIVE_CTRL & CONDITION == "STIM")) %>%
+#         summarise(normalization_control_value = case_when(mean(Concentration_REDUCED) > 0 ~ mean(Concentration_REDUCED), TRUE ~ -Inf))
+#     } else {
+#       normalization_control_value <- DF %>%
+#         group_by(!!!syms(group_vars)) %>%
+#         summarise(normalization_control_value = max(Concentration))
+#     }
+#     
+#     # Join the calculated control means
+#     DF_normalization_adj <- left_join(DF, normalization_control_value)
+#     
+#     return(DF_normalization_adj)
+#   }
+#   
+#   DF_normalization_adj <- get_normalization_value(DF = DF_baseline_adj, POSITIVE_CTRL = POSITIVE_CTRL)
+#   
+#   
+#   # Normalize ELISA data
+#   normalize_ELISA <- function(DF) {
+#     
+#     DATA_NORMALIZED <- DF %>%
+#       group_by(!!!syms(group_vars), CELL_LINE, CONDITION) %>%
+#       mutate(Concentration_NORMALIZED = case_when(Concentration_REDUCED / normalization_control_value < 0 ~ 0, TRUE ~ Concentration_REDUCED / normalization_control_value),
+#              triplicate_mean_per_day  = mean(Concentration_NORMALIZED)) %>%
+#       ungroup()
+#     return(DATA_NORMALIZED)
+#   }
+#   
+#   DATA_NORMALIZED <- DF_normalization_adj %>%
+#     group_by(!!!syms(group_vars), CELL_LINE, CONDITION) %>%
+#     mutate(Concentration_NORMALIZED = ifelse(Concentration_REDUCED / normalization_control_value < 0, 0, Concentration_REDUCED / normalization_control_value),
+#            triplicate_mean_per_day  = mean(Concentration_NORMALIZED),
+#            POSITIVE_CTRL = unique(DF_normalization_adj$CL_NAME_ON_PLOT[DF_normalization_adj$CELL_LINE == POSITIVE_CTRL]),
+#            NEGATIVE_CTRL = NEGATIVE_CTRL) %>%
+#     ungroup()
+#   
+#   return(DATA_NORMALIZED)
+# }
 
 process_ELISA_data <- function(DF, NEGATIVE_CTRL, POSITIVE_CTRL) {
   
@@ -386,7 +461,7 @@ process_ELISA_data <- function(DF, NEGATIVE_CTRL, POSITIVE_CTRL) {
     }
     
     # Join the calculated values with the dataset
-    DF_baseline_adj <- left_join(DF, baseline) %>%
+    DF_baseline_adj <- left_join(DF, baseline, by = group_vars) %>%
       mutate(Concentration_REDUCED = case_when(!is.na(baseline_control_value) ~ Concentration - baseline_control_value, TRUE ~ Concentration))
     
     return(DF_baseline_adj)
@@ -394,46 +469,61 @@ process_ELISA_data <- function(DF, NEGATIVE_CTRL, POSITIVE_CTRL) {
   
   DF_baseline_adj <- get_baseline(DF = DF, NEGATIVE_CTRL = NEGATIVE_CTRL)
   
+  # Get normalization value
   get_normalization_value <- function(DF, POSITIVE_CTRL) {
     
-    if (any(DF$CELL_LINE %in% POSITIVE_CTRL & DF$CONDITION %in% "STIM" | DF$CL_NAME_ON_PLOT %in% POSITIVE_CTRL & DF$CONDITION %in% "STIM")) {
+    # Check if the positive control exists in any of the target columns with CONDITION == "STIM"
+    positive_ctrl_exists <- any(
+      (DF$CELL_LINE %in% POSITIVE_CTRL & DF$CONDITION == "STIM") |
+        (DF$CL_NAME_ON_PLOT %in% POSITIVE_CTRL & DF$CONDITION == "STIM") |
+        (DF$CL_NUMBER %in% POSITIVE_CTRL & DF$CONDITION == "STIM")
+    )
+    
+    if (positive_ctrl_exists) {
+      # Filter for the positive control in any of the columns and with CONDITION == "STIM"
       normalization_control_value <- DF %>%
+        filter((CELL_LINE %in% POSITIVE_CTRL & CONDITION == "STIM") |
+                 (CL_NAME_ON_PLOT %in% POSITIVE_CTRL & CONDITION == "STIM") |
+                 (CL_NUMBER %in% POSITIVE_CTRL & CONDITION == "STIM")) %>%
         group_by(!!!syms(group_vars)) %>%
-        filter((CELL_LINE %in% POSITIVE_CTRL & CONDITION == "STIM") | (CL_NAME_ON_PLOT %in% POSITIVE_CTRL & CONDITION == "STIM")) %>%
-        summarise(normalization_control_value = case_when(mean(Concentration_REDUCED) > 0 ~ mean(Concentration_REDUCED), TRUE ~ -Inf))
+        summarise(normalization_control_value = case_when(
+          mean(Concentration_REDUCED) > 0 ~ mean(Concentration_REDUCED),
+          TRUE ~ -Inf
+        ))
     } else {
+      # If no positive control is found, use the maximum concentration
       normalization_control_value <- DF %>%
         group_by(!!!syms(group_vars)) %>%
         summarise(normalization_control_value = max(Concentration))
     }
     
-    # Join the calculated control means
-    DF_normalization_adj <- left_join(DF, normalization_control_value)
-    
-    return(DF_normalization_adj)
+    return(normalization_control_value)
   }
   
-  DF_normalization_adj <- get_normalization_value(DF = DF_baseline_adj, POSITIVE_CTRL = POSITIVE_CTRL)
-  
+  # Calculate normalization value and merge with baseline-adjusted data
+  DF_normalization_adj <- DF_baseline_adj %>%
+    left_join(get_normalization_value(DF_baseline_adj, POSITIVE_CTRL), by = group_vars)
   
   # Normalize ELISA data
   normalize_ELISA <- function(DF) {
-    
     DATA_NORMALIZED <- DF %>%
       group_by(!!!syms(group_vars), CELL_LINE, CONDITION) %>%
-      mutate(Concentration_NORMALIZED = case_when(Concentration_REDUCED / normalization_control_value < 0 ~ 0, TRUE ~ Concentration_REDUCED / normalization_control_value),
-             triplicate_mean_per_day  = mean(Concentration_NORMALIZED)) %>%
+      mutate(
+        Concentration_NORMALIZED = ifelse(Concentration_REDUCED / normalization_control_value < 0, 0, Concentration_REDUCED / normalization_control_value),
+        triplicate_mean_per_day = mean(Concentration_NORMALIZED, na.rm = TRUE)
+      ) %>%
       ungroup()
     return(DATA_NORMALIZED)
   }
   
-  DATA_NORMALIZED <- DF_normalization_adj %>%
-    group_by(!!!syms(group_vars), CELL_LINE, CONDITION) %>%
-    mutate(Concentration_NORMALIZED = ifelse(Concentration_REDUCED / normalization_control_value < 0, 0, Concentration_REDUCED / normalization_control_value),
-           triplicate_mean_per_day  = mean(Concentration_NORMALIZED),
-           POSITIVE_CTRL = POSITIVE_CTRL,
-           NEGATIVE_CTRL = NEGATIVE_CTRL) %>%
-    ungroup()
+  DATA_NORMALIZED <- normalize_ELISA(DF_normalization_adj) %>%
+    mutate(
+      POSITIVE_CTRL = unique(DF_normalization_adj$CL_NAME_ON_PLOT[
+        DF_normalization_adj$CELL_LINE == POSITIVE_CTRL |
+          DF_normalization_adj$CL_NUMBER == POSITIVE_CTRL |
+          DF_normalization_adj$CL_NAME_ON_PLOT == POSITIVE_CTRL]),
+      NEGATIVE_CTRL = NEGATIVE_CTRL
+      )
   
   return(DATA_NORMALIZED)
 }
@@ -1437,10 +1527,10 @@ prepare_and_plot <- function(plotting_means, plotting_stats, x_mean, x_sem, x_la
 
 ##############################################################################
   # Function to generate statistics from means
-  run_statistics <- function(plotting_means, x_mean) {
+  run_statistics <- function(plotting_means, x_mean, group_var = "CL_NAME_ON_PLOT") {
     
     tryCatch({
-      stat_significance_dt <- process_statistical_analysis(data = plotting_means, group_var = "CL_NAME_ON_PLOT", value_var = x_mean)
+      stat_significance_dt <- process_statistical_analysis(data = plotting_means, group_var = group_var, value_var = x_mean)
 
     }, error = function(e) {
       print("Statistical analysis failed.")
@@ -1631,6 +1721,180 @@ backtranslate <- function(aa_seq, codon_table) {
   # Concatenate codons to form the nucleotide sequence
   paste(codons, collapse = "")
 }
+
+################################################################################
+### 20241109 FX FOR EXTRACTION OF TECAN EXCEL FILE DATA ########################
+################################################################################
+
+calculate_subgrid_stats <- function(df, grid_size) {
+  # Obtain unique positions and split into row and col
+  position_cols <- unique(df$Position)
+  position_matrix <- str_split_fixed(position_cols, ";", 2) %>%
+    as.data.frame() %>%
+    mutate_all(as.integer)
+  colnames(position_matrix) <- c("row", "col")
+  
+  # Calculate maximum top-left corner positions
+  max_row <- max(position_matrix$row) - (grid_size - 1)
+  max_col <- max(position_matrix$col) - (grid_size - 1)
+  
+  # Generate valid top-left corners within bounds
+  top_left_corners <- expand.grid(row = 0:max_row, col = 0:max_col)
+  
+  # Function to get subgrid values and prioritize lowest/middle values
+  get_subgrid_values <- function(top_left) {
+    # Generate row and col positions for this sub-grid
+    rows <- top_left$row + (0:(grid_size - 1))
+    cols <- top_left$col + (0:(grid_size - 1))
+    subgrid_positions <- expand.grid(row = rows, col = cols)
+    subgrid_positions <- paste0(subgrid_positions$row, ";", subgrid_positions$col)
+    
+    # Extract Raw values for the positions within this sub-grid
+    subgrid_values <- df %>%
+      filter(Position %in% subgrid_positions) %>%
+      arrange(Raw) %>%  # Sort values by Raw to prioritize lowest
+      pull(Raw)
+    
+    # Select number of values based on grid size (e.g., prioritize central values if possible)
+    num_values <- ifelse(grid_size > 2, floor(grid_size^2 / 2), 2)  # Adjust selection size as needed
+    selected_values <- head(subgrid_values, num_values)  # Take lowest values up to num_values
+    
+    selected_values
+  }
+  
+  # Calculate mean for selected values in each sub-grid and find optimal sub-grid
+  subgrid_stats <- top_left_corners %>%
+    rowwise() %>%
+    mutate(
+      subgrid = list(get_subgrid_values(cur_data())),
+      mean = mean(unlist(subgrid), na.rm = TRUE)  # Mean of selected values
+    ) %>%
+    ungroup()
+  
+  # Select the sub-grid with the lowest mean
+  best_subgrid <- subgrid_stats %>%
+    slice(which.min(mean)) %>%
+    select(mean)
+  
+  best_subgrid
+}
+
+################################################################################
+### 20241110 MOI CALCULATOR FX #################################################
+################################################################################
+
+calculate_CFU <- function(OD600, conversion_factor = 8E+08) {
+  
+  # Debugging Example:
+  # OD600 = 0.2 ; conversion_factor = 8E+08
+  
+  CFU <- OD600 * conversion_factor
+  return(CFU)
+}
+
+calculate_PFU <- function(n_plaques, dilution_step, phage_volume_plated = 0.1) {
+  # Ensure n_plaques and dilution_step are provided
+  # if (dilution_step %in% c(0)) {
+  if (is.na(dilution_step)) {
+    PFU <- 0
+  } else if (!is.na(n_plaques) & !is.na(dilution_step)) {
+    PFU <- (n_plaques * 10^abs(dilution_step)) / phage_volume_plated
+    return(PFU)
+  } else {
+    cat("Error: Make sure you provide the number of plaques you counted, the volume plated (default 100µL), and the dilution step.")
+  }
+}
+
+# ### Example usage:
+# calculate_PFU(n_plaques = 280, dilution_step = -4, phage_volume_plated = 0.1)
+# calculate_PFU(n_plaques = 171, dilution_step = -6, phage_volume_plated = 0.1)
+# calculate_PFU(n_plaques = 0, dilution_step = -6, phage_volume_plated = 0.1)
+
+# Function to calculate MOI based on plaque counts and dilution
+calculate_MOI_plate_count <- function(OD600, conversion_factor = 8E+08, 
+                                      n_plaques, dilution_step, 
+                                      phage_volume_plated = 0.1, 
+                                      bacterial_volume, phage_volume_added, 
+                                      verbose = FALSE) {
+  
+  # Calculate CFU based on OD600 and the bacterial volume added
+  CFU <- calculate_CFU(OD600 = OD600, conversion_factor = conversion_factor) * bacterial_volume
+  
+  # Calculate PFU based on plaque counts and dilution factor
+  PFU <- calculate_PFU(n_plaques = n_plaques, 
+                       dilution_step = dilution_step, 
+                       phage_volume_plated = phage_volume_plated) * phage_volume_added
+  
+  # Calculate MOI
+  MOI <- PFU / CFU
+  
+  if (verbose) {
+    cat("Plate Count Method:\n")
+    cat("CFU:", CFU, "\nPFU:", PFU, "\nMOI:", MOI, "\n")
+  }
+  
+  return(MOI)
+}
+
+# ### Example usage:
+# calculate_MOI_plate_count(OD600 = 0.2, conversion_factor = 8E+08,
+#                           n_plaques = 280, dilution_step = -6,
+#                           phage_volume_plated = 0.1,
+#                           bacterial_volume = 0.18, phage_volume_added = 0.02,
+#                           verbose = TRUE)
+
+
+################################################################################
+################################################################################
+################################################################################
+
+# Function to calculate MOI for a lysis assay
+calculate_MOI_lysis_assay <- function(CFU = NA, PFU = NA, 
+                                      OD600 = NA, conversion_factor = 8E+08, 
+                                      T6_PHAGE = NA, bacterial_volume = NA,
+                                      phage_volume_added = NA, verbose = FALSE) {
+  
+  # Calculate CFU if CFU is not provided and OD600 is available
+  
+  if (is.na(CFU) & !is.na(OD600)) {
+    CFU <- calculate_CFU(OD600 = OD600, conversion_factor = conversion_factor) * bacterial_volume
+  } else if (is.na(CFU)) {
+    cat("Please provide either OD600 or CFU to get an MOI from this function.\n")
+    return(NA)
+  }
+  
+  # Check for NA in T6_PHAGE before proceeding
+  # if (!is.na(T6_PHAGE) && T6_PHAGE > 0) {
+  if (!is.na(T6_PHAGE)) {
+    if (is.na(PFU)) {
+      cat("Please provide either T6_PHAGE or PFU to get an MOI from this function.\n")
+      return(NA)
+    }
+    
+    # Calculate MOI
+    # MOI <- (phage_volume_added * PFU) * 10^-T6_PHAGE / (bacterial_volume * CFU)
+    MOI <- (phage_volume_added * PFU * 10^-T6_PHAGE) / (bacterial_volume * CFU)
+    
+  } else {
+    MOI <- 0
+    PFU <- 0
+  }
+  
+  if (verbose) {
+    cat("Lysis Assay Method:\n")
+    cat("CFU:", CFU, "\nPFU:", PFU, "\nMOI:", MOI, "\n")
+  }
+  
+  return(MOI)
+}
+
+# ### Example usage:
+# calculate_MOI_lysis_assay(OD600 = 0.2, conversion_factor = 8E+08,
+#                           T6_PHAGE = 0, PFU = calculate_PFU(n_plaques = 280, dilution_step = -4, phage_volume_plated = 0.1),
+#                           bacterial_volume = 0.18, phage_volume_added = 0.02,
+#                           verbose = TRUE
+#                           )
+
 
 ################################################################################
 ################################################################################
