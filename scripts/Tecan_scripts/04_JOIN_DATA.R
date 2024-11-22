@@ -77,28 +77,40 @@ blanks <- allplates %>% left_join(mean_df) %>%
   summarise(OD600_blank = mean(refined_OD600_mean, na.rm = T)) %>%
   select(Cycle, OD600_blank)
 
-# Join the mean and time data frames
+# Join the mean and time data frames, checking for the presence of MOI or T6_PHAGE
+# Check if MOI or T6_PHAGE columns contain data other than "EMPTY"
+use_moi <- any(allplates$MOI != "EMPTY", na.rm = TRUE)
+use_t6_phage <- any(allplates$T6_PHAGE != "EMPTY", na.rm = TRUE)
+
+# Join the mean, time, and other data frames, without setting CONDITION initially
 dp <- mean_df %>%
   left_join(time_df) %>%
-  left_join(allplates %>% select(-MOI)) %>%
+  left_join(allplates) %>%
   left_join(blanks) %>%
   filter(CELL_LINE != "EMPTY") %>%
   group_by(Plate, Date, Cycle) %>%
   mutate(
-    # T6_PHAGE = case_when(
-    #   T6_PHAGE == 0 ~ NA,
-    #   T6_PHAGE > 0  ~ T6_PHAGE,
-    #   TRUE ~ "Unknown"),
-    CONDITION = case_when(
-      T6_PHAGE == 0 ~ paste0(CELL_LINE, "_", ARABINOSE, "Ara_-T6"),
-      TRUE ~ paste0(CELL_LINE, "_", ARABINOSE, "Ara_+10e-", T6_PHAGE)),
+    # Set CONDITION based on whether we have MOI or T6_PHAGE data, using only relevant column
+    CONDITION = if (use_moi) {
+      case_when(
+        MOI == 0 ~ paste0(CELL_LINE, "_", ARABINOSE, "Ara_-T6"),
+        TRUE ~ paste0(CELL_LINE, "_", ARABINOSE, "Ara_+MOI_", MOI)
+      )
+    } else {
+      case_when(
+        T6_PHAGE == 0 ~ paste0(CELL_LINE, "_", ARABINOSE, "Ara_-T6"),
+        TRUE ~ paste0(CELL_LINE, "_", ARABINOSE, "Ara_+10e-", T6_PHAGE)
+      )
+    },
     CONDITION_2 = case_when(
       ARABINOSE == 0 ~ paste0(CELL_LINE, "-Ara"),
-      TRUE ~ paste0(CELL_LINE, "+Ara")),
+      TRUE ~ paste0(CELL_LINE, "_", ARABINOSE, "%Ara")
+    ),
+    # Calculate OD600 normalized with positive values
     OD600_normalized = as.numeric(case_when(
-      # OD600 - OD600_blank > 0 ~ OD600 - OD600_blank,
       refined_OD600_mean - OD600_blank > 0 ~ refined_OD600_mean - OD600_blank,
-      TRUE ~ 0)),
+      TRUE ~ 0
+    )),
     Time_s = round(Time_s),
     Time_min = round(Time_s / 60),
     # Rename replicate numbers to `replicate_1`, `replicate_2`, etc.
@@ -110,9 +122,10 @@ dp <- mean_df %>%
 # Calculate PFU based on latest Phage Titer
 current_PFU <- calculate_PFU(n_plaques           = n_plaques, 
                              dilution_step       = dilution_step, 
-                             phage_volume_plated = phage_volume_plated) ; cat("Current PFU:", current_PFU, "/ mL\n")
+                             phage_volume_plated = phage_volume_plated) 
+cat("Current PFU:", current_PFU, "/ mL\n")
 
-# Calculate OD600 mean and SD for Cycle 01
+# Calculate OD600 mean and SD for Cycle 01, accounting for either MOI or T6_PHAGE
 OD600_C01_df <- dp %>%
   filter(Cycle == "01" & !grepl("BLANK", CONDITION_2)) %>%
   group_by(CONDITION_2) %>%
@@ -121,46 +134,67 @@ OD600_C01_df <- dp %>%
     mean  = round(mean(refined_OD600_mean, na.rm = TRUE), 2),
     stdev = round(sd(refined_OD600_mean, na.rm = TRUE), 2)
   ) %>%
-  ungroup() %>% 
+  ungroup() %>%
   mutate(T6_PHAGE = as.numeric(T6_PHAGE)) %>%
-  # Calculate mean OD600 for each unique T6_PHAGE dilution step group
   group_by(Plate, Date, T6_PHAGE) %>%
   mutate(mean_OD600_per_T6 = mean(OD600, na.rm = TRUE)) %>%
   ungroup() %>%
-  # Calculate MOI using the mean OD600 for each dilution step group
   rowwise() %>%
   mutate(
-    MOI = calculate_MOI_lysis_assay(
-      OD600              = mean_OD600_per_T6, # Use the mean OD600 here
-      conversion_factor  = 8E+08,             # E. coli conversion factor
-      T6_PHAGE           = T6_PHAGE,
-      PFU                = current_PFU,
-      bacterial_volume   = bacterial_volume,
-      phage_volume_added = phage_volume_added
-      )
+    # Calculate MOI only if T6_PHAGE is used and MOI was not predefined
+    MOI = if_else(use_moi, as.numeric(MOI),
+                  calculate_MOI_lysis_assay(
+                    OD600              = mean_OD600_per_T6, # Use mean OD600
+                    conversion_factor  = 8E+08,             # E. coli conversion factor
+                    T6_PHAGE           = T6_PHAGE,
+                    PFU                = current_PFU,
+                    bacterial_volume   = bacterial_volume,
+                    phage_volume_added = phage_volume_added
+                  ))
   ) %>%
   ungroup()
 
+# Check for duplicates
+dp_duplicates <- dp %>%
+  filter(CELL_LINE != "BLANK") %>%
+  group_by(Date, Plate, Cycle, CELL_LINE, T6_PHAGE, MOI, ARABINOSE, REPLICATE) %>%
+  summarise(n = n()) %>%
+  filter(n > 1)
+
+# If duplicates need to be handled, resolve them with pivot_wider and values_fn
 dp_replicates <- dp %>%
   filter(CELL_LINE != "BLANK") %>%
-  # select(Date, Plate, Cycle, REPLICATE, CELL_LINE, OD600, OD600_normalized, T6_PHAGE, ARABINOSE) %>%
-  # pivot_wider(names_from = REPLICATE, values_from = OD600_normalized) %>%
-  # mutate(mean_OD600_normalized = rowMeans(select(., starts_with("replicate_")), na.rm = TRUE)) %>%
-  # select(-starts_with("replicate_"))
-  select(Date, Plate, Cycle, REPLICATE, CELL_LINE, refined_OD600_mean, T6_PHAGE, ARABINOSE) %>%
-  pivot_wider(names_from = REPLICATE, values_from = refined_OD600_mean) %>%
-  mutate(mean_OD600 = rowMeans(select(., starts_with("replicate_")), na.rm = TRUE)) %>%
+  select(Date, Plate, Cycle, REPLICATE, CELL_LINE, refined_OD600_mean, T6_PHAGE, ARABINOSE, MOI) %>%
+  pivot_wider(
+    names_from = REPLICATE, 
+    values_from = refined_OD600_mean,
+    values_fn = mean # Take the mean if duplicates exist
+  ) %>%
+  mutate(
+    # Calculate mean OD600 across replicates
+    mean_OD600 = rowMeans(select(., starts_with("replicate_")), na.rm = TRUE)
+  ) %>%
   select(-starts_with("replicate_"))
 
+# Final data preparation
 dp_final <- dp %>%
-  select(-REPLICATE) %>% unique() %>%
-  # left_join(dp_replicates) %>%
-  distinct(CONDITION, Cycle, Date, .keep_all = T) %>%
+  select(-REPLICATE) %>%
+  unique() %>%
+  distinct(CONDITION, Cycle, Date, .keep_all = TRUE) %>%
   filter(CELL_LINE != "BLANK") %>%
-  # filter(T6_PHAGE %in% c(0,1,3,5,7, NA)) %>%
   mutate(T6_PHAGE = as.numeric(T6_PHAGE))
 
-data_for_plotting <- dp_final %>% 
+# Data for plotting, adjusting fields and filling missing values
+
+if (use_moi) {
+  data_for_plotting <- dp_final %>%
+    mutate(MOI = as.numeric(MOI))
+} else {
+  data_for_plotting <- dp_final %>%
+    select(-MOI)
+}
+
+data_for_plotting <- data_for_plotting %>%
   left_join(cl_key, relationship = "many-to-many") %>%
   left_join(OD600_C01_df %>% select(-REPLICATE)) %>%
   group_by(Date, Plate) %>%

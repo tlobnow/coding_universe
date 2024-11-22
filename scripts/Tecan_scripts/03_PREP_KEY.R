@@ -9,6 +9,7 @@ allplates <- data.frame()
 patterns <- list(
   CELL_LINE  = c("CELL", "LINE", "COHORT"),
   ARABINOSE   = c("ARA", "ARABINOSE"),
+  GLUCOSE     = c("GLUCOSE"),
   T6_PHAGE    = c("T6", "PHAGE"),
   MOI         = c("MOI"),
   REPLICATE   = c("REPLICATE")
@@ -44,8 +45,11 @@ for (name in names(patterns)) {
   PLATE[[name]] <- labeled_sheet$DATA
 }
 
-# Filter out rows with "EMPTY" for CELL_LINE (optional, if needed)
-PLATE <- PLATE %>% filter(CELL_LINE != "EMPTY")
+# Filter out rows with "EMPTY" for CELL_LINE (optional, if needed) 
+PLATE <- PLATE %>% 
+  filter(CELL_LINE != "EMPTY")
 
 # Combine all plates into the main allplates data frame
 allplates <- rbind(allplates, PLATE)
+
+

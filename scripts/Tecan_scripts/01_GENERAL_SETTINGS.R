@@ -27,7 +27,7 @@ cl_key <- fread(file.path(MAIN, "TECAN_CL_KEY.csv"), na.strings = c("NA", "NaN",
 
 # Set the input and output directories
 INPUT  <- file.path(MAIN, FOLDER)
-OUTPUT <- file.path(INPUT, "output") ; if (!dir.exists(OUTPUT)) {dir.create(OUTPUT)}
+OUTPUT <- file.path(INPUT, paste0(as.character(Sys.Date()), "_output")) ; if (!dir.exists(OUTPUT)) {dir.create(OUTPUT)}
 
 # Function to find matching sheets in an Excel file and read them into data frames
 read_matching_sheets <- function(file, patterns) {
@@ -50,4 +50,4 @@ basic_columns <- c("Well", "Cycle", "Time_s", "Time_min", "Plate", "Date",
                    "CELL_LINE", "ARABINOSE", "T6_PHAGE", "REPLICATE", "CONDITION",
                    "mean_OD600_normalized", "OD600_normalized", "OD600", "OD600_blank")
 
-colors <- c("black", "red", "#E69F00","#56B4E9")
+colors <- c("black", "red", "#E69F00","#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")

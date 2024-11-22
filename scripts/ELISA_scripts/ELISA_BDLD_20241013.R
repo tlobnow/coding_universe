@@ -27,7 +27,7 @@ if (GENERAL_SETTINGS) {
   TEXT   <- 8
   
   # SET WD
-  setwd(paste0("~/Desktop/", figure))
+  setwd(paste0("~/Desktop/", figure)) ; getwd()
   
   # source("https://raw.githubusercontent.com/tlobnow/coding_universe/main/scripts/SOTA_FX.R")
   source("/Users/u_lobnow/Documents/Github/coding_universe/scripts/SOTA_FX.R")
@@ -217,6 +217,96 @@ if (REAL_SECRETION) {
       x_sem     = "IL2_concentration_Dilution_Factor_sem", 
       x_label   = "Real IL-2 secretion"
     )
+  
+  # ELISA_PLOT_REAL + 
+  #   xlim(c(0, 100))
+    # facet_zoom(xlim = c(0, 100), zoom.data = ifelse(a <= 100, NA, FALSE))
+  
+  ##############################################################################
+  ##############################################################################
+  ##############################################################################
+  
+  ### 
+  # 20241115
+  # Snippet to streamline stats for saving the ELISA plot for the Lunch Seminar slides
+  ###
+  
+  # plotting_means_MAIN <- plotting_means
+  # plotting_stats_real_MAIN <- plotting_stats_real
+  # 
+  # x_mean    = "IL2_concentration_Dilution_Factor_mean"; 
+  # x_sem     = "IL2_concentration_Dilution_Factor_sem"; 
+  # x_label   = "Real IL-2 secretion"
+  # cl_label = "CL_NAME_ON_PLOT"
+  # 
+  # 
+  # # print if stats has significance column
+  # if("significance" %in% colnames(plotting_stats_real_MAIN)){ 
+  #   cat("Yep, stats were calculated for ya!\n") 
+  # } else { 
+  #   cat("Sorry, couldn't calculate stats for ya!\n") 
+  # }
+  # 
+  # # Define the custom order for CELL_LINE
+  # custom_order <- c("590_L", 
+  #                   "BDLD_6", 
+  #                   "BDLD_11", 
+  #                   "BDLD_58", 
+  #                   "BDLD_57", 
+  #                   "BDLD_38", 
+  #                   "BDLD_69", 
+  #                   "BDLD_62", 
+  #                   "BDLD_67",
+  #                   "cl518",
+  #                   "cl519")
+  # 
+  # # Filter and set factor levels based on the custom order
+  # plotting_means <- plotting_means_MAIN %>% 
+  #   filter(CELL_LINE %in% custom_order | CL_NAME_ON_PLOT %in% custom_order) %>%
+  #   mutate(CELL_LINE = factor(CELL_LINE, levels = custom_order))
+  # 
+  # plotting_stats <- plotting_stats_real_MAIN %>% 
+  #   filter(CELL_LINE %in% custom_order | CL_NAME_ON_PLOT %in% custom_order) %>%
+  #   mutate(CELL_LINE = factor(CELL_LINE, levels = custom_order))
+  # 
+  # # Your plotting code
+  # ELISA_PLOT <- ggplot(data = plotting_stats, aes(x = !!sym(x_mean), y = CL_NAME_ON_PLOT, fill = PLOTTING_COLOR, pattern = CONDITION, group = rev(CONDITION))) +
+  #   geom_col(aes(col = PLOTTING_COLOR), position = position_dodge(width = 0.7), width = 0.68, alpha = 0.5) +
+  #   scale_y_discrete(expand = c(0, 0)) +
+  #   scale_fill_manual(name  = cl_label, values = plotting_means$PLOTTING_COLOR, breaks = plotting_means$PLOTTING_COLOR, labels = ifelse(plotting_means$CONDITION == "UNSTIM", paste0("- ", plotting_means$STIMULANT), paste0("+ ", plotting_means$STIMULANT))) +
+  #   scale_color_manual(name = cl_label, values = plotting_means$PLOTTING_COLOR, breaks = plotting_means$PLOTTING_COLOR, labels = ifelse(plotting_means$CONDITION == "UNSTIM", paste0("- ", plotting_means$STIMULANT), paste0("+ ", plotting_means$STIMULANT))) +
+  #   labs(x = x_label, y = "") +
+  #   guides(color = "none", fill = guide_legend(reverse = TRUE)) +
+  #   theme_cowplot(font_size = SIZE, font_family = FONT) +
+  #   theme(axis.text.x       = element_text(size = SIZE, vjust = 0.6),
+  #         axis.title.y      = element_blank(),
+  #         legend.position   = "bottom",
+  #         legend.title      = element_blank(),
+  #         legend.text       = element_text(size = SIZE),
+  #         legend.key.size   = unit(9, "mm"))
+  # 
+  # # Add error bars and text if significance column is present
+  # if ("significance" %in% colnames(plotting_stats)) {
+  #   ELISA_PLOT <- ELISA_PLOT +
+  #     geom_errorbar(aes(y = CL_NAME_ON_PLOT,
+  #                       xmin = !!sym(x_mean) - !!sym(x_sem),
+  #                       xmax = !!sym(x_mean) + !!sym(x_sem)),
+  #                   linewidth = .75, position = position_dodge(width = 0.5), width = 0.25) +
+  #     geom_text(data = plotting_stats, aes(x = 1.2 * max(!!sym(x_mean)), y = CL_NAME_ON_PLOT, label = significance), 
+  #               hjust = .5, vjust = 1, size = TEXT)
+  # }
+  # 
+  # # Add facet if needed
+  # if (length(unique(plotting_means$POSITIVE_CTRL)) > 1 & x_mean == "Relative_Intensity_mean") {
+  #   ELISA_PLOT <- ELISA_PLOT +
+  #     facet_wrap(~POSITIVE_CTRL, scales = "free", ncol = 1)
+  # }
+  # 
+  # # Print the plot
+  # ELISA_PLOT
+  # 
+  # ggsave("ELISA_PLOT.svg", plot = ELISA_PLOT, width = 8, height = 6, dpi = 300)
+  
 }
 
 if (SAVE) {

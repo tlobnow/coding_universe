@@ -21,6 +21,7 @@ GENERAL <- TRUE
 
 ```{r 20241106, warning=FALSE, message=FALSE}
 list.dirs(MAIN, full.names = F, recursive = F)
+# FOLDER <- "20241106"
 FOLDER <- "20241106"
 SKIP   <- 57 # How many lines to skip in the Tecan data files (depends on setup)
 
@@ -367,9 +368,10 @@ data_for_plotting %>%
 
 ```
 
+
 ```{r 20241113, warning=FALSE, message=FALSE}
 list.dirs(MAIN, full.names = F, recursive = F)
-FOLDER <- "20241112"
+FOLDER <- "20241113"
 SKIP   <- 54 # How many lines to skip in the Tecan data files (depends on setup)
 
 # Latest Phage Titer Details
@@ -381,9 +383,262 @@ phage_volume_plated = 0.01
 bacterial_volume    = 0.15
 phage_volume_added  = 0.05
 
-if (GENERAL)   {source("/Users/u_lobnow/Documents/Github/coding_universe/scripts/Tecan_scripts/01_GENERAL_SETTINGS.R")}
-if (READ_DATA) {source("/Users/u_lobnow/Documents/Github/coding_universe/scripts/Tecan_scripts/02_READ_DATA.R")}
-if (PREP_KEY)  {source("/Users/u_lobnow/Documents/Github/coding_universe/scripts/Tecan_scripts/03_PREP_KEY.R")}
-if (JOIN_DATA) {source("/Users/u_lobnow/Documents/Github/coding_universe/scripts/Tecan_scripts/04_JOIN_DATA.R")}
+if (GENERAL)   {source("/Users/u_lobnow/Documents/Github/coding_universe/scripts/Tecan_scripts/01_GENERAL_SETTINGS.R")} ; cat("General settings loaded.\n")
+if (READ_DATA) {source("/Users/u_lobnow/Documents/Github/coding_universe/scripts/Tecan_scripts/02_READ_DATA.R")}        ; cat("Data read.\n")    ; head(data)
+if (PREP_KEY)  {source("/Users/u_lobnow/Documents/Github/coding_universe/scripts/Tecan_scripts/03_PREP_KEY.R")}         ; cat("Key prepared.\n") ; head(PLATE)
+if (JOIN_DATA) {source("/Users/u_lobnow/Documents/Github/coding_universe/scripts/Tecan_scripts/04_JOIN_DATA.R")}        ; cat("Data joined.\n")  ; head(data_for_plotting)
 ```
+
+``` {r 20241113_plots}
+data_for_plotting_main <- data_for_plotting
+
+data_for_plotting$MOI <- round(abs(data_for_plotting_main$MOI), 5)
+unique(data_for_plotting$MOI)
+
+data_for_plotting %>%
+    arrange(Cycle) %>%
+    # ggplot(aes(x = Time_min, y = mean_OD600_normalized, color = ARABINOSE, group = CONDITION, alpha = -(as.numeric(T6_PHAGE)))) +
+    ggplot(aes(x = Time_min, y = original_mean, color = ARABINOSE, group = CONDITION)) +
+    # geom_line() +
+    geom_smooth() +
+    facet_wrap(~CELL_LINE+ARABINOSE, nrow = 1) +
+    theme_cowplot() +
+    labs(title = "OD600 over time", x = "time [min]", y = "OD600", subtitle = unique(data_for_plotting$Date)) +
+    theme(legend.position = "bottom")
+    
+
+# data_for_plotting$MOI <- round(data_for_plotting_main$MOI, 5)
+data_for_plotting %>% 
+    arrange(Cycle) %>%
+    ggplot(aes(x = Time_min, y = original_mean, color = CONDITION_2, group = CONDITION)) +
+    geom_smooth() +
+    facet_wrap(~T6_PHAGE, nrow = 1) +
+    facet_wrap(~MOI, nrow = 1) +
+    theme_cowplot() +
+    theme(legend.position = "bottom") +
+    labs(title = "OD600 over time", x = "time [min]", y = "OD600", subtitle = unique(data_for_plotting$Date)) +
+    scale_color_manual(values = colors)
+
+# data_for_plotting$MOI <- desc(round(data_for_plotting_main$MOI, 4))
+data_for_plotting %>% 
+  arrange(Cycle) %>%
+  ggplot(aes(x = Time_min, y = original_mean, color = CONDITION_2, linetype = as.factor(MOI))) +
+  geom_smooth(se = F) +
+  # facet_wrap(~CELL_LINE, nrow = 1) +
+  # facet_wrap(~CONDITION_2, nrow = 1) +
+  theme_cowplot() +
+  # theme(legend.position = "bottom") +
+  labs(title = "OD600 over time", x = "time [min]", y = "OD600", subtitle = unique(data_for_plotting$Date)) +
+  scale_color_manual(values = colors) +
+  xlim(0,250)
+
+# data_for_plotting$MOI <- desc(round(data_for_plotting_main$MOI, 4))
+data_for_plotting %>% 
+  arrange(Cycle) %>%
+  ggplot(aes(x = Time_min, y = refined_OD600_mean, color = CONDITION_2, linetype = as.factor(MOI))) +
+  geom_smooth(se = F) +
+  #facet_wrap(~CONDITION_2, nrow = 1) +
+  theme_cowplot() +
+  # theme(legend.position = "bottom") +
+  labs(title = "OD600 over time", x = "time [min]", y = "OD600", subtitle = unique(data_for_plotting$Date)) +
+  scale_color_manual(values = colors) +
+  xlim(0,250)
+
+data_for_plotting %>% 
+  arrange(Cycle) %>%
+  ggplot(aes(x = Time_min, y = refined_OD600_mean, color = CONDITION_2)) +
+  geom_smooth(se = F) +
+  facet_wrap(~MOI, ncol = 1, scales = "free_y") +
+  theme_cowplot() +
+  # theme(legend.position = "bottom") +
+  labs(title = "OD600 over time", x = "time [min]", y = "OD600", subtitle = unique(data_for_plotting$Date)) +
+  scale_color_manual(values = colors) +
+  xlim(0,250)
+```
+
+
+``` {r Lunch_Seminar_Plot}
+
+plot <- data_for_plotting %>% 
+  filter(MOI %in% c(0, 
+                    # 0.002,
+                    # 0.2#,
+                    # 0.1, 
+                    1
+                    ),
+         CONDITION_2 %in% c("WT-Ara", "bGSDM_0.2%Ara")) %>%
+  arrange(Cycle) %>%
+  ggplot(aes(x = Time_min, y = refined_OD600_mean, color = CONDITION_2, group = interaction(CONDITION_2, MOI))) +
+  # using stat_smooth with geom = "line" to control alpha
+  stat_smooth(geom = "line", se = FALSE, method = "loess", 
+              aes(linetype = as.factor(-MOI), alpha = as.factor(-MOI))) +
+  theme_cowplot() +
+  labs(title = "OD600 over time", x = "time [min]", y = "OD600", subtitle = unique(data_for_plotting$Date)) +
+  scale_color_manual(values = c("darkolivegreen3", "gray50")) +
+  scale_alpha_manual(values = c(1, 0.7, 0.5, 0.3)) +  # Manually set alpha values for each MOI level
+  xlim(0, 150) +
+  theme(legend.position = "bottom")
+
+plot
+
+moi1_plot <- data_for_plotting %>% 
+  filter(MOI %in% c(1),
+         CONDITION_2 %in% c("WT-Ara", "bGSDM_0.2%Ara"#, 
+                            # "bGSDM_0.02%Ara"
+                            )) %>%
+  arrange(Cycle) %>%
+  ggplot(aes(x = Time_min, y = refined_OD600_mean, color = CONDITION_2, group = interaction(CONDITION_2, MOI))) +
+  # using stat_smooth with geom = "line" to control alpha
+  # stat_smooth(geom = "line", se = FALSE, method = "loess", 
+  #             aes(linetype = as.factor(-MOI), alpha = as.factor(-MOI))) +
+  geom_smooth(se = F) +
+  theme_cowplot() +
+  labs(title = "OD600 over time", x = "time [min]", y = "OD600", subtitle = unique(data_for_plotting$Date)) +
+  scale_color_manual(values = c("darkolivegreen3", 
+                                # "darkolivegreen2", 
+                                "gray50")) +
+  scale_alpha_manual(values = c(1, 0.7, 0.5, 0.3)) +  # Manually set alpha values for each MOI level
+  xlim(0, 250) +
+  theme(legend.position = "bottom")
+
+moi1_plot
+
+if (SAVE) {
+  
+  if (dir.exists(OUTPUT)) {print(paste0("Files will be saved to ", OUTPUT))} else {dir.create(OUTPUT, recursive = T); print(paste0("Files will be saved to ", OUTPUT))}
+  
+  ggsave(plot = plot,      glue("{OUTPUT}/{FOLDER}.svg"), width = 5, height = 4)
+  ggsave(plot = moi1_plot, glue("{OUTPUT}/{FOLDER}_moi1.svg"), width = 5, height = 4)
+
+}
+
+```
+
+```{r 20241118, warning=FALSE, message=FALSE}
+list.dirs(MAIN, full.names = F, recursive = F)
+FOLDER <- "20241118"
+SKIP   <- 53 # How many lines to skip in the Tecan data files (depends on setup)
+
+# Latest Phage Titer Details
+n_plaques           = 290
+dilution_step       = -5
+phage_volume_plated = 0.1
+
+# Assay Details
+bacterial_volume    = 0.18
+phage_volume_added  = 0.02
+
+if (GENERAL)   {source("/Users/u_lobnow/Documents/Github/coding_universe/scripts/Tecan_scripts/01_GENERAL_SETTINGS.R")} ; cat("General settings loaded.\n")
+if (READ_DATA) {source("/Users/u_lobnow/Documents/Github/coding_universe/scripts/Tecan_scripts/02_READ_DATA.R")}        ; cat("Data read.\n")    ; head(data)
+if (PREP_KEY)  {source("/Users/u_lobnow/Documents/Github/coding_universe/scripts/Tecan_scripts/03_PREP_KEY.R")}         ; cat("Key prepared.\n") ; head(PLATE)
+if (JOIN_DATA) {source("/Users/u_lobnow/Documents/Github/coding_universe/scripts/Tecan_scripts/04_JOIN_DATA.R")}        ; cat("Data joined.\n")  ; head(data_for_plotting)
+```
+``` {r 20241118_plots}
+data_for_plotting_main <- data_for_plotting
+# data_for_plotting <- data_for_plotting_main
+
+# set the colors depending on arabinose status - if the status is 0.02, use the color specified in the COL_ARA_002 column of the data_for_plotting dataframe, 
+# if the status is 0.2, use the color specified in COL_ARA_02, otherwise use the color specified in PLOTTING_COLOR
+data_for_plotting$COLOR <- ifelse(data_for_plotting_main$ARABINOSE == 0.02, data_for_plotting_main$COL_ARA_002, 
+                                  ifelse(data_for_plotting_main$ARABINOSE == 0.2, data_for_plotting_main$COL_ARA_02, 
+                                         data_for_plotting_main$PLOTTING_COLOR))
+
+data_for_plotting$T6_PHAGE <- ifelse(is.na(data_for_plotting$T6_PHAGE), 10, as.numeric(data_for_plotting$T6_PHAGE))
+
+data_for_plotting$MOI <- round(data_for_plotting$MOI, 2)
+
+# data_for_plotting %>%
+#   ggplot(aes(x = Time_min, y = refined_OD600_mean, color = COLOR, group = CONDITION, alpha = as.numeric(-T6_PHAGE))) +
+#   # geom_smooth(se = F) +
+#   geom_line(linewidth = 1.5) +
+#   # geom_point() +
+#   # facet_grid(CELL_LINE~ARABINOSE) +
+#   facet_grid(~CELL_LINE) +
+#   theme_cowplot() +
+#   labs(title = "OD600 over time", x = "time [min]", y = "OD600", subtitle = unique(data_for_plotting$Date)) +
+#   scale_color_identity()
+
+data_for_plotting %>%
+  ggplot(aes(x = Time_min, y = refined_OD600_mean, color = COLOR, group = CONDITION, linetype = as.factor(MOI))) +
+  # geom_smooth(se = F) +
+  geom_line() +
+  # geom_point() +
+  facet_grid(CELL_LINE~ARABINOSE) +
+  # facet_grid(~CELL_LINE) +
+  theme_cowplot() +
+  labs(title = "OD600 over time", x = "time [min]", y = "OD600", subtitle = unique(data_for_plotting$Date)) +
+  scale_color_identity()
+
+data_for_plotting %>%
+  ggplot(aes(x = Time_min, y = refined_OD600_mean, color = COLOR, group = CONDITION, shape = as.factor(MOI))) +
+  # geom_smooth(se = F) +
+  geom_line(linewidth = 0.8, alpha = 0.3) +
+  geom_point() +
+  facet_grid(#CELL_LINE
+             ~ARABINOSE) +
+  # facet_grid(~CELL_LINE) +
+  theme_cowplot() +
+  labs(title = "OD600 over time", x = "time [min]", y = "OD600", subtitle = unique(data_for_plotting$Date)) +
+  scale_color_identity()
+  
+data_for_plotting %>%
+  filter(MOI %in% c(0.00000, 0.00145, 0.14485)) %>%
+  ggplot(aes(x = Time_min, y = refined_OD600_mean, color = COLOR, group = CONDITION, shape = as.factor(MOI))) +
+  # geom_smooth(se = F) +
+  # geom_line(linewidth = 1.5) +
+  geom_point() +
+  facet_grid(#CELL_LINE
+             ~ARABINOSE) +
+  # facet_grid(~CELL_LINE) +
+  theme_cowplot() +
+  labs(title = "OD600 over time", x = "time [min]", y = "OD600", subtitle = unique(data_for_plotting$Date)) +
+  scale_color_identity()
+
+data_for_plotting %>%
+  # filter(MOI %in% c(0.00000, 0.00145, 0.14485)) %>%
+  # mutate(MOI = round(MOI, 3)) %>%
+  ggplot(aes(x = Time_min, y = refined_OD600_mean, color = COLOR, group = CONDITION, alpha = MOI)) +
+  # geom_smooth(se = F) +
+  geom_line(linewidth = 1.5) +
+  # geom_point() +
+  # facet_grid(CELL_LINE~ARABINOSE) +
+  # facet_grid(~CELL_LINE) +
+  facet_grid(~ARABINOSE) +
+  # facet_grid(~MOI) +
+  theme_cowplot() +
+  labs(title = "OD600 over time", x = "time [min]", y = "OD600", subtitle = unique(data_for_plotting$Date)) +
+  scale_color_identity()
+
+data_for_plotting %>%
+  filter(CELL_LINE != "EGFP") %>%
+  ggplot(aes(x = Time_min, y = refined_OD600_mean, color = COLOR, group = CONDITION)) +
+  geom_smooth(se = F) +
+  scale_color_identity() +
+  facet_grid(paste0(ARABINOSE, "% Ara")~paste("MOI", MOI))
+
+# reorder the data by MOI
+
+data_for_plotting %>%
+  filter(CELL_LINE != "EGFP") %>%
+  ggplot(aes(x = Time_min, y = refined_OD600_mean, color = COLOR, group = CONDITION)) +
+  geom_smooth(se = F, linewidth = 2.5) +
+  scale_color_identity() +
+  facet_wrap(~paste("MOI", MOI), nrow = 1) +
+  xlim(0, 250)
+
+
+data_for_plotting %>%
+  filter(CELL_LINE != "EGFP") %>%
+  ggplot(aes(x = Time_min, y = refined_OD600_mean, color = COLOR, group = CONDITION, shape = as.factor(MOI))) +
+  # geom_smooth(se = F) +
+  geom_line(alpha = 0.3) +
+  geom_point() +
+  scale_color_identity() +
+  facet_wrap(~MOI, nrow = 1) +
+  # xlim(0, 250) +
+  theme(legend.position = "0")
+    
+```
+
+
 
