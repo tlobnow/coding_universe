@@ -439,6 +439,99 @@ sem <- function(x) sd(x)/sqrt(length(x))
 #   return(DATA_NORMALIZED)
 # }
 
+# process_ELISA_data <- function(DF, NEGATIVE_CTRL, POSITIVE_CTRL) {
+#   
+#   group_vars <- c("STIM_DAY", "Date")
+#   
+#   # Get baseline
+#   get_baseline <- function(DF, NEGATIVE_CTRL) {
+#     if (any((DF$CELL_LINE %in% NEGATIVE_CTRL & DF$CONDITION == "UNSTIM") | unique(DF$CL_NAME_ON_PLOT %in% NEGATIVE_CTRL & DF$CONDITION == "UNSTIM"))) {
+#       baseline <- DF %>%
+#         group_by(!!!syms(group_vars)) %>%
+#         filter((CELL_LINE %in% NEGATIVE_CTRL & CONDITION == "UNSTIM") | (CL_NAME_ON_PLOT %in% NEGATIVE_CTRL & CONDITION == "UNSTIM")) %>%
+#         summarise(baseline_control_value = mean(Concentration))
+#     } else if (any(DF$CELL_LINE %in% NEGATIVE_CTRL)) {
+#       baseline <- DF %>%
+#         group_by(!!!syms(group_vars)) %>%
+#         summarise(baseline_control_value = min(Concentration[CONDITION == "UNSTIM"]))
+#     } else {
+#       baseline <- DF %>%
+#         group_by(!!!syms(group_vars)) %>%
+#         summarise(baseline_control_value = min(Concentration))
+#     }
+#     
+#     # Join the calculated values with the dataset
+#     DF_baseline_adj <- left_join(DF, baseline, by = group_vars) %>%
+#       mutate(Concentration_REDUCED = case_when(!is.na(baseline_control_value) ~ Concentration - baseline_control_value, TRUE ~ Concentration))
+#     
+#     return(DF_baseline_adj)
+#   }
+#   
+#   DF_baseline_adj <- get_baseline(DF = DF, NEGATIVE_CTRL = NEGATIVE_CTRL)
+#   
+#   # Get normalization value
+#   get_normalization_value <- function(DF, POSITIVE_CTRL) {
+#     
+#     # Check if the positive control exists in any of the target columns with CONDITION == "STIM"
+#     positive_ctrl_exists <- any(
+#       (DF$CELL_LINE %in% POSITIVE_CTRL & DF$CONDITION == "STIM") |
+#         (DF$CL_NAME_ON_PLOT %in% POSITIVE_CTRL & DF$CONDITION == "STIM") |
+#         (DF$CL_NUMBER %in% POSITIVE_CTRL & DF$CONDITION == "STIM")
+#     )
+#     
+#     if (positive_ctrl_exists) {
+#       # Filter for the positive control in any of the columns and with CONDITION == "STIM"
+#       normalization_control_value <- DF %>%
+#         filter((CELL_LINE %in% POSITIVE_CTRL & CONDITION == "STIM") |
+#                  (CL_NAME_ON_PLOT %in% POSITIVE_CTRL & CONDITION == "STIM") |
+#                  (CL_NUMBER %in% POSITIVE_CTRL & CONDITION == "STIM")) %>%
+#         group_by(!!!syms(group_vars)) %>%
+#         summarise(normalization_control_value = case_when(
+#           mean(Concentration_REDUCED) > 0 ~ mean(Concentration_REDUCED),
+#           TRUE ~ -Inf
+#         ))
+#     } else {
+#       # If no positive control is found, use the maximum concentration
+#       normalization_control_value <- DF %>%
+#         group_by(!!!syms(group_vars)) %>%
+#         summarise(normalization_control_value = max(Concentration))
+#     }
+#     
+#     return(normalization_control_value)
+#   }
+#   
+#   # Calculate normalization value and merge with baseline-adjusted data
+#   DF_normalization_adj <- DF_baseline_adj %>%
+#     left_join(get_normalization_value(DF_baseline_adj, POSITIVE_CTRL), by = group_vars)
+#   
+#   # Normalize ELISA data
+#   normalize_ELISA <- function(DF) {
+#     DATA_NORMALIZED <- DF %>%
+#       group_by(!!!syms(group_vars), CELL_LINE, CONDITION) %>%
+#       mutate(
+#         Concentration_NORMALIZED = ifelse(Concentration_REDUCED / normalization_control_value < 0, 0, Concentration_REDUCED / normalization_control_value),
+#         triplicate_mean_per_day = mean(Concentration_NORMALIZED, na.rm = TRUE)
+#       ) %>%
+#       ungroup()
+#     return(DATA_NORMALIZED)
+#   }
+#   
+#   DATA_NORMALIZED <- normalize_ELISA(DF_normalization_adj) %>%
+#     mutate(
+#       POSITIVE_CTRL = unique(DF_normalization_adj$CL_NAME_ON_PLOT[
+#         DF_normalization_adj$CELL_LINE == POSITIVE_CTRL |
+#           DF_normalization_adj$CL_NUMBER == POSITIVE_CTRL |
+#           DF_normalization_adj$CL_NAME_ON_PLOT == POSITIVE_CTRL]),
+#       NEGATIVE_CTRL = NEGATIVE_CTRL
+#       )
+#   
+#   return(DATA_NORMALIZED)
+# }
+
+
+# DF = data_20240304_p1_p2; NEGATIVE_CTRL = "cl204"; POSITIVE_CTRL = "cl028"
+# DF = data_20230704;       NEGATIVE_CTRL = "cl204"; POSITIVE_CTRL = "cl028"
+# DF = batch_1;             NEGATIVE_CTRL = "cl204"; POSITIVE_CTRL = "cl069"
 process_ELISA_data <- function(DF, NEGATIVE_CTRL, POSITIVE_CTRL) {
   
   group_vars <- c("STIM_DAY", "Date")
@@ -515,17 +608,91 @@ process_ELISA_data <- function(DF, NEGATIVE_CTRL, POSITIVE_CTRL) {
       ungroup()
     return(DATA_NORMALIZED)
   }
-  
-  DATA_NORMALIZED <- normalize_ELISA(DF_normalization_adj) %>%
-    mutate(
-      POSITIVE_CTRL = unique(DF_normalization_adj$CL_NAME_ON_PLOT[
-        DF_normalization_adj$CELL_LINE == POSITIVE_CTRL |
-          DF_normalization_adj$CL_NUMBER == POSITIVE_CTRL |
-          DF_normalization_adj$CL_NAME_ON_PLOT == POSITIVE_CTRL]),
-      NEGATIVE_CTRL = NEGATIVE_CTRL
+
+  # DF = DATA_NORMALIZED
+  # Calculate fold change and significance
+  calculate_fold_change <- function(DF, NEGATIVE_CTRL) {
+    
+    # use half the smallest non-zero value in the dataset to replace zeros (usually I would set 0 to 1, but this is a better approach for ELISA data with low values)
+    # small_value <- min(DF$Concentration_NORMALIZED[DF$Concentration_NORMALIZED > 0]) / 2 ; small_value
+    small_value <- min(DF$MEASUREMENT[DF$MEASUREMENT > 0]) / 2 ; small_value
+    
+    DF <- DF %>%
+      # mutate(Concentration_NORMALIZED = ifelse(Concentration_NORMALIZED == 0, 
+      #                                          small_value, 
+      #                                          Concentration_NORMALIZED)
+      mutate(Concentration_NORMALIZED = ifelse(MEASUREMENT == 0, 
+                                               small_value, 
+                                               MEASUREMENT)
+             )
+    
+    # Calculate negative control mean with grouping
+    DF <- DF %>%
+      group_by(STIM_DAY, CELL_LINE, CL_NUMBER, CL_NAME_ON_PLOT) %>%
+      # summarise(fold_change = mean(Concentration_NORMALIZED[CONDITION == "STIM"], na.rm = TRUE) / mean(Concentration_NORMALIZED[CONDITION == "UNSTIM"], na.rm = TRUE), .groups = "drop")
+      summarise(fold_change = mean(MEASUREMENT[CONDITION == "STIM"], na.rm = TRUE) / mean(MEASUREMENT[CONDITION == "UNSTIM"], na.rm = TRUE), .groups = "drop")
+    
+    # Extract negative control fold change
+    negative_control_fold_change <- DF %>%
+      filter(DF$CELL_LINE == NEGATIVE_CTRL |
+               DF$CL_NUMBER == NEGATIVE_CTRL |
+               DF$CL_NAME_ON_PLOT == NEGATIVE_CTRL) %>%
+      select(STIM_DAY, neg_fold_change = fold_change)
+    
+    # Join negative control fold change with experimental cell lines
+    DF_fc <- DF %>% left_join(negative_control_fold_change, by = "STIM_DAY")
+    
+    DF_fc_stats <- DF_fc %>%
+      group_by(CELL_LINE) %>%
+      summarise(
+        # Check if there are enough values to perform the t-test
+        fc_p_value = if (n() > 1) {
+          t.test(fold_change, 
+                 neg_fold_change, # Use the vector of negative control values
+                 alternative = "two.sided")$p.value
+        } else {
+          NA_real_ # Assign NA if there are too few values
+        },
+        .groups = "drop"
+      ) %>%
+      mutate(
+        fc_significance = case_when(
+          is.na(fc_p_value) ~ NA_character_, # Assign NA for significance if p-value is NA
+          fc_p_value < 0.05  ~ "*",
+          fc_p_value < 0.01  ~ "**",
+          fc_p_value < 0.001 ~ "***",
+          TRUE ~ "ns"
+        )
       )
+    
+    
+    return(list(DF_fc, DF_fc_stats))
+  }
   
-  return(DATA_NORMALIZED)
+  # Process the data
+  DF_baseline_adj       <- get_baseline(DF = DF, NEGATIVE_CTRL = NEGATIVE_CTRL)
+  DF_normalization_adj  <- DF_baseline_adj %>% left_join(get_normalization_value(DF_baseline_adj, POSITIVE_CTRL), by = group_vars)
+  DATA_NORMALIZED       <- normalize_ELISA(DF_normalization_adj)
+  DATA_WITH_FOLD_CHANGE <- calculate_fold_change(DF = DATA_NORMALIZED, NEGATIVE_CTRL = NEGATIVE_CTRL)
+  
+  # Add metadata for controls
+  DATA_WITH_FOLD_CHANGE_2 <- DATA_WITH_FOLD_CHANGE[[2]]
+  DATA_WITH_FOLD_CHANGE_2 <- DATA_WITH_FOLD_CHANGE_2 %>%
+    mutate(
+      POSITIVE_CTRL = unique(DATA_NORMALIZED$CL_NAME_ON_PLOT[
+        DATA_NORMALIZED$CELL_LINE == POSITIVE_CTRL |
+          DATA_NORMALIZED$CL_NUMBER == POSITIVE_CTRL |
+          DATA_NORMALIZED$CL_NAME_ON_PLOT == POSITIVE_CTRL]),
+      NEGATIVE_CTRL = NEGATIVE_CTRL
+    )
+  
+  
+  # Join the calculated values with the normalized dataset
+  ANALYZED_DATA <- 
+    left_join(DATA_NORMALIZED, DATA_WITH_FOLD_CHANGE[[1]], relationship = "many-to-many") %>%
+    left_join(DATA_WITH_FOLD_CHANGE_2)
+  
+  return(ANALYZED_DATA)
 }
 
 ################################################################################
@@ -1477,9 +1644,9 @@ prepare_and_plot <- function(plotting_means, plotting_stats, x_mean, x_sem, x_la
   
   # print if stats has significance column
   if("significance" %in% colnames(plotting_stats)){ 
-    cat("Yep, stats were calculated for ya!\n") 
+    cat("Yay! Stats were calculated!\n") 
   } else { 
-    cat("Sorry, couldn't calculate stats for ya!\n") 
+    cat("Sorry, couldn't calculate stats!\n") 
   }
   
   plotting_means$CL_NAME_ON_PLOT <- reorder(plotting_means$CL_NAME_ON_PLOT, -plotting_means$ORDER_NO)
@@ -1725,7 +1892,6 @@ backtranslate <- function(aa_seq, codon_table) {
 ################################################################################
 ### 20241109 FX FOR EXTRACTION OF TECAN EXCEL FILE DATA ########################
 ################################################################################
-
 calculate_subgrid_stats <- function(df, grid_size) {
   # Obtain unique positions and split into row and col
   position_cols <- unique(df$Position)
@@ -1773,7 +1939,8 @@ calculate_subgrid_stats <- function(df, grid_size) {
   
   # Select the sub-grid with the lowest mean
   best_subgrid <- subgrid_stats %>%
-    slice(which.min(mean)) %>%
+    # slice(which.min(mean)) %>%
+    filter(mean == min(mean, na.rm = TRUE)) %>%
     select(mean)
   
   best_subgrid
