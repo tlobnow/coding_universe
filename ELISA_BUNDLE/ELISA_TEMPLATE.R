@@ -56,7 +56,8 @@ if (GENERAL_SETTINGS) {
   # NAME_KEY <- ("your/path/to/ELISA_CL_KEY.csv")
   
   # GATHER DATA & FUNCTIONS
-  Input_Directory  <- file.path(getwd(), "input")
+  Input_Directory  <- file.path(getwd(), "example_data")
+  # Input_Directory  <- file.path(getwd(), "input")
   Output_Directory <- file.path(MAIN, paste0("output_", as.character(Sys.Date())))
   
   if (dir.exists(Input_Directory))  {print(paste0("Data will be loaded from ", Input_Directory))}
@@ -80,7 +81,8 @@ if (RUN_SETTINGS_AND_PREP) {
 
 if (RUN_PROCESSING_AND_SUBSET) {
   
-  
+  ##############################################################################
+  ## 1 ADD YOUR DATA & NORMALIZE IT ############################################
   ##############################################################################
   # subset and normalize data to your needs
   
@@ -111,6 +113,8 @@ if (RUN_PROCESSING_AND_SUBSET) {
   normalized_data_20240304_p3    <- process_ELISA_data(DF = data_20240304_p3,    NEGATIVE_CTRL = "cl204", POSITIVE_CTRL = "cl069")
   normalized_data_20230704       <- process_ELISA_data(DF = data_20230704,       NEGATIVE_CTRL = "cl204", POSITIVE_CTRL = "cl028")
 
+  ##############################################################################
+  ## 2 BIND THE DATA OF INTEREST ###############################################
   ##############################################################################
   # join data frames of interest 
   # I would always include all subsets and hash out (#) what you don't need at the moment

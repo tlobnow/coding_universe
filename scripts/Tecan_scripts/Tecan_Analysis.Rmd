@@ -19,7 +19,7 @@ GENERAL <- TRUE
 
 ```
 
-```{r 20241106, warning=FALSE, message=FALSE}
+```{r 20241106, warning=FALSE, message=FALSE, eval = F}
 list.dirs(MAIN, full.names = F, recursive = F)
 # FOLDER <- "20241106"
 FOLDER <- "20241106"
@@ -40,7 +40,7 @@ if (PREP_KEY)  {source("/Users/u_lobnow/Documents/Github/coding_universe/scripts
 if (JOIN_DATA) {source("/Users/u_lobnow/Documents/Github/coding_universe/scripts/Tecan_scripts/04_JOIN_DATA.R")}
 ```
 
-```{r 20241106_plots} 
+```{r 20241106_plots, eval = F} 
   data_for_plotting %>%
     arrange(Cycle) %>%
     # ggplot(aes(x = Time_min, y = mean_OD600_normalized, color = ARABINOSE, group = CONDITION, alpha = -(as.numeric(T6_PHAGE)))) +
@@ -84,7 +84,7 @@ data_for_plotting %>%
 ```
 
 
-```{r 20241108, include=FALSE}
+```{r 20241108, include=FALSE, eval = F}
 
 list.dirs(MAIN, full.names = F, recursive = F)
 FOLDER <- "20241108"
@@ -105,7 +105,7 @@ if (PREP_KEY)  {source("/Users/u_lobnow/Documents/Github/coding_universe/scripts
 if (JOIN_DATA) {source("/Users/u_lobnow/Documents/Github/coding_universe/scripts/Tecan_scripts/04_JOIN_DATA.R")}
 ```
 
-```{r 20241108_plots} 
+```{r 20241108_plots, eval = F} 
   data_for_plotting %>%
     arrange(Cycle) %>%
     # ggplot(aes(x = Time_min, y = mean_OD600_normalized, color = ARABINOSE, group = CONDITION, alpha = -(as.numeric(T6_PHAGE)))) +
@@ -149,7 +149,7 @@ data_for_plotting %>%
 ```
 
 
-```{r 20241109, warning=FALSE, message=FALSE}
+```{r 20241109, warning=FALSE, message=FALSE, eval = F}
 list.dirs(MAIN, full.names = F, recursive = F)
 FOLDER <- "20241109"
 SKIP   <- 57 # How many lines to skip in the Tecan data files (depends on setup)
@@ -169,7 +169,7 @@ if (PREP_KEY)  {source("/Users/u_lobnow/Documents/Github/coding_universe/scripts
 if (JOIN_DATA) {source("/Users/u_lobnow/Documents/Github/coding_universe/scripts/Tecan_scripts/04_JOIN_DATA.R")}
 ```
 
-```{r 20241109_plots} 
+```{r 20241109_plots, eval = F} 
   data_for_plotting %>%
     arrange(Cycle) %>%
     # ggplot(aes(x = Time_min, y = mean_OD600_normalized, color = ARABINOSE, group = CONDITION, alpha = -(as.numeric(T6_PHAGE)))) +
@@ -214,7 +214,7 @@ if (JOIN_DATA) {source("/Users/u_lobnow/Documents/Github/coding_universe/scripts
 ```
 
 
-```{r 20241111, warning=FALSE, message=FALSE}
+```{r 20241111, warning=FALSE, message=FALSE, eval = F}
 list.dirs(MAIN, full.names = F, recursive = F)
 FOLDER <- "20241111"
 SKIP   <- 57 # How many lines to skip in the Tecan data files (depends on setup)
@@ -234,7 +234,7 @@ if (PREP_KEY)  {source("/Users/u_lobnow/Documents/Github/coding_universe/scripts
 if (JOIN_DATA) {source("/Users/u_lobnow/Documents/Github/coding_universe/scripts/Tecan_scripts/04_JOIN_DATA.R")}
 ```
 
-``` {r 20241111_plots} 
+```{r 20241111_plots, eval = F} 
   data_for_plotting %>%
     arrange(Cycle) %>%
     # ggplot(aes(x = Time_min, y = mean_OD600_normalized, color = ARABINOSE, group = CONDITION, alpha = -(as.numeric(T6_PHAGE)))) +
@@ -279,7 +279,7 @@ if (JOIN_DATA) {source("/Users/u_lobnow/Documents/Github/coding_universe/scripts
 ```
 
 
-```{r 20241112, warning=FALSE, message=FALSE}
+```{r 20241112, warning=FALSE, message=FALSE, eval = F}
 list.dirs(MAIN, full.names = F, recursive = F)
 FOLDER <- "20241112"
 SKIP   <- 54 # How many lines to skip in the Tecan data files (depends on setup)
@@ -300,7 +300,7 @@ if (JOIN_DATA) {source("/Users/u_lobnow/Documents/Github/coding_universe/scripts
 
 ```
 
-``` {r 20241112_plots}
+```{r 20241112_plots, eval = F}
 data_for_plotting_main <- data_for_plotting
 
 data_for_plotting$MOI <- round(abs(data_for_plotting_main$MOI), 5)
@@ -369,7 +369,7 @@ data_for_plotting %>%
 ```
 
 
-```{r 20241113, warning=FALSE, message=FALSE}
+```{r 20241113, warning=FALSE, message=FALSE, eval = F}
 list.dirs(MAIN, full.names = F, recursive = F)
 FOLDER <- "20241113"
 SKIP   <- 54 # How many lines to skip in the Tecan data files (depends on setup)
@@ -389,7 +389,7 @@ if (PREP_KEY)  {source("/Users/u_lobnow/Documents/Github/coding_universe/scripts
 if (JOIN_DATA) {source("/Users/u_lobnow/Documents/Github/coding_universe/scripts/Tecan_scripts/04_JOIN_DATA.R")}        ; cat("Data joined.\n")  ; head(data_for_plotting)
 ```
 
-``` {r 20241113_plots}
+```{r 20241113_plots, eval = F}
 data_for_plotting_main <- data_for_plotting
 
 data_for_plotting$MOI <- round(abs(data_for_plotting_main$MOI), 5)
@@ -457,7 +457,7 @@ data_for_plotting %>%
 ```
 
 
-``` {r Lunch_Seminar_Plot}
+```{r Lunch_Seminar_Plot, eval = F}
 
 plot <- data_for_plotting %>% 
   filter(MOI %in% c(0, 
@@ -514,7 +514,8 @@ if (SAVE) {
 
 ```
 
-```{r 20241118, warning=FALSE, message=FALSE}
+
+```{r 20241118, warning=FALSE, message=FALSE, eval = F}
 list.dirs(MAIN, full.names = F, recursive = F)
 FOLDER <- "20241118"
 SKIP   <- 53 # How many lines to skip in the Tecan data files (depends on setup)
@@ -533,7 +534,8 @@ if (READ_DATA) {source("/Users/u_lobnow/Documents/Github/coding_universe/scripts
 if (PREP_KEY)  {source("/Users/u_lobnow/Documents/Github/coding_universe/scripts/Tecan_scripts/03_PREP_KEY.R")}         ; cat("Key prepared.\n") ; head(PLATE)
 if (JOIN_DATA) {source("/Users/u_lobnow/Documents/Github/coding_universe/scripts/Tecan_scripts/04_JOIN_DATA.R")}        ; cat("Data joined.\n")  ; head(data_for_plotting)
 ```
-``` {r 20241118_plots}
+
+```{r 20241118_plots, eval = F}
 data_for_plotting_main <- data_for_plotting
 # data_for_plotting <- data_for_plotting_main
 
@@ -641,4 +643,65 @@ data_for_plotting %>%
 ```
 
 
+```{r 20241122, warning=FALSE, message=FALSE}
+list.dirs(MAIN, full.names = F, recursive = F)
+FOLDER <- "20241122"
+SKIP   <- 53 # How many lines to skip in the Tecan data files (depends on setup)
 
+# Latest Phage Titer Details
+n_plaques           = 290
+dilution_step       = -5
+phage_volume_plated = 0.1
+
+# Assay Details
+bacterial_volume    = 0.18
+phage_volume_added  = 0.02
+
+if (GENERAL)   {source("/Users/u_lobnow/Documents/Github/coding_universe/scripts/Tecan_scripts/01_GENERAL_SETTINGS.R")} ; cat("General settings loaded.\n")
+if (READ_DATA) {source("/Users/u_lobnow/Documents/Github/coding_universe/scripts/Tecan_scripts/02_READ_DATA.R")}        ; cat("Data read.\n")    ; head(data)
+if (PREP_KEY)  {source("/Users/u_lobnow/Documents/Github/coding_universe/scripts/Tecan_scripts/03_PREP_KEY.R")}         ; cat("Key prepared.\n") ; head(PLATE)
+if (JOIN_DATA) {source("/Users/u_lobnow/Documents/Github/coding_universe/scripts/Tecan_scripts/04_JOIN_DATA.R")}        ; cat("Data joined.\n")  ; head(data_for_plotting)
+```
+
+``` {r 20241122_plots}
+data_for_plotting_main <- data_for_plotting
+# data_for_plotting <- data_for_plotting_main
+
+# set the colors depending on arabinose status
+  # if the status is 0.02, use the color specified in the COL_ARA_002 column of the data_for_plotting dataframe, 
+  # if the status is 0.2, use the color specified in COL_ARA_02, otherwise use the color specified in PLOTTING_COLOR
+data_for_plotting$COLOR <- ifelse(data_for_plotting_main$ARABINOSE == 0.02, data_for_plotting_main$COL_ARA_002, 
+                                  ifelse(data_for_plotting_main$ARABINOSE == 0.2, data_for_plotting_main$COL_ARA_02, 
+                                         data_for_plotting_main$PLOTTING_COLOR))
+
+# reorder data by ORDER_NUMBER
+data_for_plotting$CELL_LINE <- reorder(data_for_plotting$CELL_LINE, data_for_plotting$ORDER_NO)
+
+# set T6_PHAGE to 10 if it is NA
+data_for_plotting$T6_PHAGE <- ifelse(is.na(data_for_plotting$T6_PHAGE), 10, as.numeric(data_for_plotting$T6_PHAGE))
+
+# round MOI to X decimal places
+data_for_plotting$MOI <- round(data_for_plotting_main$MOI, 3) ; unique(data_for_plotting$MOI)
+
+data_for_plotting %>%
+  ggplot(aes(x = Time_min, y = refined_OD600_mean, color = COLOR, group = CONDITION, linetype = as.factor(MOI))) +  
+  geom_hline(yintercept = 0.2, alpha = 0.5) +
+  geom_smooth(se = F) +
+  facet_grid(~CELL_LINE) +
+  theme_cowplot() +
+  labs(title = "OD600 over time", x = "time [min]", y = "OD600", subtitle = unique(data_for_plotting$Date)) +
+  scale_color_identity()
+    
+
+data_for_plotting %>%
+  arrange(Cycle) %>%
+  filter(CELL_LINE != "EGFP") %>%
+  ggplot(aes(x = Time_min, y = refined_OD600_mean, color = COLOR, group = CONDITION)) +  
+  geom_hline(yintercept = 0.2, alpha = 0.5) +
+  geom_line(aes(x = Time_min, y = OD600_blank), alpha = 0.5, linetype = "dashed") +
+  geom_smooth(se = F) +
+  facet_grid(~MOI) +
+  theme_cowplot() +
+  labs(title = "OD600 over time", x = "time [min]", y = "OD600", subtitle = unique(data_for_plotting$Date)) +
+  scale_color_identity()
+```
