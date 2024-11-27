@@ -51,9 +51,8 @@ if (GENERAL_SETTINGS) {
   # try(source("/Users/u_lobnow/Documents/Github/coding_universe/scripts/SOTA_FX.R"))
   
   # Use the provided link to read the cell line key or supply the name and path of your own key file
-  try(NAME_KEY  <- fread("https://raw.githubusercontent.com/tlobnow/coding_universe/refs/heads/main/ELISA_CL_KEY.csv"))
-  # NAME_KEY <- fread("/Users/u_lobnow/Documents/Github/coding_universe/ELISA_CL_KEY.csv")
-  # NAME_KEY <- ("your/path/to/ELISA_CL_KEY.csv")
+  # try(NAME_KEY <- fread("https://raw.githubusercontent.com/tlobnow/coding_universe/refs/heads/main/ELISA_CL_KEY.csv"))
+  try(NAME_KEY <- fread(file.path(MAIN, "ELISA_CL_KEY.csv")))
   
   # GATHER DATA & FUNCTIONS
   Input_Directory  <- file.path(getwd(), "example_data")
