@@ -354,7 +354,8 @@ write_fasta <- function(df, id_col, seq_col, file_path) {
 ################################################################################
 ################################################################################
 
-sem <- function(x) sd(x)/sqrt(length(x))
+# sem <- function(x) sd(x)/sqrt(length(x))
+sem <- function(x) sd(x, na.rm = TRUE) / sqrt(sum(!is.na(x)))
 
 ################################################################################
 ################################################################################
@@ -532,7 +533,8 @@ sem <- function(x) sd(x)/sqrt(length(x))
 # DF = data_20240304_p1_p2; NEGATIVE_CTRL = "cl204"; POSITIVE_CTRL = "cl028"
 # DF = data_20230704;       NEGATIVE_CTRL = "cl204"; POSITIVE_CTRL = "cl028"
 # DF = batch_1;             NEGATIVE_CTRL = "cl204"; POSITIVE_CTRL = "cl069"
-process_ELISA_data <- function(DF, NEGATIVE_CTRL, POSITIVE_CTRL) {
+# DF = AMYLOIDS_20241202;             NEGATIVE_CTRL = "cl204"; POSITIVE_CTRL = "cl069" ; SKIP_FOLD_CHANGE = F
+process_ELISA_data <- function(DF, NEGATIVE_CTRL, POSITIVE_CTRL, SKIP_FOLD_CHANGE = FALSE) {
   
   group_vars <- c("STIM_DAY", "Date")
   
@@ -609,47 +611,61 @@ process_ELISA_data <- function(DF, NEGATIVE_CTRL, POSITIVE_CTRL) {
     return(DATA_NORMALIZED)
   }
 
-  # DF = DATA_NORMALIZED
+  # DF = DATA_NORMALIZED ; FC_BASIS = "Concentration_REDUCED"
   # Calculate fold change and significance
-  calculate_fold_change <- function(DF, NEGATIVE_CTRL) {
+  calculate_fold_change <- function(DF, NEGATIVE_CTRL, FC_BASIS = "MEASUREMENT") {
     
-    # use half the smallest non-zero value in the dataset to replace zeros (usually I would set 0 to 1, but this is a better approach for ELISA data with low values)
-    # small_value <- min(DF$Concentration_NORMALIZED[DF$Concentration_NORMALIZED > 0]) / 2 ; small_value
-    small_value <- min(DF$MEASUREMENT[DF$MEASUREMENT > 0]) / 2 ; small_value
+    # Ensure zero or missing values are replaced by half the smallest non-zero value
+    # small_value <- min(DF[[FC_BASIS]][DF[[FC_BASIS]] > 0], na.rm = TRUE) / 2
+    small_value <- ifelse(any(DF[[FC_BASIS]] > 0, na.rm = TRUE),
+                          min(DF[[FC_BASIS]][DF[[FC_BASIS]] > 0], na.rm = TRUE) / 2,
+                          1e-9) # Fallback to a very small positive value
     
-    DF <- DF %>%
-      # mutate(Concentration_NORMALIZED = ifelse(Concentration_NORMALIZED == 0, 
-      #                                          small_value, 
-      #                                          Concentration_NORMALIZED)
-      mutate(Concentration_NORMALIZED = ifelse(MEASUREMENT == 0, 
-                                               small_value, 
-                                               MEASUREMENT)
-             )
+    DF          <- DF %>% mutate(!!sym(FC_BASIS) := ifelse(!!sym(FC_BASIS) <= 0 | is.na(!!sym(FC_BASIS)), small_value, !!sym(FC_BASIS)))
     
-    # Calculate negative control mean with grouping
-    DF <- DF %>%
-      group_by(STIM_DAY, CELL_LINE, CL_NUMBER, CL_NAME_ON_PLOT) %>%
-      # summarise(fold_change = mean(Concentration_NORMALIZED[CONDITION == "STIM"], na.rm = TRUE) / mean(Concentration_NORMALIZED[CONDITION == "UNSTIM"], na.rm = TRUE), .groups = "drop")
-      summarise(fold_change = mean(MEASUREMENT[CONDITION == "STIM"], na.rm = TRUE) / mean(MEASUREMENT[CONDITION == "UNSTIM"], na.rm = TRUE), .groups = "drop")
+    # Create a new column for the values of interest, outside of the summarise()
+    DF <- DF %>% mutate(FC_BASIS = !!sym(FC_BASIS))
+    
+    # Calculate daily fold change (without grouping by STIM_DAY)
+    daily_fold_change <- DF %>%
+      group_by(CELL_LINE, CL_NUMBER, CL_NAME_ON_PLOT, STIM_DAY) %>%
+      summarise(
+        daily_stim_mean = mean(FC_BASIS[CONDITION == "STIM"], na.rm = TRUE),
+        daily_unstim_mean =  mean(FC_BASIS[CONDITION == "UNSTIM"], na.rm = TRUE),
+        daily_fold_change = ifelse((daily_stim_mean / daily_unstim_mean > 0), daily_stim_mean / daily_unstim_mean, 0),
+        .groups = "drop"
+      )
+    
+    # Now summarise the fold change calculation by STIM_DAY
+    mean_fold_change <- DF %>%
+      group_by(CELL_LINE, CL_NUMBER, CL_NAME_ON_PLOT) %>%
+      summarise(
+        stim_mean = mean(FC_BASIS[CONDITION == "STIM"], na.rm = TRUE),
+        unstim_mean = mean(FC_BASIS[CONDITION == "UNSTIM"], na.rm = TRUE),
+        fold_change = stim_mean / unstim_mean,
+        .groups = "drop"
+      )
     
     # Extract negative control fold change
-    negative_control_fold_change <- DF %>%
-      filter(DF$CELL_LINE == NEGATIVE_CTRL |
-               DF$CL_NUMBER == NEGATIVE_CTRL |
-               DF$CL_NAME_ON_PLOT == NEGATIVE_CTRL) %>%
-      select(STIM_DAY, neg_fold_change = fold_change)
+    negative_control_fold_change <- daily_fold_change %>%
+      filter(CELL_LINE == NEGATIVE_CTRL | 
+               CL_NUMBER == NEGATIVE_CTRL | 
+               CL_NAME_ON_PLOT == NEGATIVE_CTRL) %>%
+      select(STIM_DAY, neg_fold_change = daily_fold_change)
     
-    # Join negative control fold change with experimental cell lines
-    DF_fc <- DF %>% left_join(negative_control_fold_change, by = "STIM_DAY")
+    # Join negative control fold change and daily fold change with experimental data
+    DF_fc <- DF %>% 
+      left_join(mean_fold_change) %>%
+      left_join(negative_control_fold_change) %>%
+      left_join(daily_fold_change)
     
+    # Perform t-tests for fold change significance
     DF_fc_stats <- DF_fc %>%
       group_by(CELL_LINE) %>%
       summarise(
-        # Check if there are enough values to perform the t-test
         fc_p_value = if (n() > 1) {
-          t.test(fold_change, 
-                 neg_fold_change, # Use the vector of negative control values
-                 alternative = "two.sided")$p.value
+          # t.test(fold_change, neg_fold_change, alternative = "two.sided")$p.value
+          t.test(fold_change, neg_fold_change, alternative = "greater")$p.value
         } else {
           NA_real_ # Assign NA if there are too few values
         },
@@ -657,41 +673,49 @@ process_ELISA_data <- function(DF, NEGATIVE_CTRL, POSITIVE_CTRL) {
       ) %>%
       mutate(
         fc_significance = case_when(
-          is.na(fc_p_value) ~ NA_character_, # Assign NA for significance if p-value is NA
-          fc_p_value < 0.05  ~ "*",
-          fc_p_value < 0.01  ~ "**",
+          is.na(fc_p_value) ~ NA_character_,
           fc_p_value < 0.001 ~ "***",
+          fc_p_value < 0.01  ~ "**",
+          fc_p_value < 0.05  ~ "*",
           TRUE ~ "ns"
         )
       )
     
-    
-    return(list(DF_fc, DF_fc_stats))
+    # Return results as a list
+    return(list(fold_change_data = DF_fc, statistics = DF_fc_stats))
   }
   
   # Process the data
   DF_baseline_adj       <- get_baseline(DF = DF, NEGATIVE_CTRL = NEGATIVE_CTRL)
   DF_normalization_adj  <- DF_baseline_adj %>% left_join(get_normalization_value(DF_baseline_adj, POSITIVE_CTRL), by = group_vars)
   DATA_NORMALIZED       <- normalize_ELISA(DF_normalization_adj)
-  DATA_WITH_FOLD_CHANGE <- calculate_fold_change(DF = DATA_NORMALIZED, NEGATIVE_CTRL = NEGATIVE_CTRL)
-  
-  # Add metadata for controls
-  DATA_WITH_FOLD_CHANGE_2 <- DATA_WITH_FOLD_CHANGE[[2]]
-  DATA_WITH_FOLD_CHANGE_2 <- DATA_WITH_FOLD_CHANGE_2 %>%
-    mutate(
-      POSITIVE_CTRL = unique(DATA_NORMALIZED$CL_NAME_ON_PLOT[
-        DATA_NORMALIZED$CELL_LINE == POSITIVE_CTRL |
-          DATA_NORMALIZED$CL_NUMBER == POSITIVE_CTRL |
-          DATA_NORMALIZED$CL_NAME_ON_PLOT == POSITIVE_CTRL]),
-      NEGATIVE_CTRL = NEGATIVE_CTRL
-    )
-  
-  
-  # Join the calculated values with the normalized dataset
-  ANALYZED_DATA <- 
-    left_join(DATA_NORMALIZED, DATA_WITH_FOLD_CHANGE[[1]], relationship = "many-to-many") %>%
-    left_join(DATA_WITH_FOLD_CHANGE_2)
-  
+  if (SKIP_FOLD_CHANGE) {
+    ANALYZED_DATA <- DATA_NORMALIZED %>%
+      mutate(
+        POSITIVE_CTRL = unique(DATA_NORMALIZED$CL_NAME_ON_PLOT[
+          DATA_NORMALIZED$CELL_LINE == POSITIVE_CTRL |
+            DATA_NORMALIZED$CL_NUMBER == POSITIVE_CTRL |
+            DATA_NORMALIZED$CL_NAME_ON_PLOT == POSITIVE_CTRL]),
+        NEGATIVE_CTRL = NEGATIVE_CTRL
+      )
+  } else {
+    DATA_WITH_FOLD_CHANGE <- calculate_fold_change(DATA_NORMALIZED, NEGATIVE_CTRL)
+    # Add metadata for controls
+    DATA_WITH_FOLD_CHANGE_2 <- DATA_WITH_FOLD_CHANGE[[2]]
+    DATA_WITH_FOLD_CHANGE_2 <- DATA_WITH_FOLD_CHANGE_2 %>%
+      mutate(
+        POSITIVE_CTRL = unique(DATA_NORMALIZED$CL_NAME_ON_PLOT[
+          DATA_NORMALIZED$CELL_LINE == POSITIVE_CTRL |
+            DATA_NORMALIZED$CL_NUMBER == POSITIVE_CTRL |
+            DATA_NORMALIZED$CL_NAME_ON_PLOT == POSITIVE_CTRL]),
+        NEGATIVE_CTRL = NEGATIVE_CTRL
+      )
+    
+    # Join the calculated values with the normalized dataset
+    ANALYZED_DATA <- 
+      left_join(DATA_NORMALIZED, DATA_WITH_FOLD_CHANGE[[1]], relationship = "many-to-many") %>%
+      left_join(DATA_WITH_FOLD_CHANGE_2)
+  }
   return(ANALYZED_DATA)
 }
 

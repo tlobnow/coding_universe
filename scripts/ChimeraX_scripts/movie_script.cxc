@@ -1,0 +1,12 @@
+set bgColor white
+
+open $1
+rainbow chain palette Set2
+cofr show true
+movie record
+turn x 2 180
+wait 180
+turn y 2 180
+wait 180
+movie encode $2, format=.mp4
+quit

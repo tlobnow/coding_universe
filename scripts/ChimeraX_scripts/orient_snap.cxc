@@ -1,0 +1,17 @@
+# Setup
+set bgColor white
+open $1
+hide atoms
+show cartoons
+show surfaces
+transparency 40
+
+# Select chains and align using matchmaker (here for 10 models))
+select :1-10/A
+
+# match models 2-10 to model 1
+matchmaker #!2-10 & sel to #1 & sel
+
+
+# Exit
+quit

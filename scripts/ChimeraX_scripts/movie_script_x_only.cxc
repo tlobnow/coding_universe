@@ -1,0 +1,14 @@
+# Setup
+set bgColor white
+open $1
+rainbow chain palette RdYlBu
+style sphere
+hide cartoons
+show atoms
+
+# Movie recording
+movie record; turn y 2 180; wait 180
+movie encode $2, format=.mp4
+
+# Exit
+quit
